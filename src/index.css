@@ -9,36 +9,48 @@
 
 :root {
     /* Ethereal cosmic theme for empathetic avatar interface */
-    --background: oklch(0.98 0.01 240);
+    --background: oklch(1.00 0 0);
     --foreground: oklch(0.10 0.005 240);
     --card: oklch(1.00 0 0);
     --card-foreground: oklch(0.10 0.005 240);
     --popover: oklch(1.00 0 0);
     --popover-foreground: oklch(0.10 0.005 240);
-    --primary: oklch(0.25 0.15 240);
+    --primary: oklch(0.45 0.15 260);
     --primary-foreground: oklch(1.00 0 0);
-    --secondary: oklch(0.96 0.005 240);
+    --secondary: oklch(0.98 0.002 240);
     --secondary-foreground: oklch(0.35 0.008 240);
-    --muted: oklch(0.94 0.01 240);
+    --muted: oklch(0.96 0.005 240);
     --muted-foreground: oklch(0.45 0.01 240);
-    --accent: oklch(0.70 0.20 200);
-    --accent-foreground: oklch(0.10 0.005 240);
+    --accent: oklch(0.10 0.005 240);
+    --accent-foreground: oklch(1.00 0 0);
     --destructive: oklch(0.55 0.22 25);
     --destructive-foreground: oklch(1.00 0 0);
     --border: oklch(0.88 0.01 240);
     --input: oklch(1.00 0 0);
-    --ring: oklch(0.70 0.20 200);
-    --radius: 1rem;
-    --shadow-color: oklch(0.25 0.15 240);
-    --shadow-opacity: 0.1;
-    --shadow-blur: 20px;
+    --ring: oklch(0.45 0.15 260);
+    --radius: 0.5rem;
+    --shadow-color: oklch(0.10 0.005 240);
+    --shadow-opacity: 0.05;
+    --shadow-blur: 10px;
     --shadow-spread: 0px;
     --shadow-offset-x: 0px;
-    --shadow-offset-y: 8px;
-    --font-sans: "Inter";
-    --font-serif: "Noto Serif";
-    --font-mono: "JetBrains Mono"
-}
+    --shadow-offset-y: 4px;
+    --font-sans: Inter;
+    --font-serif: Noto Serif;
+    --font-mono: JetBrains Mono;
+    --chart-1: oklch(0.45 0.15 260);
+    --chart-2: oklch(0.10 0.005 240);
+    --chart-3: oklch(0.45 0.01 240);
+    --chart-4: oklch(0.35 0.008 240);
+    --chart-5: oklch(0.55 0.22 25);
+    --sidebar: oklch(0.96 0.005 240);
+    --sidebar-foreground: oklch(0.10 0.005 240);
+    --sidebar-primary: oklch(0.45 0.15 260);
+    --sidebar-primary-foreground: oklch(1.00 0 0);
+    --sidebar-accent: oklch(0.10 0.005 240);
+    --sidebar-accent-foreground: oklch(1.00 0 0);
+    --sidebar-border: oklch(0.88 0.01 240);
+    --sidebar-ring: oklch(0.45 0.15 260)}
 
 @theme {
   --color-background: var(--background);

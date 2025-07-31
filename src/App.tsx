@@ -1418,6 +1418,7 @@ function App() {
                     </div>
                   </div>
                 )}
+                )}
                 
                 {activeTab === 'calendar' && (
                   <div>
