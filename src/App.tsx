@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Send, Mic } from "@phosphor-icons/react"
+import { Badge } from "@/components/ui/badge"
+import { Send, Mic, ChartLine, X } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -12,13 +13,36 @@ interface Message {
   sender: 'user' | 'avatar'
   timestamp: Date
   mood?: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+  userEmotion?: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+}
+
+interface EmotionalPattern {
+  date: string
+  emotions: { [key: string]: number }
+  dominantEmotion: string
+  intensity: number
+  context: string[]
+}
+
+interface ConversationMemory {
+  patterns: EmotionalPattern[]
+  keywords: { [key: string]: number }
+  totalConversations: number
+  lastUpdated: Date
 }
 
 function App() {
   const [messages, setMessages] = useKV<Message[]>("conversation-history", [])
+  const [memory, setMemory] = useKV<ConversationMemory>("emotional-memory", {
+    patterns: [],
+    keywords: {},
+    totalConversations: 0,
+    lastUpdated: new Date()
+  })
   const [inputText, setInputText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentMood, setCurrentMood] = useState<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'>('calm')
+  const [showMemoryInsights, setShowMemoryInsights] = useState(false)
 
   const analyzeMood = async (text: string): Promise<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'> => {
     try {
@@ -34,23 +58,117 @@ function App() {
     }
   }
 
+  const updateEmotionalMemory = async (userMessage: string, userEmotion: string, avatarResponse: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      
+      // Extract keywords from user message
+      const keywordPrompt = spark.llmPrompt`Extract 3-5 key emotional or topical words from this message, return as comma-separated list: "${userMessage}"`
+      const keywordsResult = await spark.llm(keywordPrompt, "gpt-4o-mini")
+      const keywords = keywordsResult.split(',').map(k => k.trim().toLowerCase())
+      
+      setMemory(currentMemory => {
+        const newMemory = { ...currentMemory }
+        
+        // Update keyword frequency
+        keywords.forEach(keyword => {
+          newMemory.keywords[keyword] = (newMemory.keywords[keyword] || 0) + 1
+        })
+        
+        // Find or create today's pattern
+        let todayPattern = newMemory.patterns.find(p => p.date === today)
+        if (!todayPattern) {
+          todayPattern = {
+            date: today,
+            emotions: {},
+            dominantEmotion: userEmotion,
+            intensity: 1,
+            context: []
+          }
+          newMemory.patterns.push(todayPattern)
+        }
+        
+        // Update emotion counts
+        todayPattern.emotions[userEmotion] = (todayPattern.emotions[userEmotion] || 0) + 1
+        
+        // Update dominant emotion
+        const emotionEntries = Object.entries(todayPattern.emotions)
+        todayPattern.dominantEmotion = emotionEntries.reduce((a, b) => a[1] > b[1] ? a : b)[0]
+        
+        // Add context (keep last 5 topics)
+        todayPattern.context = [...new Set([...todayPattern.context, ...keywords])].slice(-5)
+        
+        // Update intensity (average of emotion frequencies)
+        todayPattern.intensity = Math.min(5, Math.max(1, 
+          Object.values(todayPattern.emotions).reduce((a, b) => a + b, 0) / Object.keys(todayPattern.emotions).length
+        ))
+        
+        newMemory.totalConversations += 1
+        newMemory.lastUpdated = new Date()
+        
+        // Keep only last 30 days of patterns
+        newMemory.patterns = newMemory.patterns
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .slice(0, 30)
+        
+        return newMemory
+      })
+    } catch (error) {
+      console.log('Memory update failed:', error)
+    }
+  }
+
+  const getContextualPrompt = (userMessage: string) => {
+    // Get recent emotional patterns for context
+    const recentPatterns = memory.patterns.slice(0, 7) // Last week
+    const frequentKeywords = Object.entries(memory.keywords)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([word]) => word)
+    
+    let contextualInfo = ""
+    
+    if (recentPatterns.length > 0) {
+      const recentEmotions = recentPatterns.map(p => p.dominantEmotion).join(', ')
+      contextualInfo += `Recent emotional patterns: ${recentEmotions}. `
+    }
+    
+    if (frequentKeywords.length > 0) {
+      contextualInfo += `Frequent topics: ${frequentKeywords.slice(0, 5).join(', ')}. `
+    }
+    
+    if (memory.totalConversations > 0) {
+      contextualInfo += `Total conversations: ${memory.totalConversations}. `
+    }
+    
+    const basePrompt = `You are an empathetic, caring AI companion with a gentle, understanding nature. ${contextualInfo}Use this context to respond with deeper understanding and continuity. Respond to: "${userMessage}"`
+    
+    return basePrompt
+  }
+
   const sendMessage = async () => {
     if (!inputText.trim()) return
+
+    // Analyze user's emotional state
+    const userEmotion = await analyzeMood(inputText)
 
     const userMessage: Message = {
       id: Date.now().toString(),
       text: inputText,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
+      userEmotion: userEmotion
     }
 
     setMessages(prev => [...prev, userMessage])
+    const messageText = inputText
     setInputText("")
     setIsTyping(true)
 
-    // Simulate avatar response with LLM
+    // Simulate avatar response with LLM using contextual memory
     try {
-      const prompt = spark.llmPrompt`You are an empathetic, caring AI companion with a gentle, understanding nature. Respond to this message with genuine warmth and empathy, offering thoughtful support or conversation: "${inputText}"`
+      const contextualPrompt = getContextualPrompt(messageText)
+      const prompt = spark.llmPrompt`${contextualPrompt}`
       const response = await spark.llm(prompt, "gpt-4o")
       
       // Analyze mood of the response
@@ -66,6 +184,10 @@ function App() {
       }
 
       setMessages(prev => [...prev, avatarMessage])
+      
+      // Update emotional memory
+      await updateEmotionalMemory(messageText, userEmotion, response)
+      
     } catch (error) {
       const fallbackMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -234,8 +356,76 @@ function App() {
             
             {/* Header */}
             <div className="p-6 border-b border-border/50">
-              <h1 className="text-xl font-semibold text-foreground">Conversation</h1>
-              <p className="text-sm text-muted-foreground mt-1">Share your thoughts freely</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-foreground">Conversation</h1>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-sm text-muted-foreground">Share your thoughts freely</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {memory.totalConversations > 0 && (
+                    <span className="text-xs text-muted-foreground bg-accent/10 px-2 py-1 rounded-full">
+                      {memory.totalConversations} talks
+                    </span>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowMemoryInsights(!showMemoryInsights)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {showMemoryInsights ? <X size={16} /> : <ChartLine size={16} />}
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Memory Insights Panel */}
+              {showMemoryInsights && memory.patterns.length > 0 && (
+                <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                  <h3 className="text-sm font-medium text-foreground mb-3">Emotional Journey</h3>
+                  <div className="space-y-3">
+                    {/* Recent Patterns */}
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">Recent emotional patterns:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {memory.patterns.slice(0, 7).map((pattern, index) => (
+                          <Badge 
+                            key={pattern.date} 
+                            variant="outline" 
+                            className={`text-xs ${
+                              pattern.dominantEmotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                              pattern.dominantEmotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                              pattern.dominantEmotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                              pattern.dominantEmotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                              'border-accent/50'
+                            }`}
+                          >
+                            {pattern.dominantEmotion}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Frequent Topics */}
+                    {Object.keys(memory.keywords).length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">Common themes:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(memory.keywords)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 5)
+                            .map(([keyword, count]) => (
+                              <Badge key={keyword} variant="secondary" className="text-xs">
+                                {keyword} ({count})
+                              </Badge>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
             </div>
 
             {/* Messages */}
@@ -261,17 +451,30 @@ function App() {
                           }`}>
                             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
-                          {message.sender === 'avatar' && message.mood && (
-                            <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${
-                              message.mood === 'joyful' ? 'bg-amber-400 text-amber-700' :
-                              message.mood === 'concerned' ? 'bg-blue-500 text-blue-700' :
-                              message.mood === 'contemplative' ? 'bg-purple-400 text-purple-700' :
-                              message.mood === 'supportive' ? 'bg-green-400 text-green-700' :
-                              'bg-accent text-accent-foreground'
-                            }`}>
-                              {message.mood}
-                            </span>
-                          )}
+                          <div className="flex items-center space-x-2">
+                            {message.sender === 'user' && message.userEmotion && (
+                              <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${
+                                message.userEmotion === 'joyful' ? 'bg-amber-400 text-amber-100' :
+                                message.userEmotion === 'concerned' ? 'bg-blue-500 text-blue-100' :
+                                message.userEmotion === 'contemplative' ? 'bg-purple-400 text-purple-100' :
+                                message.userEmotion === 'supportive' ? 'bg-green-400 text-green-100' :
+                                'bg-white text-primary-foreground'
+                              }`}>
+                                {message.userEmotion}
+                              </span>
+                            )}
+                            {message.sender === 'avatar' && message.mood && (
+                              <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${
+                                message.mood === 'joyful' ? 'bg-amber-400 text-amber-700' :
+                                message.mood === 'concerned' ? 'bg-blue-500 text-blue-700' :
+                                message.mood === 'contemplative' ? 'bg-purple-400 text-purple-700' :
+                                message.mood === 'supportive' ? 'bg-green-400 text-green-700' :
+                                'bg-accent text-accent-foreground'
+                              }`}>
+                                {message.mood}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </Card>
                     </div>
