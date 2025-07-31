@@ -11,12 +11,28 @@ interface Message {
   text: string
   sender: 'user' | 'avatar'
   timestamp: Date
+  mood?: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
 }
 
 function App() {
   const [messages, setMessages] = useKV<Message[]>("conversation-history", [])
   const [inputText, setInputText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [currentMood, setCurrentMood] = useState<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'>('calm')
+
+  const analyzeMood = async (text: string): Promise<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'> => {
+    try {
+      const prompt = spark.llmPrompt`Analyze the emotional tone of this message and return only one word from: calm, joyful, concerned, contemplative, supportive. Message: "${text}"`
+      const moodResult = await spark.llm(prompt, "gpt-4o-mini")
+      const mood = moodResult.toLowerCase().trim() as 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+      
+      // Validate the result
+      const validMoods = ['calm', 'joyful', 'concerned', 'contemplative', 'supportive']
+      return validMoods.includes(mood) ? mood : 'calm'
+    } catch {
+      return 'calm'
+    }
+  }
 
   const sendMessage = async () => {
     if (!inputText.trim()) return
@@ -37,11 +53,16 @@ function App() {
       const prompt = spark.llmPrompt`You are an empathetic, caring AI companion with a gentle, understanding nature. Respond to this message with genuine warmth and empathy, offering thoughtful support or conversation: "${inputText}"`
       const response = await spark.llm(prompt, "gpt-4o")
       
+      // Analyze mood of the response
+      const mood = await analyzeMood(response)
+      setCurrentMood(mood)
+      
       const avatarMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: response,
         sender: 'avatar',
-        timestamp: new Date()
+        timestamp: new Date(),
+        mood: mood
       }
 
       setMessages(prev => [...prev, avatarMessage])
@@ -50,13 +71,93 @@ function App() {
         id: (Date.now() + 1).toString(),
         text: "I'm here with you. Please tell me more about what's on your mind.",
         sender: 'avatar',
-        timestamp: new Date()
+        timestamp: new Date(),
+        mood: 'supportive'
       }
+      setCurrentMood('supportive')
       setMessages(prev => [...prev, fallbackMessage])
     } finally {
       setIsTyping(false)
     }
   }
+
+  // Mood-based visual configurations
+  const getMoodConfig = (mood: string) => {
+    switch (mood) {
+      case 'joyful':
+        return {
+          containerGradient: 'from-amber-400/20 via-orange-300/10 to-yellow-200/15',
+          glowColor: 'from-amber-400/30 to-orange-300/20',
+          eyeColor: 'bg-amber-400',
+          eyeShadow: 'shadow-amber-400/60',
+          mouthClass: 'w-16 h-4 bg-amber-400/90',
+          animationSpeed: 'animate-pulse',
+          orbitals: [
+            { pos: 'top-6 left-6', color: 'bg-amber-400/70', anim: 'animate-bounce' },
+            { pos: 'bottom-8 right-8', color: 'bg-orange-300/80', anim: 'animate-ping' },
+            { pos: 'top-12 right-6', color: 'bg-yellow-300/60', anim: 'animate-pulse' }
+          ]
+        }
+      case 'concerned':
+        return {
+          containerGradient: 'from-blue-500/15 via-indigo-400/8 to-purple-300/12',
+          glowColor: 'from-blue-500/25 to-indigo-400/15',
+          eyeColor: 'bg-blue-500',
+          eyeShadow: 'shadow-blue-500/50',
+          mouthClass: 'w-10 h-2 bg-blue-500/80',
+          animationSpeed: 'animate-pulse duration-1000',
+          orbitals: [
+            { pos: 'top-8 left-8', color: 'bg-blue-500/60', anim: 'animate-pulse' },
+            { pos: 'bottom-12 right-12', color: 'bg-indigo-400/70', anim: 'animate-bounce' },
+            { pos: 'top-16 right-8', color: 'bg-purple-400/50', anim: 'animate-ping' }
+          ]
+        }
+      case 'contemplative':
+        return {
+          containerGradient: 'from-purple-400/15 via-violet-300/8 to-indigo-300/12',
+          glowColor: 'from-purple-400/25 to-violet-300/15',
+          eyeColor: 'bg-purple-400',
+          eyeShadow: 'shadow-purple-400/50',
+          mouthClass: 'w-8 h-2 bg-purple-400/80',
+          animationSpeed: 'animate-pulse duration-2000',
+          orbitals: [
+            { pos: 'top-10 left-10', color: 'bg-purple-400/60', anim: 'animate-pulse' },
+            { pos: 'bottom-10 right-10', color: 'bg-violet-300/70', anim: 'animate-pulse' },
+            { pos: 'top-20 right-10', color: 'bg-indigo-400/50', anim: 'animate-pulse' }
+          ]
+        }
+      case 'supportive':
+        return {
+          containerGradient: 'from-green-400/15 via-emerald-300/8 to-teal-300/12',
+          glowColor: 'from-green-400/25 to-emerald-300/15',
+          eyeColor: 'bg-green-400',
+          eyeShadow: 'shadow-green-400/50',
+          mouthClass: 'w-14 h-3 bg-green-400/85',
+          animationSpeed: 'animate-pulse duration-1500',
+          orbitals: [
+            { pos: 'top-8 left-8', color: 'bg-green-400/60', anim: 'animate-bounce' },
+            { pos: 'bottom-12 right-12', color: 'bg-emerald-300/70', anim: 'animate-pulse' },
+            { pos: 'top-16 right-8', color: 'bg-teal-300/60', anim: 'animate-ping' }
+          ]
+        }
+      default: // calm
+        return {
+          containerGradient: 'from-accent/10 via-primary/5 to-transparent',
+          glowColor: 'from-accent/20 to-primary/10',
+          eyeColor: 'bg-accent',
+          eyeShadow: 'shadow-accent/50',
+          mouthClass: 'w-12 h-3 bg-accent/80',
+          animationSpeed: 'animate-pulse',
+          orbitals: [
+            { pos: 'top-8 left-8', color: 'bg-accent/60', anim: 'animate-bounce' },
+            { pos: 'bottom-12 right-12', color: 'bg-primary/80', anim: 'animate-ping' },
+            { pos: 'top-16 right-8', color: 'bg-accent/40', anim: 'animate-pulse' }
+          ]
+        }
+    }
+  }
+
+  const moodConfig = getMoodConfig(currentMood)
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -73,7 +174,7 @@ function App() {
         {/* Avatar Section - Takes up majority of screen */}
         <div className="flex-1 lg:flex-[2] flex items-center justify-center p-8 relative overflow-hidden">
           {/* Ethereal Background Effects */}
-          <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-primary/5 to-transparent"></div>
+          <div className={`absolute inset-0 bg-gradient-to-br ${moodConfig.containerGradient} transition-all duration-2000`}></div>
           <div className="absolute inset-0 bg-gradient-radial from-accent/20 via-transparent to-transparent opacity-60"></div>
           
           {/* Avatar Container */}
@@ -82,10 +183,10 @@ function App() {
             {/* Main Avatar Display */}
             <div className="relative">
               {/* Avatar Face Container */}
-              <div className="w-80 h-80 lg:w-96 lg:h-96 rounded-full bg-gradient-to-br from-card via-accent/10 to-primary/20 shadow-2xl border border-accent/30 flex items-center justify-center relative overflow-hidden">
+              <div className={`w-80 h-80 lg:w-96 lg:h-96 rounded-full bg-gradient-to-br from-card via-accent/10 to-primary/20 shadow-2xl border border-accent/30 flex items-center justify-center relative overflow-hidden transition-all duration-2000`}>
                 
                 {/* Animated Background Patterns */}
-                <div className="absolute inset-0 bg-gradient-radial from-accent/30 via-transparent to-transparent animate-pulse"></div>
+                <div className={`absolute inset-0 bg-gradient-radial from-accent/30 via-transparent to-transparent ${moodConfig.animationSpeed}`}></div>
                 <div className="absolute inset-0 bg-gradient-conic from-primary/20 via-transparent to-accent/20 animate-spin-slow"></div>
                 
                 {/* Face Features */}
@@ -93,35 +194,35 @@ function App() {
                   
                   {/* Eyes */}
                   <div className="flex space-x-8">
-                    <div className="w-6 h-6 rounded-full bg-accent animate-pulse shadow-lg shadow-accent/50"></div>
-                    <div className="w-6 h-6 rounded-full bg-accent animate-pulse shadow-lg shadow-accent/50" style={{animationDelay: '0.5s'}}></div>
+                    <div className={`w-6 h-6 rounded-full ${moodConfig.eyeColor} ${moodConfig.animationSpeed} shadow-lg ${moodConfig.eyeShadow} transition-all duration-1000`}></div>
+                    <div className={`w-6 h-6 rounded-full ${moodConfig.eyeColor} ${moodConfig.animationSpeed} shadow-lg ${moodConfig.eyeShadow} transition-all duration-1000`} style={{animationDelay: '0.5s'}}></div>
                   </div>
                   
                   {/* Nose/Center Point */}
-                  <div className="w-2 h-2 rounded-full bg-accent/60"></div>
+                  <div className={`w-2 h-2 rounded-full ${moodConfig.eyeColor} opacity-60 transition-all duration-1000`}></div>
                   
                   {/* Mouth/Expression Area */}
-                  <div className={`w-12 h-3 rounded-full bg-accent/80 shadow-lg transition-all duration-1000 ${isTyping ? 'animate-pulse scale-110' : ''}`}></div>
+                  <div className={`${moodConfig.mouthClass} rounded-full shadow-lg transition-all duration-1000 ${isTyping ? 'animate-pulse scale-110' : ''}`}></div>
                   
                 </div>
                 
                 {/* Orbital Elements */}
                 <div className="absolute inset-0">
-                  <div className="absolute top-8 left-8 w-2 h-2 rounded-full bg-accent/60 animate-bounce"></div>
-                  <div className="absolute bottom-12 right-12 w-1 h-1 rounded-full bg-primary/80 animate-ping"></div>
-                  <div className="absolute top-16 right-8 w-1.5 h-1.5 rounded-full bg-accent/40 animate-pulse"></div>
+                  {moodConfig.orbitals.map((orbital, index) => (
+                    <div key={index} className={`absolute ${orbital.pos} w-2 h-2 rounded-full ${orbital.color} ${orbital.anim} transition-all duration-1000`}></div>
+                  ))}
                 </div>
               </div>
               
               {/* Avatar Glow Effect */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-accent/20 to-primary/10 blur-xl scale-110 animate-pulse"></div>
+              <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${moodConfig.glowColor} blur-xl scale-110 animate-pulse transition-all duration-2000`}></div>
             </div>
             
             {/* Status Indicator */}
             <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${isTyping ? 'bg-accent animate-pulse' : 'bg-primary/60'}`}></div>
+              <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${isTyping ? 'bg-accent animate-pulse' : moodConfig.eyeColor}`}></div>
               <span className="text-sm text-muted-foreground font-medium">
-                {isTyping ? 'Thinking...' : 'Listening'}
+                {isTyping ? 'Thinking...' : `${currentMood.charAt(0).toUpperCase() + currentMood.slice(1)} • Listening`}
               </span>
             </div>
           </div>
@@ -148,17 +249,30 @@ function App() {
                 ) : (
                   messages.map((message) => (
                     <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <Card className={`max-w-[80%] p-4 ${
+                      <Card className={`max-w-[80%] p-4 relative ${ 
                         message.sender === 'user' 
                           ? 'bg-primary text-primary-foreground' 
                           : 'bg-muted border-accent/20'
                       }`}>
                         <p className="text-sm leading-relaxed">{message.text}</p>
-                        <p className={`text-xs mt-2 opacity-70 ${
-                          message.sender === 'user' ? 'text-primary-foreground' : 'text-muted-foreground'
-                        }`}>
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className={`text-xs opacity-70 ${
+                            message.sender === 'user' ? 'text-primary-foreground' : 'text-muted-foreground'
+                          }`}>
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          {message.sender === 'avatar' && message.mood && (
+                            <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${
+                              message.mood === 'joyful' ? 'bg-amber-400 text-amber-700' :
+                              message.mood === 'concerned' ? 'bg-blue-500 text-blue-700' :
+                              message.mood === 'contemplative' ? 'bg-purple-400 text-purple-700' :
+                              message.mood === 'supportive' ? 'bg-green-400 text-green-700' :
+                              'bg-accent text-accent-foreground'
+                            }`}>
+                              {message.mood}
+                            </span>
+                          )}
+                        </div>
                       </Card>
                     </div>
                   ))
