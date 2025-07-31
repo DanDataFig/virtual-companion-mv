@@ -237,6 +237,8 @@ function App() {
       generateEmotionalInsights()
     }
   }, [memory.patterns.length])
+
+  const updateEmotionalMemory = async (userMessage: string, userEmotion: string, avatarResponse: string) => {
     try {
       const today = new Date().toISOString().split('T')[0]
       
@@ -296,7 +298,7 @@ function App() {
     }
   }
 
-  const updateEmotionalMemory = async (userMessage: string, userEmotion: string, avatarResponse: string) => {
+  const getContextualPrompt = (userMessage: string) => {
     // Get recent emotional patterns for context
     const recentPatterns = memory.patterns.slice(0, 7) // Last week
     const frequentKeywords = Object.entries(memory.keywords)
@@ -660,6 +662,7 @@ function App() {
                   </div>
                 )}
                 
+                {activeTab === 'calendar' && (
                   <div>
                     <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
                       <Calendar size={20} />
