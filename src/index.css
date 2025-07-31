@@ -1,47 +1,98 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+
+@layer base {
+  * {
+    @apply border-border
+  }
+}
+
 :root {
-    --background: oklch(1.00 0 0);
+    /* Ethereal cosmic theme for empathetic avatar interface */
+    --background: oklch(0.98 0.01 240);
     --foreground: oklch(0.10 0.005 240);
     --card: oklch(1.00 0 0);
     --card-foreground: oklch(0.10 0.005 240);
     --popover: oklch(1.00 0 0);
     --popover-foreground: oklch(0.10 0.005 240);
-    --primary: oklch(0.45 0.15 260);
+    --primary: oklch(0.25 0.15 240);
     --primary-foreground: oklch(1.00 0 0);
-    --secondary: oklch(0.98 0.002 240);
+    --secondary: oklch(0.96 0.005 240);
     --secondary-foreground: oklch(0.35 0.008 240);
-    --muted: oklch(0.96 0.005 240);
+    --muted: oklch(0.94 0.01 240);
     --muted-foreground: oklch(0.45 0.01 240);
-    --accent: oklch(0.10 0.005 240);
-    --accent-foreground: oklch(1.00 0 0);
+    --accent: oklch(0.70 0.20 200);
+    --accent-foreground: oklch(0.10 0.005 240);
     --destructive: oklch(0.55 0.22 25);
     --destructive-foreground: oklch(1.00 0 0);
     --border: oklch(0.88 0.01 240);
     --input: oklch(1.00 0 0);
-    --ring: oklch(0.45 0.15 260);
-    --chart-1: oklch(0.45 0.15 260);
-    --chart-2: oklch(0.10 0.005 240);
-    --chart-3: oklch(0.45 0.01 240);
-    --chart-4: oklch(0.35 0.008 240);
-    --chart-5: oklch(0.55 0.22 25);
-    --radius: 0.5rem;
-    --sidebar: oklch(0.96 0.005 240);
-    --sidebar-foreground: oklch(0.10 0.005 240);
-    --sidebar-primary: oklch(0.45 0.15 260);
-    --sidebar-primary-foreground: oklch(1.00 0 0);
-    --sidebar-accent: oklch(0.10 0.005 240);
-    --sidebar-accent-foreground: oklch(1.00 0 0);
-    --sidebar-border: oklch(0.88 0.01 240);
-    --sidebar-ring: oklch(0.45 0.15 260);
-    --shadow-color: oklch(0.10 0.005 240);
-    --shadow-opacity: 0.05;
-    --shadow-blur: 10px;
+    --ring: oklch(0.70 0.20 200);
+    --radius: 1rem;
+    --shadow-color: oklch(0.25 0.15 240);
+    --shadow-opacity: 0.1;
+    --shadow-blur: 20px;
     --shadow-spread: 0px;
     --shadow-offset-x: 0px;
-    --shadow-offset-y: 4px
-;
+    --shadow-offset-y: 8px;
     --font-sans: "Inter";
     --font-serif: "Noto Serif";
-    --font-mono: "JetBrains Mono"}
+    --font-mono: "JetBrains Mono"
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 3);
+  --radius-full: 9999px;
+}
+
 /* This is where custom CSS goes */
 body {
-    font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'}
+    font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'
+}
+
+/* Custom animations for ethereal effects */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+/* Radial gradient backgrounds */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+.bg-gradient-conic {
+  background: conic-gradient(from 0deg, var(--tw-gradient-stops));
+}
