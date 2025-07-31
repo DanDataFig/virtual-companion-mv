@@ -704,7 +704,8 @@ function App() {
       textContent += `JOURNAL ENTRIES\n`
       textContent += `---------------\n\n`
 
-      [...journalEntries]
+      journalEntries
+        .slice()
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .forEach((entry, index) => {
           textContent += `${index + 1}. ${entry.title}\n`
@@ -1416,7 +1417,6 @@ function App() {
                       )}
                     </div>
                   </div>
-                )}
                 )}
                 
                 {activeTab === 'calendar' && (
