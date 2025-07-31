@@ -22,6 +22,10 @@
 - **Avatar Responsiveness**: Visual feedback and reactions during conversation
 - **Conversation Memory**: Emotional pattern tracking to build deeper understanding over time
 - **Memory Insights**: Visual display of emotional journey and conversation themes
+- **Conversation Themes**: Curated thematic prompts for guided emotional exploration (gratitude, growth, support, mindfulness, connection, creativity)
+- **Ambient Soundscapes**: Emotion-responsive generative audio frequencies for immersive presence
+- **Theme-Aware AI**: Contextual responses that maintain thematic coherence while preserving natural conversation
+- **Audio Controls**: User-controlled ambient sound environment with mood-based frequency generation
 
 ## Design Direction
 

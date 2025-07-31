@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart } from "@phosphor-icons/react"
+import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -44,6 +44,25 @@ interface ConversationMemory {
   insights: EmotionalInsight[]
 }
 
+interface ConversationTheme {
+  id: string
+  name: string
+  description: string
+  prompts: string[]
+  emotion: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+  color: string
+  icon: string
+}
+
+interface AmbientSound {
+  id: string
+  name: string
+  emotion: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+  frequency: number
+  volume: number
+  type: 'sine' | 'triangle' | 'sawtooth' | 'square'
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("conversation-history", [])
   const [memory, setMemory] = useKV<ConversationMemory>("emotional-memory", {
@@ -59,6 +78,281 @@ function App() {
   const [showMemoryInsights, setShowMemoryInsights] = useState(false)
   const [activeTab, setActiveTab] = useState('chat')
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false)
+  const [selectedTheme, setSelectedTheme] = useState<ConversationTheme | null>(null)
+  const [ambientEnabled, setAmbientEnabled] = useState(false)
+  const [showThemes, setShowThemes] = useState(false)
+
+  // Audio context and oscillators for ambient sounds
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const oscillatorsRef = useRef<{ [key: string]: OscillatorNode }>({})
+  const gainNodesRef = useRef<{ [key: string]: GainNode }>({})
+
+  // Conversation themes based on emotions
+  const conversationThemes: ConversationTheme[] = [
+    {
+      id: 'gratitude',
+      name: 'Gratitude & Appreciation',
+      description: 'Explore moments of gratitude and positive reflection',
+      emotion: 'joyful',
+      color: 'amber',
+      icon: '✨',
+      prompts: [
+        "What's something beautiful you noticed today?",
+        "Tell me about a moment that made you smile recently",
+        "What are you most grateful for right now?",
+        "Share a memory that brings you joy"
+      ]
+    },
+    {
+      id: 'growth',
+      name: 'Personal Growth',
+      description: 'Reflect on learning, challenges, and development',
+      emotion: 'contemplative',
+      color: 'purple',
+      icon: '🌱',
+      prompts: [
+        "What's something new you've learned about yourself?",
+        "How have you grown through a recent challenge?",
+        "What wisdom would you share with your past self?",
+        "What skills or qualities are you developing?"
+      ]
+    },
+    {
+      id: 'support',
+      name: 'Seeking Support',
+      description: 'Share challenges and receive gentle guidance',
+      emotion: 'concerned',
+      color: 'blue',
+      icon: '🤝',
+      prompts: [
+        "What's weighing on your mind lately?",
+        "How can I support you through this?",
+        "What do you need to feel more at peace?",
+        "Tell me about what's making you feel uncertain"
+      ]
+    },
+    {
+      id: 'mindfulness',
+      name: 'Mindful Presence',
+      description: 'Ground yourself in the present moment',
+      emotion: 'calm',
+      color: 'slate',
+      icon: '🧘',
+      prompts: [
+        "How are you feeling in this very moment?",
+        "What sensations do you notice in your body right now?",
+        "Describe your environment - what do you see, hear, feel?",
+        "What would help you feel more centered today?"
+      ]
+    },
+    {
+      id: 'connection',
+      name: 'Human Connection',
+      description: 'Explore relationships and meaningful connections',
+      emotion: 'supportive',
+      color: 'green',
+      icon: '💚',
+      prompts: [
+        "Tell me about someone who makes you feel understood",
+        "How do you like to show care for others?",
+        "What makes you feel most connected to people?",
+        "Share a meaningful conversation you've had recently"
+      ]
+    },
+    {
+      id: 'creativity',
+      name: 'Creative Expression',
+      description: 'Explore imagination, art, and creative outlets',
+      emotion: 'joyful',
+      color: 'orange',
+      icon: '🎨',
+      prompts: [
+        "What creative activities bring you alive?",
+        "Tell me about an idea that excites you",
+        "How do you express your unique perspective?",
+        "What would you create if you had unlimited resources?"
+      ]
+    }
+  ]
+
+  // Generate ambient sounds based on current mood
+  const createAmbientSound = (emotion: string): AmbientSound[] => {
+    switch (emotion) {
+      case 'joyful':
+        return [
+          { id: 'joy-1', name: 'Bright Harmony', emotion: 'joyful', frequency: 432, volume: 0.1, type: 'sine' },
+          { id: 'joy-2', name: 'Gentle Sparkle', emotion: 'joyful', frequency: 528, volume: 0.08, type: 'triangle' }
+        ]
+      case 'concerned':
+        return [
+          { id: 'concern-1', name: 'Deep Presence', emotion: 'concerned', frequency: 256, volume: 0.12, type: 'sine' },
+          { id: 'concern-2', name: 'Grounding Tone', emotion: 'concerned', frequency: 174, volume: 0.1, type: 'triangle' }
+        ]
+      case 'contemplative':
+        return [
+          { id: 'contemp-1', name: 'Thoughtful Resonance', emotion: 'contemplative', frequency: 396, volume: 0.1, type: 'sine' },
+          { id: 'contemp-2', name: 'Reflective Space', emotion: 'contemplative', frequency: 285, volume: 0.08, type: 'triangle' }
+        ]
+      case 'supportive':
+        return [
+          { id: 'support-1', name: 'Healing Frequency', emotion: 'supportive', frequency: 417, volume: 0.11, type: 'sine' },
+          { id: 'support-2', name: 'Nurturing Tone', emotion: 'supportive', frequency: 639, volume: 0.09, type: 'triangle' }
+        ]
+      default: // calm
+        return [
+          { id: 'calm-1', name: 'Peaceful Flow', emotion: 'calm', frequency: 528, volume: 0.08, type: 'sine' },
+          { id: 'calm-2', name: 'Centered Breath', emotion: 'calm', frequency: 432, volume: 0.06, type: 'triangle' }
+        ]
+    }
+  }
+
+  // Initialize audio context
+  const initializeAudio = () => {
+    try {
+      if (!audioContextRef.current) {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+        if (AudioContext) {
+          audioContextRef.current = new AudioContext()
+        }
+      }
+    } catch (error) {
+      console.warn('Audio context initialization failed:', error)
+    }
+  }
+
+  // Start ambient sounds
+  const startAmbientSounds = (emotion: string) => {
+    if (!ambientEnabled) return
+    
+    try {
+      initializeAudio()
+      if (!audioContextRef.current) return
+
+      // Stop existing sounds
+      stopAmbientSounds()
+
+      const sounds = createAmbientSound(emotion)
+      
+      sounds.forEach(sound => {
+        try {
+          const oscillator = audioContextRef.current!.createOscillator()
+          const gainNode = audioContextRef.current!.createGain()
+          
+          oscillator.type = sound.type
+          oscillator.frequency.setValueAtTime(sound.frequency, audioContextRef.current!.currentTime)
+          
+          gainNode.gain.setValueAtTime(0, audioContextRef.current!.currentTime)
+          gainNode.gain.linearRampToValueAtTime(sound.volume, audioContextRef.current!.currentTime + 2)
+          
+          oscillator.connect(gainNode)
+          gainNode.connect(audioContextRef.current!.destination)
+          
+          oscillator.start()
+          
+          oscillatorsRef.current[sound.id] = oscillator
+          gainNodesRef.current[sound.id] = gainNode
+        } catch (error) {
+          console.warn('Failed to create oscillator:', error)
+        }
+      })
+    } catch (error) {
+      console.warn('Failed to start ambient sounds:', error)
+    }
+  }
+
+  // Stop ambient sounds
+  const stopAmbientSounds = () => {
+    Object.values(oscillatorsRef.current).forEach(oscillator => {
+      try {
+        oscillator.stop()
+      } catch (e) {
+        // Oscillator already stopped
+      }
+    })
+    
+    oscillatorsRef.current = {}
+    gainNodesRef.current = {}
+  }
+
+  // Update ambient sounds when mood changes
+  useEffect(() => {
+    if (ambientEnabled) {
+      startAmbientSounds(currentMood)
+    }
+    return () => {
+      if (!ambientEnabled) {
+        stopAmbientSounds()
+      }
+    }
+  }, [currentMood, ambientEnabled])
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      stopAmbientSounds()
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close()
+      }
+    }
+  }, [])
+
+  // Toggle ambient sounds
+  const toggleAmbientSounds = () => {
+    try {
+      setAmbientEnabled(!ambientEnabled)
+      if (!ambientEnabled) {
+        // User needs to interact with page for audio to work
+        if (audioContextRef.current?.state === 'suspended') {
+          audioContextRef.current.resume()
+        }
+        startAmbientSounds(currentMood)
+      } else {
+        stopAmbientSounds()
+      }
+    } catch (error) {
+      console.warn('Failed to toggle ambient sounds:', error)
+    }
+  }
+
+  // Apply conversation theme
+  const applyTheme = (theme: ConversationTheme) => {
+    setSelectedTheme(theme)
+    setCurrentMood(theme.emotion)
+    setShowThemes(false)
+    
+    // Add a theme message to the conversation
+    const themeMessage: Message = {
+      id: `theme-${Date.now()}`,
+      text: `Let's explore ${theme.name.toLowerCase()}. ${theme.description}`,
+      sender: 'avatar',
+      timestamp: new Date(),
+      mood: theme.emotion
+    }
+    
+    setMessages(prev => [...prev, themeMessage])
+  }
+
+  // Get theme prompt
+  const getThemePrompt = (theme: ConversationTheme): string => {
+    const randomPrompt = theme.prompts[Math.floor(Math.random() * theme.prompts.length)]
+    return randomPrompt
+  }
+
+  // Suggest theme-based conversation starter
+  const suggestThemePrompt = () => {
+    if (!selectedTheme) return
+    
+    const prompt = getThemePrompt(selectedTheme)
+    const themePromptMessage: Message = {
+      id: `prompt-${Date.now()}`,
+      text: prompt,
+      sender: 'avatar',
+      timestamp: new Date(),
+      mood: selectedTheme.emotion
+    }
+    
+    setMessages(prev => [...prev, themePromptMessage])
+  }
 
   const analyzeMood = async (text: string): Promise<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'> => {
     try {
@@ -319,6 +613,11 @@ function App() {
     
     if (memory.totalConversations > 0) {
       contextualInfo += `Total conversations: ${memory.totalConversations}. `
+    }
+    
+    // Add theme context if active
+    if (selectedTheme) {
+      contextualInfo += `Current conversation theme: ${selectedTheme.name} - ${selectedTheme.description}. Focus on this theme while maintaining natural conversation flow. `
     }
     
     const basePrompt = `You are an empathetic, caring AI companion with a gentle, understanding nature. ${contextualInfo}Use this context to respond with deeper understanding and continuity. Respond to: "${userMessage}"`
@@ -590,11 +889,29 @@ function App() {
             </div>
             
             {/* Status Indicator */}
-            <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${isTyping ? 'bg-accent animate-pulse' : moodConfig.eyeColor}`}></div>
-              <span className="text-sm text-muted-foreground font-medium">
-                {isTyping ? 'Thinking...' : `${currentMood.charAt(0).toUpperCase() + currentMood.slice(1)} • Listening`}
-              </span>
+            <div className="flex flex-col items-center space-y-2">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${isTyping ? 'bg-accent animate-pulse' : moodConfig.eyeColor}`}></div>
+                <span className="text-sm text-muted-foreground font-medium">
+                  {isTyping ? 'Thinking...' : `${currentMood.charAt(0).toUpperCase() + currentMood.slice(1)} • Listening`}
+                </span>
+              </div>
+              
+              {/* Ambient Sound Status */}
+              {ambientEnabled && (
+                <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+                  <span>Ambient sounds active</span>
+                </div>
+              )}
+              
+              {/* Active Theme Display */}
+              {selectedTheme && (
+                <div className="flex items-center space-x-2 text-xs text-muted-foreground bg-card/50 px-3 py-1 rounded-full border border-accent/20">
+                  <span>{selectedTheme.icon}</span>
+                  <span>{selectedTheme.name}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -627,6 +944,24 @@ function App() {
                           {memory.totalConversations} talks
                         </span>
                       )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={toggleAmbientSounds}
+                        className={`text-muted-foreground hover:text-foreground ${ambientEnabled ? 'bg-accent/20 text-accent' : ''}`}
+                        title={ambientEnabled ? 'Disable ambient sounds' : 'Enable ambient sounds'}
+                      >
+                        {ambientEnabled ? <SpeakerHigh size={16} /> : <SpeakerX size={16} />}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowThemes(!showThemes)}
+                        className={`text-muted-foreground hover:text-foreground ${showThemes ? 'bg-accent/20 text-accent' : ''}`}
+                        title="Conversation themes"
+                      >
+                        <Palette size={16} />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -680,6 +1015,85 @@ function App() {
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">Emotional patterns over time</p>
                   </div>
+                )}
+                
+                {/* Theme selection panel */}
+                {activeTab === 'chat' && showThemes && (
+                  <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-foreground">Conversation Themes</h3>
+                      {selectedTheme && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={suggestThemePrompt}
+                          className="text-xs"
+                        >
+                          <Sparkle size={12} className="mr-1" />
+                          Suggest prompt
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {selectedTheme && (
+                      <div className="mb-4 p-3 rounded-lg bg-card border border-accent/20">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-lg">{selectedTheme.icon}</span>
+                          <h4 className="text-sm font-medium">{selectedTheme.name}</h4>
+                          <Badge variant="outline" className={`text-xs ${
+                            selectedTheme.emotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                            selectedTheme.emotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                            selectedTheme.emotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                            selectedTheme.emotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                            'border-slate-400/50 text-slate-700'
+                          }`}>
+                            {selectedTheme.emotion}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{selectedTheme.description}</p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedTheme(null)}
+                          className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Clear theme
+                        </Button>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-1 gap-2">
+                      {conversationThemes.map((theme) => (
+                        <Button
+                          key={theme.id}
+                          variant="ghost"
+                          onClick={() => applyTheme(theme)}
+                          className={`justify-start h-auto p-3 text-left ${
+                            selectedTheme?.id === theme.id ? 'bg-accent/20 border border-accent/30' : 'hover:bg-card'
+                          }`}
+                        >
+                          <div className="flex items-start space-x-3 w-full">
+                            <span className="text-lg mt-0.5">{theme.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <p className="text-sm font-medium truncate">{theme.name}</p>
+                                <Badge variant="outline" className={`text-xs ${
+                                  theme.emotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                                  theme.emotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                                  theme.emotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                                  theme.emotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                                  'border-slate-400/50 text-slate-700'
+                                }`}>
+                                  {theme.emotion}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{theme.description}</p>
+                            </div>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  </Card>
                 )}
                 
                 {/* Memory Insights Panel - only show in chat tab */}
@@ -738,7 +1152,20 @@ function App() {
                     {messages.length === 0 ? (
                       <div className="text-center py-12">
                         <p className="text-muted-foreground mb-2">Welcome</p>
-                        <p className="text-sm text-muted-foreground">I'm here to listen and understand. What would you like to talk about?</p>
+                        <p className="text-sm text-muted-foreground mb-4">I'm here to listen and understand. What would you like to talk about?</p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">💡 Try conversation themes or ambient sounds from the toolbar above</p>
+                          <div className="flex justify-center space-x-1">
+                            <Badge variant="outline" className="text-xs">
+                              <Palette size={10} className="mr-1" />
+                              Themes
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              <SpeakerHigh size={10} className="mr-1" />
+                              Sounds
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       messages.map((message) => (
