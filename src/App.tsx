@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle } from "@phosphor-icons/react"
+import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle, BookOpen, Download, Plus, FileText, Export } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -63,6 +64,18 @@ interface AmbientSound {
   type: 'sine' | 'triangle' | 'sawtooth' | 'square'
 }
 
+interface JournalEntry {
+  id: string
+  title: string
+  content: string
+  emotion: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+  intensity: number
+  tags: string[]
+  conversationContext?: string[]
+  timestamp: Date | string
+  aiInsight?: string
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("conversation-history", [])
   const [memory, setMemory] = useKV<ConversationMemory>("emotional-memory", {
@@ -72,6 +85,7 @@ function App() {
     lastUpdated: new Date(),
     insights: []
   })
+  const [journalEntries, setJournalEntries] = useKV<JournalEntry[]>("journal-entries", [])
   const [inputText, setInputText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentMood, setCurrentMood] = useState<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'>('calm')
@@ -81,6 +95,16 @@ function App() {
   const [selectedTheme, setSelectedTheme] = useState<ConversationTheme | null>(null)
   const [ambientEnabled, setAmbientEnabled] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
+  const [showJournalForm, setShowJournalForm] = useState(false)
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null)
+  const [journalForm, setJournalForm] = useState({
+    title: '',
+    content: '',
+    emotion: 'calm' as const,
+    intensity: 3,
+    tags: [] as string[],
+    tagInput: ''
+  })
 
   // Audio context and oscillators for ambient sounds
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -525,6 +549,207 @@ function App() {
     }
   }
 
+  // Generate AI insight for journal entry
+  const generateJournalInsight = async (content: string, emotion: string): Promise<string> => {
+    try {
+      const prompt = spark.llmPrompt`
+        Based on this journal entry about ${emotion} feelings:
+        "${content}"
+        
+        Provide a gentle, supportive insight or reflection (2-3 sentences) that offers:
+        1. Validation of their feelings
+        2. A thoughtful observation or connection
+        3. Gentle encouragement or perspective
+        
+        Keep it warm, empathetic, and focused on growth or self-compassion.
+      `
+      
+      const insight = await spark.llm(prompt, "gpt-4o")
+      return insight
+    } catch (error) {
+      return "Thank you for sharing your thoughts. Every reflection is a step toward deeper self-understanding."
+    }
+  }
+
+  // Create or update journal entry
+  const saveJournalEntry = async () => {
+    if (!journalForm.title.trim() || !journalForm.content.trim()) return
+
+    const entryData = {
+      id: editingEntry?.id || `journal-${Date.now()}`,
+      title: journalForm.title.trim(),
+      content: journalForm.content.trim(),
+      emotion: journalForm.emotion,
+      intensity: journalForm.intensity,
+      tags: journalForm.tags,
+      timestamp: editingEntry?.timestamp || new Date(),
+      conversationContext: memory.keywords ? 
+        Object.entries(memory.keywords)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([word]) => word) : []
+    }
+
+    // Generate AI insight
+    const aiInsight = await generateJournalInsight(entryData.content, entryData.emotion)
+    
+    const newEntry: JournalEntry = {
+      ...entryData,
+      aiInsight
+    }
+
+    if (editingEntry) {
+      setJournalEntries(current => 
+        current.map(entry => entry.id === editingEntry.id ? newEntry : entry)
+      )
+    } else {
+      setJournalEntries(current => [newEntry, ...current])
+    }
+
+    // Reset form
+    setJournalForm({
+      title: '',
+      content: '',
+      emotion: 'calm',
+      intensity: 3,
+      tags: [],
+      tagInput: ''
+    })
+    setEditingEntry(null)
+    setShowJournalForm(false)
+  }
+
+  // Delete journal entry
+  const deleteJournalEntry = (id: string) => {
+    setJournalEntries(current => current.filter(entry => entry.id !== id))
+  }
+
+  // Start editing journal entry
+  const startEditingEntry = (entry: JournalEntry) => {
+    setEditingEntry(entry)
+    setJournalForm({
+      title: entry.title,
+      content: entry.content,
+      emotion: entry.emotion,
+      intensity: entry.intensity,
+      tags: entry.tags,
+      tagInput: ''
+    })
+    setShowJournalForm(true)
+  }
+
+  // Add tag to journal form
+  const addTag = () => {
+    const tag = journalForm.tagInput.trim().toLowerCase()
+    if (tag && !journalForm.tags.includes(tag)) {
+      setJournalForm(prev => ({
+        ...prev,
+        tags: [...prev.tags, tag],
+        tagInput: ''
+      }))
+    }
+  }
+
+  // Remove tag from journal form
+  const removeTag = (tagToRemove: string) => {
+    setJournalForm(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }))
+  }
+
+  // Export journal as JSON
+  const exportJournal = () => {
+    const exportData = {
+      entries: journalEntries,
+      emotionalPatterns: memory.patterns,
+      insights: memory.insights,
+      totalConversations: memory.totalConversations,
+      exportDate: new Date().toISOString(),
+      summary: {
+        totalEntries: journalEntries.length,
+        emotionBreakdown: journalEntries.reduce((acc, entry) => {
+          acc[entry.emotion] = (acc[entry.emotion] || 0) + 1
+          return acc
+        }, {} as Record<string, number>),
+        averageIntensity: journalEntries.length > 0 ? 
+          journalEntries.reduce((sum, entry) => sum + entry.intensity, 0) / journalEntries.length : 0,
+        dateRange: journalEntries.length > 0 ? {
+          earliest: journalEntries[journalEntries.length - 1]?.timestamp,
+          latest: journalEntries[0]?.timestamp
+        } : null
+      }
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `emotional-journal-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // Export journal as readable text
+  const exportJournalAsText = () => {
+    let textContent = `PERSONAL EMOTIONAL JOURNAL\n`
+    textContent += `=========================\n\n`
+    textContent += `Export Date: ${new Date().toLocaleDateString()}\n`
+    textContent += `Total Entries: ${journalEntries.length}\n`
+    textContent += `Total Conversations: ${memory.totalConversations}\n\n`
+
+    if (journalEntries.length > 0) {
+      textContent += `JOURNAL ENTRIES\n`
+      textContent += `---------------\n\n`
+
+      [...journalEntries]
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .forEach((entry, index) => {
+          textContent += `${index + 1}. ${entry.title}\n`
+          textContent += `Date: ${new Date(entry.timestamp).toLocaleDateString()}\n`
+          textContent += `Emotion: ${entry.emotion} (intensity: ${entry.intensity}/5)\n`
+          if (entry.tags.length > 0) {
+            textContent += `Tags: ${entry.tags.join(', ')}\n`
+          }
+          textContent += `\nContent:\n${entry.content}\n`
+          if (entry.aiInsight) {
+            textContent += `\nAI Insight:\n${entry.aiInsight}\n`
+          }
+          textContent += `\n${'-'.repeat(50)}\n\n`
+        })
+    }
+
+    // Add emotional patterns summary
+    if (memory.patterns.length > 0) {
+      textContent += `EMOTIONAL PATTERNS SUMMARY\n`
+      textContent += `--------------------------\n\n`
+      
+      const emotionCounts = memory.patterns.reduce((acc, pattern) => {
+        acc[pattern.dominantEmotion] = (acc[pattern.dominantEmotion] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+
+      Object.entries(emotionCounts)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([emotion, count]) => {
+          textContent += `${emotion}: ${count} days\n`
+        })
+      textContent += `\n`
+    }
+
+    const blob = new Blob([textContent], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `emotional-journal-${new Date().toISOString().split('T')[0]}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   // Auto-generate insights when enough data is available
   useEffect(() => {
     if (memory.patterns.length >= 3 && memory.insights.length === 0) {
@@ -923,8 +1148,9 @@ function App() {
             {/* Navigation Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
               <div className="p-6 border-b border-border/50">
-                <TabsList className="grid w-full grid-cols-4 mb-4">
+                <TabsList className="grid w-full grid-cols-5 mb-4">
                   <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
+                  <TabsTrigger value="journal" className="text-xs">Journal</TabsTrigger>
                   <TabsTrigger value="insights" className="text-xs">Insights</TabsTrigger>
                   <TabsTrigger value="calendar" className="text-xs">Calendar</TabsTrigger>
                   <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
@@ -974,6 +1200,201 @@ function App() {
                   </div>
                 )}
                 
+                {activeTab === 'journal' && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                          <BookOpen size={20} />
+                          Personal Journal
+                        </h1>
+                        <p className="text-sm text-muted-foreground mt-1">Reflect on your emotional journey</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {journalEntries.length > 0 && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={exportJournalAsText}
+                              className="text-muted-foreground hover:text-foreground"
+                              title="Export as text file"
+                            >
+                              <FileText size={16} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={exportJournal}
+                              className="text-muted-foreground hover:text-foreground"
+                              title="Export as JSON"
+                            >
+                              <Download size={16} />
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingEntry(null)
+                            setJournalForm({
+                              title: '',
+                              content: '',
+                              emotion: 'calm',
+                              intensity: 3,
+                              tags: [],
+                              tagInput: ''
+                            })
+                            setShowJournalForm(!showJournalForm)
+                          }}
+                          className={`text-muted-foreground hover:text-foreground ${showJournalForm ? 'bg-accent/20 text-accent' : ''}`}
+                        >
+                          {showJournalForm ? <X size={16} /> : <Plus size={16} />}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Journal Entry Form */}
+                    {showJournalForm && (
+                      <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                        <h3 className="text-sm font-medium text-foreground mb-3">
+                          {editingEntry ? 'Edit Entry' : 'New Journal Entry'}
+                        </h3>
+                        
+                        <div className="space-y-4">
+                          {/* Title */}
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Title</label>
+                            <Input
+                              value={journalForm.title}
+                              onChange={(e) => setJournalForm(prev => ({ ...prev, title: e.target.value }))}
+                              placeholder="Give your entry a title..."
+                              className="bg-background border-accent/30"
+                            />
+                          </div>
+                          
+                          {/* Content */}
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Your thoughts</label>
+                            <Textarea
+                              value={journalForm.content}
+                              onChange={(e) => setJournalForm(prev => ({ ...prev, content: e.target.value }))}
+                              placeholder="What's on your mind? How are you feeling? What insights have you gained?"
+                              className="bg-background border-accent/30 resize-none"
+                              rows={4}
+                            />
+                          </div>
+                          
+                          {/* Emotion and Intensity */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Emotion</label>
+                              <select
+                                value={journalForm.emotion}
+                                onChange={(e) => setJournalForm(prev => ({ ...prev, emotion: e.target.value as any }))}
+                                className="w-full p-2 text-sm bg-background border border-accent/30 rounded-md focus:outline-none focus:border-accent"
+                              >
+                                <option value="calm">Calm</option>
+                                <option value="joyful">Joyful</option>
+                                <option value="concerned">Concerned</option>
+                                <option value="contemplative">Contemplative</option>
+                                <option value="supportive">Supportive</option>
+                              </select>
+                            </div>
+                            
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">
+                                Intensity ({journalForm.intensity}/5)
+                              </label>
+                              <input
+                                type="range"
+                                min="1"
+                                max="5"
+                                value={journalForm.intensity}
+                                onChange={(e) => setJournalForm(prev => ({ ...prev, intensity: parseInt(e.target.value) }))}
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Tags */}
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Tags</label>
+                            <div className="flex space-x-2 mb-2">
+                              <Input
+                                value={journalForm.tagInput}
+                                onChange={(e) => setJournalForm(prev => ({ ...prev, tagInput: e.target.value }))}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    addTag()
+                                  }
+                                }}
+                                placeholder="Add a tag..."
+                                className="flex-1 bg-background border-accent/30"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={addTag}
+                                disabled={!journalForm.tagInput.trim()}
+                                className="bg-accent hover:bg-accent/90"
+                              >
+                                Add
+                              </Button>
+                            </div>
+                            
+                            {journalForm.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {journalForm.tags.map((tag) => (
+                                  <Badge
+                                    key={tag}
+                                    variant="secondary"
+                                    className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                                    onClick={() => removeTag(tag)}
+                                  >
+                                    {tag} ×
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Actions */}
+                          <div className="flex space-x-2 pt-2">
+                            <Button
+                              size="sm"
+                              onClick={saveJournalEntry}
+                              disabled={!journalForm.title.trim() || !journalForm.content.trim()}
+                              className="bg-accent hover:bg-accent/90"
+                            >
+                              {editingEntry ? 'Update Entry' : 'Save Entry'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setShowJournalForm(false)
+                                setEditingEntry(null)
+                                setJournalForm({
+                                  title: '',
+                                  content: '',
+                                  emotion: 'calm',
+                                  intensity: 3,
+                                  tags: [],
+                                  tagInput: ''
+                                })
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                )}
+                
                 {activeTab === 'insights' && (
                   <div>
                     <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
@@ -995,6 +1416,7 @@ function App() {
                       )}
                     </div>
                   </div>
+                )}
                 )}
                 
                 {activeTab === 'calendar' && (
@@ -1254,6 +1676,148 @@ function App() {
                     </Button>
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="journal" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1 p-6">
+                  {journalEntries.length === 0 ? (
+                    <div className="text-center py-12">
+                      <BookOpen size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-2">Your journal is empty</p>
+                      <p className="text-sm text-muted-foreground mb-4">Start writing to capture your thoughts and emotional journey</p>
+                      <Button
+                        onClick={() => setShowJournalForm(true)}
+                        className="bg-accent hover:bg-accent/90"
+                      >
+                        <Plus size={16} className="mr-2" />
+                        Write First Entry
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Journal Stats */}
+                      <Card className="p-4 bg-muted/30">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <p className="text-lg font-semibold">{journalEntries.length}</p>
+                            <p className="text-xs text-muted-foreground">Entries</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold">
+                              {journalEntries.length > 0 ? 
+                                Math.round(journalEntries.reduce((sum, entry) => sum + entry.intensity, 0) / journalEntries.length * 10) / 10 
+                                : 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Avg Intensity</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold">
+                              {journalEntries.length > 0 ? 
+                                Object.entries(
+                                  journalEntries.reduce((acc, entry) => {
+                                    acc[entry.emotion] = (acc[entry.emotion] || 0) + 1
+                                    return acc
+                                  }, {} as Record<string, number>)
+                                ).sort((a, b) => b[1] - a[1])[0]?.[0] || 'none'
+                                : 'none'
+                              }
+                            </p>
+                            <p className="text-xs text-muted-foreground">Top Emotion</p>
+                          </div>
+                        </div>
+                      </Card>
+
+                      {/* Journal Entries List */}
+                      <div className="space-y-4">
+                        {journalEntries
+                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                          .map((entry) => (
+                            <Card key={entry.id} className="p-4 border-accent/20 hover:border-accent/40 transition-colors">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <h3 className="font-medium text-sm text-foreground mb-1">{entry.title}</h3>
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-xs ${ 
+                                        entry.emotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                                        entry.emotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                                        entry.emotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                                        entry.emotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                                        'border-slate-400/50 text-slate-700'
+                                      }`}
+                                    >
+                                      {entry.emotion}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      Intensity: {entry.intensity}/5
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(entry.timestamp).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => startEditingEntry(entry)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => deleteJournalEntry(entry.id)}
+                                    className="text-muted-foreground hover:text-destructive"
+                                  >
+                                    <X size={12} />
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                                {entry.content}
+                              </p>
+                              
+                              {entry.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {entry.tags.map((tag) => (
+                                    <Badge key={tag} variant="secondary" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {entry.aiInsight && (
+                                <div className="border-l-2 border-accent/50 pl-3 bg-accent/5 rounded-r-md p-2">
+                                  <p className="text-xs text-muted-foreground mb-1">AI Insight</p>
+                                  <p className="text-sm text-accent-foreground leading-relaxed">
+                                    {entry.aiInsight}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {entry.conversationContext && entry.conversationContext.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-border/30">
+                                  <p className="text-xs text-muted-foreground mb-1">Related conversation themes</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {entry.conversationContext.map((context) => (
+                                      <Badge key={context} variant="outline" className="text-xs">
+                                        {context}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </Card>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </ScrollArea>
               </TabsContent>
 
               <TabsContent value="insights" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
