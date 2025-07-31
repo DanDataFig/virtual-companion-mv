@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Send, Mic, ChartLine, X, Calendar, Clock } from "@phosphor-icons/react"
+import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -25,11 +25,23 @@ interface EmotionalPattern {
   context: string[]
 }
 
+interface EmotionalInsight {
+  id: string
+  type: 'pattern' | 'trend' | 'recommendation' | 'reflection'
+  title: string
+  description: string
+  confidence: number
+  timestamp: Date
+  actionable?: boolean
+  relatedEmotions: string[]
+}
+
 interface ConversationMemory {
   patterns: EmotionalPattern[]
   keywords: { [key: string]: number }
   totalConversations: number
   lastUpdated: Date
+  insights: EmotionalInsight[]
 }
 
 function App() {
@@ -38,13 +50,15 @@ function App() {
     patterns: [],
     keywords: {},
     totalConversations: 0,
-    lastUpdated: new Date()
+    lastUpdated: new Date(),
+    insights: []
   })
   const [inputText, setInputText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentMood, setCurrentMood] = useState<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'>('calm')
   const [showMemoryInsights, setShowMemoryInsights] = useState(false)
   const [activeTab, setActiveTab] = useState('chat')
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false)
 
   const analyzeMood = async (text: string): Promise<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'> => {
     try {
@@ -60,7 +74,169 @@ function App() {
     }
   }
 
-  const updateEmotionalMemory = async (userMessage: string, userEmotion: string, avatarResponse: string) => {
+  const generateEmotionalInsights = async () => {
+    if (memory.patterns.length < 3) return // Need at least 3 days of data
+    
+    setIsGeneratingInsights(true)
+    try {
+      // Prepare data for analysis
+      const recentPatterns = memory.patterns.slice(0, 14) // Last 2 weeks
+      const emotionFrequency = {}
+      const topicFrequency = { ...memory.keywords }
+      
+      recentPatterns.forEach(pattern => {
+        Object.entries(pattern.emotions).forEach(([emotion, count]) => {
+          emotionFrequency[emotion] = (emotionFrequency[emotion] || 0) + count
+        })
+      })
+      
+      // Create context for AI analysis
+      const analysisData = {
+        recentEmotions: Object.entries(emotionFrequency).sort((a, b) => b[1] - a[1]),
+        frequentTopics: Object.entries(topicFrequency).sort((a, b) => b[1] - a[1]).slice(0, 10),
+        totalConversations: memory.totalConversations,
+        daysTracked: recentPatterns.length,
+        emotionalTrends: recentPatterns.map(p => ({
+          date: p.date,
+          dominant: p.dominantEmotion,
+          intensity: p.intensity
+        }))
+      }
+      
+      // Generate different types of insights
+      const insights: EmotionalInsight[] = []
+      
+      // Pattern Analysis
+      const patternPrompt = spark.llmPrompt`
+        Analyze these emotional patterns over ${analysisData.daysTracked} days:
+        Emotions: ${JSON.stringify(analysisData.recentEmotions)}
+        Topics: ${JSON.stringify(analysisData.frequentTopics)}
+        
+        Identify one significant emotional pattern. Respond with JSON:
+        {
+          "title": "Brief pattern name",
+          "description": "2-3 sentence explanation of the pattern",
+          "confidence": number 1-100,
+          "relatedEmotions": ["emotion1", "emotion2"]
+        }
+      `
+      
+      const patternResult = await spark.llm(patternPrompt, "gpt-4o", true)
+      const patternData = JSON.parse(patternResult)
+      
+      insights.push({
+        id: `pattern-${Date.now()}`,
+        type: 'pattern',
+        title: patternData.title,
+        description: patternData.description,
+        confidence: patternData.confidence,
+        timestamp: new Date(),
+        relatedEmotions: patternData.relatedEmotions
+      })
+      
+      // Trend Analysis
+      const trendPrompt = spark.llmPrompt`
+        Analyze emotional trends from this timeline:
+        ${JSON.stringify(analysisData.emotionalTrends)}
+        
+        Identify one emotional trend (improving, declining, stable, cyclical). Respond with JSON:
+        {
+          "title": "Brief trend description",
+          "description": "2-3 sentence explanation of the trend and what it might indicate",
+          "confidence": number 1-100,
+          "relatedEmotions": ["emotion1", "emotion2"]
+        }
+      `
+      
+      const trendResult = await spark.llm(trendPrompt, "gpt-4o", true)
+      const trendData = JSON.parse(trendResult)
+      
+      insights.push({
+        id: `trend-${Date.now()}`,
+        type: 'trend',
+        title: trendData.title,
+        description: trendData.description,
+        confidence: trendData.confidence,
+        timestamp: new Date(),
+        relatedEmotions: trendData.relatedEmotions
+      })
+      
+      // Recommendation
+      const recommendationPrompt = spark.llmPrompt`
+        Based on these emotional patterns and frequent topics:
+        Emotions: ${JSON.stringify(analysisData.recentEmotions.slice(0, 3))}
+        Topics: ${JSON.stringify(analysisData.frequentTopics.slice(0, 5))}
+        
+        Suggest one gentle, actionable recommendation for emotional wellbeing. Respond with JSON:
+        {
+          "title": "Brief recommendation title",
+          "description": "2-3 sentence supportive suggestion that's specific and actionable",
+          "confidence": number 1-100,
+          "relatedEmotions": ["emotion1", "emotion2"]
+        }
+      `
+      
+      const recommendationResult = await spark.llm(recommendationPrompt, "gpt-4o", true)
+      const recommendationData = JSON.parse(recommendationResult)
+      
+      insights.push({
+        id: `recommendation-${Date.now()}`,
+        type: 'recommendation',
+        title: recommendationData.title,
+        description: recommendationData.description,
+        confidence: recommendationData.confidence,
+        timestamp: new Date(),
+        actionable: true,
+        relatedEmotions: recommendationData.relatedEmotions
+      })
+      
+      // Reflection
+      const reflectionPrompt = spark.llmPrompt`
+        Create a gentle reflection based on this emotional journey:
+        Dominant emotions: ${analysisData.recentEmotions.slice(0, 2).map(([emotion]) => emotion).join(', ')}
+        Key topics: ${analysisData.frequentTopics.slice(0, 3).map(([topic]) => topic).join(', ')}
+        
+        Write an empathetic reflection about growth and self-awareness. Respond with JSON:
+        {
+          "title": "Reflection title",
+          "description": "2-3 sentence compassionate reflection on their emotional journey",
+          "confidence": number 1-100,
+          "relatedEmotions": ["emotion1", "emotion2"]
+        }
+      `
+      
+      const reflectionResult = await spark.llm(reflectionPrompt, "gpt-4o", true)
+      const reflectionData = JSON.parse(reflectionResult)
+      
+      insights.push({
+        id: `reflection-${Date.now()}`,
+        type: 'reflection',
+        title: reflectionData.title,
+        description: reflectionData.description,
+        confidence: reflectionData.confidence,
+        timestamp: new Date(),
+        relatedEmotions: reflectionData.relatedEmotions
+      })
+      
+      // Update memory with new insights (keep only last 10)
+      setMemory(currentMemory => ({
+        ...currentMemory,
+        insights: [...insights, ...currentMemory.insights].slice(0, 10)
+      }))
+      
+    } catch (error) {
+      console.log('Insight generation failed:', error)
+    } finally {
+      setIsGeneratingInsights(false)
+    }
+  }
+
+  // Auto-generate insights when enough data is available
+  useEffect(() => {
+    if (memory.patterns.length >= 3 && memory.insights.length === 0) {
+      generateEmotionalInsights()
+    }
+  }, [memory.patterns.length])
     try {
       const today = new Date().toISOString().split('T')[0]
       
@@ -120,7 +296,7 @@ function App() {
     }
   }
 
-  const getContextualPrompt = (userMessage: string) => {
+  const updateEmotionalMemory = async (userMessage: string, userEmotion: string, avatarResponse: string) => {
     // Get recent emotional patterns for context
     const recentPatterns = memory.patterns.slice(0, 7) // Last week
     const frequentKeywords = Object.entries(memory.keywords)
@@ -189,6 +365,11 @@ function App() {
       
       // Update emotional memory
       await updateEmotionalMemory(messageText, userEmotion, response)
+      
+      // Generate insights if we have enough data and haven't generated recently
+      if (memory.patterns.length >= 3 && memory.totalConversations % 5 === 0) {
+        setTimeout(() => generateEmotionalInsights(), 1000)
+      }
       
     } catch (error) {
       const fallbackMessage: Message = {
@@ -423,8 +604,9 @@ function App() {
             {/* Navigation Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
               <div className="p-6 border-b border-border/50">
-                <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsList className="grid w-full grid-cols-4 mb-4">
                   <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
+                  <TabsTrigger value="insights" className="text-xs">Insights</TabsTrigger>
                   <TabsTrigger value="calendar" className="text-xs">Calendar</TabsTrigger>
                   <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
                 </TabsList>
@@ -455,7 +637,29 @@ function App() {
                   </div>
                 )}
                 
-                {activeTab === 'calendar' && (
+                {activeTab === 'insights' && (
+                  <div>
+                    <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                      <Brain size={20} />
+                      AI Insights
+                    </h1>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-sm text-muted-foreground">AI-powered emotional pattern analysis</p>
+                      {memory.patterns.length >= 3 && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={generateEmotionalInsights}
+                          disabled={isGeneratingInsights}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          {isGeneratingInsights ? 'Analyzing...' : 'Refresh'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                   <div>
                     <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
                       <Calendar size={20} />
@@ -620,6 +824,154 @@ function App() {
                     </Button>
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="insights" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1 p-6">
+                  {memory.patterns.length < 3 ? (
+                    <div className="text-center py-12">
+                      <Brain size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-2">Building insights...</p>
+                      <p className="text-sm text-muted-foreground">AI insights will appear after a few conversations to identify meaningful patterns</p>
+                      <div className="mt-4">
+                        <Badge variant="secondary" className="text-xs">
+                          {memory.patterns.length}/3 conversations needed
+                        </Badge>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* AI Insights Header */}
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium">Emotional Intelligence</h3>
+                        <div className="flex items-center space-x-2">
+                          {isGeneratingInsights && (
+                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                              <div className="w-2 h-2 rounded-full bg-accent animate-bounce"></div>
+                              <span>Analyzing patterns...</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Insights List */}
+                      {memory.insights.length === 0 && !isGeneratingInsights ? (
+                        <Card className="p-6 text-center">
+                          <Lightbulb size={32} className="mx-auto text-muted-foreground mb-3" />
+                          <p className="text-muted-foreground mb-2">No insights yet</p>
+                          <Button
+                            size="sm"
+                            onClick={generateEmotionalInsights}
+                            className="bg-accent hover:bg-accent/90"
+                          >
+                            Generate Insights
+                          </Button>
+                        </Card>
+                      ) : (
+                        <div className="space-y-4">
+                          {memory.insights
+                            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                            .map((insight) => (
+                              <Card key={insight.id} className={`p-4 border-l-4 ${
+                                insight.type === 'pattern' ? 'border-l-purple-400 bg-purple-50/50' :
+                                insight.type === 'trend' ? 'border-l-blue-400 bg-blue-50/50' :
+                                insight.type === 'recommendation' ? 'border-l-green-400 bg-green-50/50' :
+                                'border-l-amber-400 bg-amber-50/50'
+                              }`}>
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center space-x-2">
+                                    {insight.type === 'pattern' && <Brain size={16} className="text-purple-600" />}
+                                    {insight.type === 'trend' && <TrendUp size={16} className="text-blue-600" />}
+                                    {insight.type === 'recommendation' && <Lightbulb size={16} className="text-green-600" />}
+                                    {insight.type === 'reflection' && <Heart size={16} className="text-amber-600" />}
+                                    <h4 className="font-medium text-sm">{insight.title}</h4>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      {Math.round(insight.confidence)}% confident
+                                    </Badge>
+                                    <Badge 
+                                      variant="secondary" 
+                                      className={`text-xs capitalize ${
+                                        insight.type === 'pattern' ? 'bg-purple-100 text-purple-700' :
+                                        insight.type === 'trend' ? 'bg-blue-100 text-blue-700' :
+                                        insight.type === 'recommendation' ? 'bg-green-100 text-green-700' :
+                                        'bg-amber-100 text-amber-700'
+                                      }`}
+                                    >
+                                      {insight.type}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                
+                                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                                  {insight.description}
+                                </p>
+                                
+                                {insight.relatedEmotions.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {insight.relatedEmotions.map((emotion) => (
+                                      <Badge key={emotion} variant="outline" className={`text-xs ${
+                                        emotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                                        emotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                                        emotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                                        emotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                                        'border-slate-400/50 text-slate-700'
+                                      }`}>
+                                        {emotion}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(insight.timestamp).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </Card>
+                            ))}
+                        </div>
+                      )}
+
+                      {/* Insights Summary */}
+                      {memory.insights.length > 0 && (
+                        <Card className="p-4 bg-muted/30">
+                          <h4 className="text-sm font-medium mb-3">Insight Summary</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Total Insights</p>
+                              <p className="text-lg font-semibold">{memory.insights.length}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Avg Confidence</p>
+                              <p className="text-lg font-semibold">
+                                {Math.round(memory.insights.reduce((acc, insight) => acc + insight.confidence, 0) / memory.insights.length)}%
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-3">
+                            <p className="text-xs text-muted-foreground mb-2">Insight Types</p>
+                            <div className="flex flex-wrap gap-1">
+                              {['pattern', 'trend', 'recommendation', 'reflection'].map(type => {
+                                const count = memory.insights.filter(i => i.type === type).length
+                                if (count === 0) return null
+                                return (
+                                  <Badge key={type} variant="secondary" className="text-xs">
+                                    {type} ({count})
+                                  </Badge>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        </Card>
+                      )}
+                    </div>
+                  )}
+                </ScrollArea>
               </TabsContent>
 
               <TabsContent value="calendar" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
