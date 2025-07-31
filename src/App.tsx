@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Send, Mic, ChartLine, X } from "@phosphor-icons/react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Send, Mic, ChartLine, X, Calendar, Clock } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -43,6 +44,7 @@ function App() {
   const [isTyping, setIsTyping] = useState(false)
   const [currentMood, setCurrentMood] = useState<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'>('calm')
   const [showMemoryInsights, setShowMemoryInsights] = useState(false)
+  const [activeTab, setActiveTab] = useState('chat')
 
   const analyzeMood = async (text: string): Promise<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'> => {
     try {
@@ -288,6 +290,70 @@ function App() {
     }
   }
 
+  // Helper function to get emotional intensity color
+  const getEmotionColor = (emotion: string, intensity: number) => {
+    const colors = {
+      joyful: `bg-amber-${Math.min(400 + intensity * 100, 600)}`,
+      concerned: `bg-blue-${Math.min(400 + intensity * 100, 600)}`,
+      contemplative: `bg-purple-${Math.min(400 + intensity * 100, 600)}`,
+      supportive: `bg-green-${Math.min(400 + intensity * 100, 600)}`,
+      calm: `bg-slate-${Math.min(400 + intensity * 100, 600)}`
+    }
+    return colors[emotion as keyof typeof colors] || 'bg-slate-400'
+  }
+
+  // Generate timeline data from emotional patterns
+  const getTimelineData = () => {
+    const sortedPatterns = [...memory.patterns].sort((a, b) => a.date.localeCompare(b.date))
+    return sortedPatterns.map(pattern => ({
+      ...pattern,
+      formattedDate: new Date(pattern.date).toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric' 
+      })
+    }))
+  }
+
+  // Generate calendar grid data
+  const getCalendarData = () => {
+    const today = new Date()
+    const currentMonth = today.getMonth()
+    const currentYear = today.getFullYear()
+    
+    // Get first day of month and number of days
+    const firstDay = new Date(currentYear, currentMonth, 1)
+    const lastDay = new Date(currentYear, currentMonth + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDayOfWeek = firstDay.getDay()
+    
+    // Create calendar grid
+    const calendarDays = []
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      calendarDays.push(null)
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      const pattern = memory.patterns.find(p => p.date === dateStr)
+      
+      calendarDays.push({
+        day,
+        date: dateStr,
+        pattern,
+        isToday: day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()
+      })
+    }
+    
+    return {
+      monthName: today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      days: calendarDays
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main Content Area */}
@@ -354,175 +420,377 @@ function App() {
         <div className="lg:flex-1 lg:max-w-md border-t lg:border-t-0 lg:border-l border-border/50 bg-card/50 backdrop-blur-sm">
           <div className="h-full flex flex-col">
             
-            {/* Header */}
-            <div className="p-6 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-semibold text-foreground">Conversation</h1>
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-sm text-muted-foreground">Share your thoughts freely</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {memory.totalConversations > 0 && (
-                    <span className="text-xs text-muted-foreground bg-accent/10 px-2 py-1 rounded-full">
-                      {memory.totalConversations} talks
-                    </span>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowMemoryInsights(!showMemoryInsights)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    {showMemoryInsights ? <X size={16} /> : <ChartLine size={16} />}
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Memory Insights Panel */}
-              {showMemoryInsights && memory.patterns.length > 0 && (
-                <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
-                  <h3 className="text-sm font-medium text-foreground mb-3">Emotional Journey</h3>
-                  <div className="space-y-3">
-                    {/* Recent Patterns */}
+            {/* Navigation Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+              <div className="p-6 border-b border-border/50">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
+                  <TabsTrigger value="calendar" className="text-xs">Calendar</TabsTrigger>
+                  <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
+                </TabsList>
+                
+                {activeTab === 'chat' && (
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-2">Recent emotional patterns:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {memory.patterns.slice(0, 7).map((pattern, index) => (
-                          <Badge 
-                            key={pattern.date} 
-                            variant="outline" 
-                            className={`text-xs ${
-                              pattern.dominantEmotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
-                              pattern.dominantEmotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
-                              pattern.dominantEmotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
-                              pattern.dominantEmotion === 'supportive' ? 'border-green-400/50 text-green-700' :
-                              'border-accent/50'
-                            }`}
-                          >
-                            {pattern.dominantEmotion}
-                          </Badge>
-                        ))}
+                      <h1 className="text-xl font-semibold text-foreground">Conversation</h1>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-sm text-muted-foreground">Share your thoughts freely</p>
                       </div>
                     </div>
-                    
-                    {/* Frequent Topics */}
-                    {Object.keys(memory.keywords).length > 0 && (
+                    <div className="flex items-center space-x-2">
+                      {memory.totalConversations > 0 && (
+                        <span className="text-xs text-muted-foreground bg-accent/10 px-2 py-1 rounded-full">
+                          {memory.totalConversations} talks
+                        </span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowMemoryInsights(!showMemoryInsights)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        {showMemoryInsights ? <X size={16} /> : <ChartLine size={16} />}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {activeTab === 'calendar' && (
+                  <div>
+                    <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                      <Calendar size={20} />
+                      Emotional Calendar
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-1">Your emotional journey by day</p>
+                  </div>
+                )}
+                
+                {activeTab === 'timeline' && (
+                  <div>
+                    <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                      <Clock size={20} />
+                      Timeline View
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-1">Emotional patterns over time</p>
+                  </div>
+                )}
+                
+                {/* Memory Insights Panel - only show in chat tab */}
+                {activeTab === 'chat' && showMemoryInsights && memory.patterns.length > 0 && (
+                  <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                    <h3 className="text-sm font-medium text-foreground mb-3">Emotional Journey</h3>
+                    <div className="space-y-3">
+                      {/* Recent Patterns */}
                       <div>
-                        <p className="text-xs text-muted-foreground mb-2">Common themes:</p>
+                        <p className="text-xs text-muted-foreground mb-2">Recent emotional patterns:</p>
                         <div className="flex flex-wrap gap-1">
-                          {Object.entries(memory.keywords)
-                            .sort((a, b) => b[1] - a[1])
-                            .slice(0, 5)
-                            .map(([keyword, count]) => (
-                              <Badge key={keyword} variant="secondary" className="text-xs">
-                                {keyword} ({count})
-                              </Badge>
-                            ))}
+                          {memory.patterns.slice(0, 7).map((pattern, index) => (
+                            <Badge 
+                              key={pattern.date} 
+                              variant="outline" 
+                              className={`text-xs ${
+                                pattern.dominantEmotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                                pattern.dominantEmotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                                pattern.dominantEmotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                                pattern.dominantEmotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                                'border-accent/50'
+                              }`}
+                            >
+                              {pattern.dominantEmotion}
+                            </Badge>
+                          ))}
                         </div>
+                      </div>
+                      
+                      {/* Frequent Topics */}
+                      {Object.keys(memory.keywords).length > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-2">Common themes:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(memory.keywords)
+                              .sort((a, b) => b[1] - a[1])
+                              .slice(0, 5)
+                              .map(([keyword, count]) => (
+                                <Badge key={keyword} variant="secondary" className="text-xs">
+                                  {keyword} ({count})
+                                </Badge>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* Tab Content */}
+              <TabsContent value="chat" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                {/* Messages */}
+                <ScrollArea className="flex-1 p-6">
+                  <div className="space-y-6">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-muted-foreground mb-2">Welcome</p>
+                        <p className="text-sm text-muted-foreground">I'm here to listen and understand. What would you like to talk about?</p>
+                      </div>
+                    ) : (
+                      messages.map((message) => (
+                        <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <Card className={`max-w-[80%] p-4 relative ${ 
+                            message.sender === 'user' 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-muted border-accent/20'
+                          }`}>
+                            <p className="text-sm leading-relaxed">{message.text}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className={`text-xs opacity-70 ${
+                                message.sender === 'user' ? 'text-primary-foreground' : 'text-muted-foreground'
+                              }`}>
+                                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              <div className="flex items-center space-x-2">
+                                {message.sender === 'user' && message.userEmotion && (
+                                  <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${
+                                    message.userEmotion === 'joyful' ? 'bg-amber-400 text-amber-100' :
+                                    message.userEmotion === 'concerned' ? 'bg-blue-500 text-blue-100' :
+                                    message.userEmotion === 'contemplative' ? 'bg-purple-400 text-purple-100' :
+                                    message.userEmotion === 'supportive' ? 'bg-green-400 text-green-100' :
+                                    'bg-white text-primary-foreground'
+                                  }`}>
+                                    {message.userEmotion}
+                                  </span>
+                                )}
+                                {message.sender === 'avatar' && message.mood && (
+                                  <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${
+                                    message.mood === 'joyful' ? 'bg-amber-400 text-amber-700' :
+                                    message.mood === 'concerned' ? 'bg-blue-500 text-blue-700' :
+                                    message.mood === 'contemplative' ? 'bg-purple-400 text-purple-700' :
+                                    message.mood === 'supportive' ? 'bg-green-400 text-green-700' :
+                                    'bg-accent text-accent-foreground'
+                                  }`}>
+                                    {message.mood}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </Card>
+                        </div>
+                      ))
+                    )}
+                    
+                    {isTyping && (
+                      <div className="flex justify-start">
+                        <Card className="bg-muted border-accent/20 p-4">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 rounded-full bg-accent animate-bounce"></div>
+                            <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                            <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                          </div>
+                        </Card>
                       </div>
                     )}
                   </div>
-                </Card>
-              )}
-            </div>
+                </ScrollArea>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-6">
-              <div className="space-y-6">
-                {messages.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-2">Welcome</p>
-                    <p className="text-sm text-muted-foreground">I'm here to listen and understand. What would you like to talk about?</p>
+                {/* Input Area */}
+                <div className="p-6 border-t border-border/50 bg-background/50">
+                  <div className="flex space-x-3">
+                    <Input
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type your message..."
+                      className="flex-1 bg-background border-accent/30 focus:border-accent"
+                      disabled={isTyping}
+                    />
+                    <Button 
+                      size="icon"
+                      onClick={sendMessage}
+                      disabled={!inputText.trim() || isTyping}
+                      className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                    >
+                      <Send size={16} />
+                    </Button>
+                    <Button 
+                      size="icon"
+                      variant="outline"
+                      className="border-accent/30 hover:bg-accent/10"
+                    >
+                      <Mic size={16} />
+                    </Button>
                   </div>
-                ) : (
-                  messages.map((message) => (
-                    <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <Card className={`max-w-[80%] p-4 relative ${ 
-                        message.sender === 'user' 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted border-accent/20'
-                      }`}>
-                        <p className="text-sm leading-relaxed">{message.text}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <p className={`text-xs opacity-70 ${
-                            message.sender === 'user' ? 'text-primary-foreground' : 'text-muted-foreground'
-                          }`}>
-                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          <div className="flex items-center space-x-2">
-                            {message.sender === 'user' && message.userEmotion && (
-                              <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${
-                                message.userEmotion === 'joyful' ? 'bg-amber-400 text-amber-100' :
-                                message.userEmotion === 'concerned' ? 'bg-blue-500 text-blue-100' :
-                                message.userEmotion === 'contemplative' ? 'bg-purple-400 text-purple-100' :
-                                message.userEmotion === 'supportive' ? 'bg-green-400 text-green-100' :
-                                'bg-white text-primary-foreground'
-                              }`}>
-                                {message.userEmotion}
-                              </span>
-                            )}
-                            {message.sender === 'avatar' && message.mood && (
-                              <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${
-                                message.mood === 'joyful' ? 'bg-amber-400 text-amber-700' :
-                                message.mood === 'concerned' ? 'bg-blue-500 text-blue-700' :
-                                message.mood === 'contemplative' ? 'bg-purple-400 text-purple-700' :
-                                message.mood === 'supportive' ? 'bg-green-400 text-green-700' :
-                                'bg-accent text-accent-foreground'
-                              }`}>
-                                {message.mood}
-                              </span>
-                            )}
-                          </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="calendar" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1 p-6">
+                  {memory.patterns.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Calendar size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-2">No emotional data yet</p>
+                      <p className="text-sm text-muted-foreground">Start having conversations to see your emotional calendar</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Calendar Grid */}
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">{getCalendarData().monthName}</h3>
+                        <div className="grid grid-cols-7 gap-1 mb-4">
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            <div key={day} className="text-xs font-medium text-muted-foreground text-center p-2">
+                              {day}
+                            </div>
+                          ))}
+                          {getCalendarData().days.map((day, index) => (
+                            <div key={index} className="aspect-square">
+                              {day ? (
+                                <div className={`w-full h-full rounded-lg border border-border/30 flex flex-col items-center justify-center relative ${
+                                  day.isToday ? 'border-accent bg-accent/10' : ''
+                                } ${day.pattern ? 'cursor-pointer hover:border-accent/50' : ''}`}>
+                                  <span className={`text-xs font-medium ${day.isToday ? 'text-accent' : 'text-foreground'}`}>
+                                    {day.day}
+                                  </span>
+                                  {day.pattern && (
+                                    <div 
+                                      className={`w-2 h-2 rounded-full mt-1 ${
+                                        day.pattern.dominantEmotion === 'joyful' ? 'bg-amber-400' :
+                                        day.pattern.dominantEmotion === 'concerned' ? 'bg-blue-500' :
+                                        day.pattern.dominantEmotion === 'contemplative' ? 'bg-purple-400' :
+                                        day.pattern.dominantEmotion === 'supportive' ? 'bg-green-400' :
+                                        'bg-slate-400'
+                                      }`}
+                                      title={`${day.pattern.dominantEmotion} (intensity: ${day.pattern.intensity})`}
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="w-full h-full"></div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Legend */}
+                      <Card className="p-4 bg-muted/30">
+                        <h4 className="text-sm font-medium mb-3">Emotional States</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { emotion: 'joyful', color: 'bg-amber-400', label: 'Joyful' },
+                            { emotion: 'concerned', color: 'bg-blue-500', label: 'Concerned' },
+                            { emotion: 'contemplative', color: 'bg-purple-400', label: 'Contemplative' },
+                            { emotion: 'supportive', color: 'bg-green-400', label: 'Supportive' },
+                            { emotion: 'calm', color: 'bg-slate-400', label: 'Calm' }
+                          ].map(({ emotion, color, label }) => (
+                            <div key={emotion} className="flex items-center space-x-2">
+                              <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                              <span className="text-xs text-muted-foreground">{label}</span>
+                            </div>
+                          ))}
                         </div>
                       </Card>
                     </div>
-                  ))
-                )}
-                
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <Card className="bg-muted border-accent/20 p-4">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 rounded-full bg-accent animate-bounce"></div>
-                        <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                        <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                      </div>
-                    </Card>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+                  )}
+                </ScrollArea>
+              </TabsContent>
 
-            {/* Input Area */}
-            <div className="p-6 border-t border-border/50 bg-background/50">
-              <div className="flex space-x-3">
-                <Input
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
-                  className="flex-1 bg-background border-accent/30 focus:border-accent"
-                  disabled={isTyping}
-                />
-                <Button 
-                  size="icon"
-                  onClick={sendMessage}
-                  disabled={!inputText.trim() || isTyping}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground"
-                >
-                  <Send size={16} />
-                </Button>
-                <Button 
-                  size="icon"
-                  variant="outline"
-                  className="border-accent/30 hover:bg-accent/10"
-                >
-                  <Mic size={16} />
-                </Button>
-              </div>
-            </div>
+              <TabsContent value="timeline" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1 p-6">
+                  {memory.patterns.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-2">No timeline data yet</p>
+                      <p className="text-sm text-muted-foreground">Your emotional journey will appear here as you continue conversations</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Timeline Header */}
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium">Emotional Timeline</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {memory.patterns.length} {memory.patterns.length === 1 ? 'day' : 'days'} tracked
+                        </Badge>
+                      </div>
+
+                      {/* Timeline Items */}
+                      <div className="relative">
+                        {/* Timeline Line */}
+                        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border"></div>
+                        
+                        <div className="space-y-6">
+                          {getTimelineData().map((pattern, index) => (
+                            <div key={pattern.date} className="relative flex items-start space-x-4">
+                              {/* Timeline Dot */}
+                              <div className={`w-3 h-3 rounded-full border-2 border-background z-10 ${
+                                pattern.dominantEmotion === 'joyful' ? 'bg-amber-400' :
+                                pattern.dominantEmotion === 'concerned' ? 'bg-blue-500' :
+                                pattern.dominantEmotion === 'contemplative' ? 'bg-purple-400' :
+                                pattern.dominantEmotion === 'supportive' ? 'bg-green-400' :
+                                'bg-slate-400'
+                              }`}></div>
+                              
+                              {/* Timeline Content */}
+                              <Card className="flex-1 p-4 bg-card border-accent/20">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
+                                    <h4 className="font-medium text-sm">{pattern.formattedDate}</h4>
+                                    <p className="text-xs text-muted-foreground">
+                                      Dominant: {pattern.dominantEmotion} • Intensity: {pattern.intensity}/5
+                                    </p>
+                                  </div>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`text-xs ${
+                                      pattern.dominantEmotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                                      pattern.dominantEmotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                                      pattern.dominantEmotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                                      pattern.dominantEmotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                                      'border-slate-400/50 text-slate-700'
+                                    }`}
+                                  >
+                                    {pattern.dominantEmotion}
+                                  </Badge>
+                                </div>
+                                
+                                {/* Emotional Breakdown */}
+                                {Object.keys(pattern.emotions).length > 1 && (
+                                  <div className="mb-3">
+                                    <p className="text-xs text-muted-foreground mb-2">Emotional mix:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {Object.entries(pattern.emotions)
+                                        .sort((a, b) => b[1] - a[1])
+                                        .map(([emotion, count]) => (
+                                          <Badge key={emotion} variant="secondary" className="text-xs">
+                                            {emotion} ({count})
+                                          </Badge>
+                                        ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Context Keywords */}
+                                {pattern.context.length > 0 && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-2">Topics discussed:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {pattern.context.map((topic) => (
+                                        <Badge key={topic} variant="outline" className="text-xs">
+                                          {topic}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </Card>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
