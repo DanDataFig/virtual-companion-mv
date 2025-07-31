@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle, BookOpen, Download, Plus, FileText, Export } from "@phosphor-icons/react"
+import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle, BookOpen, Download, Plus, FileText, Export, Smiley } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -76,6 +76,13 @@ interface JournalEntry {
   aiInsight?: string
 }
 
+interface MoodEntry {
+  id: string
+  moodLevel: number // 1-5 scale (1=very sad, 5=very happy)
+  timestamp: Date | string
+  note?: string
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("conversation-history", [])
   const [memory, setMemory] = useKV<ConversationMemory>("emotional-memory", {
@@ -86,6 +93,7 @@ function App() {
     insights: []
   })
   const [journalEntries, setJournalEntries] = useKV<JournalEntry[]>("journal-entries", [])
+  const [moodEntries, setMoodEntries] = useKV<MoodEntry[]>("mood-entries", [])
   const [inputText, setInputText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentMood, setCurrentMood] = useState<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'>('calm')
@@ -96,6 +104,7 @@ function App() {
   const [ambientEnabled, setAmbientEnabled] = useState(false)
   const [showThemes, setShowThemes] = useState(false)
   const [showJournalForm, setShowJournalForm] = useState(false)
+  const [showMoodRegistration, setShowMoodRegistration] = useState(false)
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null)
   const [journalForm, setJournalForm] = useState({
     title: '',
@@ -320,7 +329,53 @@ function App() {
     }
   }, [])
 
-  // Toggle ambient sounds
+  // Quick mood registration functions
+  const getMoodEmoji = (level: number): string => {
+    switch (level) {
+      case 1: return '😢' // Very sad
+      case 2: return '😞' // Sad
+      case 3: return '😐' // Neutral
+      case 4: return '🙂' // Happy
+      case 5: return '😊' // Very happy
+      default: return '😐'
+    }
+  }
+
+  const getMoodLabel = (level: number): string => {
+    switch (level) {
+      case 1: return 'Very Sad'
+      case 2: return 'Sad'
+      case 3: return 'Neutral'
+      case 4: return 'Happy'
+      case 5: return 'Very Happy'
+      default: return 'Neutral'
+    }
+  }
+
+  const registerMood = (level: number, note?: string) => {
+    const newMoodEntry: MoodEntry = {
+      id: `mood-${Date.now()}`,
+      moodLevel: level,
+      timestamp: new Date(),
+      note: note?.trim() || undefined
+    }
+
+    setMoodEntries(current => [newMoodEntry, ...current.slice(0, 99)]) // Keep last 100 entries
+    setShowMoodRegistration(false)
+  }
+
+  const getTodaysMoods = () => {
+    const today = new Date().toDateString()
+    return moodEntries.filter(entry => 
+      new Date(entry.timestamp).toDateString() === today
+    )
+  }
+
+  const getAverageMoodToday = () => {
+    const todaysMoods = getTodaysMoods()
+    if (todaysMoods.length === 0) return null
+    return Math.round(todaysMoods.reduce((sum, mood) => sum + mood.moodLevel, 0) / todaysMoods.length * 10) / 10
+  }
   const toggleAmbientSounds = () => {
     try {
       setAmbientEnabled(!ambientEnabled)
@@ -1151,10 +1206,10 @@ function App() {
               <div className="p-6 border-b border-border/50">
                 <TabsList className="grid w-full grid-cols-5 mb-4">
                   <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
+                  <TabsTrigger value="mood" className="text-xs">Mood</TabsTrigger>
                   <TabsTrigger value="journal" className="text-xs">Journal</TabsTrigger>
                   <TabsTrigger value="insights" className="text-xs">Insights</TabsTrigger>
                   <TabsTrigger value="calendar" className="text-xs">Calendar</TabsTrigger>
-                  <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
                 </TabsList>
                 
                 {activeTab === 'chat' && (
@@ -1171,6 +1226,21 @@ function App() {
                           {memory.totalConversations} talks
                         </span>
                       )}
+                      {/* Quick Mood Display */}
+                      {getAverageMoodToday() && (
+                        <span className="text-xs text-muted-foreground bg-accent/10 px-2 py-1 rounded-full flex items-center gap-1">
+                          {getMoodEmoji(Math.round(getAverageMoodToday()!))} Today
+                        </span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowMoodRegistration(!showMoodRegistration)}
+                        className={`text-muted-foreground hover:text-foreground ${showMoodRegistration ? 'bg-accent/20 text-accent' : ''}`}
+                        title="Quick mood check-in"
+                      >
+                        <Smiley size={16} />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1198,6 +1268,65 @@ function App() {
                         {showMemoryInsights ? <X size={16} /> : <ChartLine size={16} />}
                       </Button>
                     </div>
+                  </div>
+                )}
+                
+                {activeTab === 'mood' && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                          <Smiley size={20} />
+                          Mood Tracker
+                        </h1>
+                        <p className="text-sm text-muted-foreground mt-1">Quick daily mood check-ins</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {moodEntries.length > 0 && (
+                          <span className="text-xs text-muted-foreground bg-accent/10 px-2 py-1 rounded-full">
+                            {moodEntries.length} entries
+                          </span>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowMoodRegistration(!showMoodRegistration)}
+                          className={`text-muted-foreground hover:text-foreground ${showMoodRegistration ? 'bg-accent/20 text-accent' : ''}`}
+                        >
+                          {showMoodRegistration ? <X size={16} /> : <Plus size={16} />}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Quick Mood Registration Form */}
+                    {showMoodRegistration && (
+                      <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                        <h3 className="text-sm font-medium text-foreground mb-3">How are you feeling right now?</h3>
+                        
+                        <div className="space-y-4">
+                          {/* Emoji Scale */}
+                          <div className="flex justify-between items-center">
+                            {[1, 2, 3, 4, 5].map((level) => (
+                              <Button
+                                key={level}
+                                variant="ghost"
+                                onClick={() => registerMood(level)}
+                                className="h-16 w-16 flex flex-col items-center justify-center hover:bg-accent/20 transition-colors rounded-xl"
+                              >
+                                <span className="text-2xl mb-1">{getMoodEmoji(level)}</span>
+                                <span className="text-xs text-muted-foreground">{level}</span>
+                              </Button>
+                            ))}
+                          </div>
+                          
+                          <div className="flex justify-between text-xs text-muted-foreground px-2">
+                            <span>Very Sad</span>
+                            <span>Neutral</span>
+                            <span>Very Happy</span>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
                   </div>
                 )}
                 
@@ -1418,7 +1547,6 @@ function App() {
                     </div>
                   </div>
                 )}
-                )}
                 
                 {activeTab === 'calendar' && (
                   <div>
@@ -1428,19 +1556,65 @@ function App() {
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">Your emotional journey by day</p>
                   </div>
-                )}
                 
-                {activeTab === 'timeline' && (
-                  <div>
-                    <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                      <Clock size={20} />
-                      Timeline View
-                    </h1>
-                    <p className="text-sm text-muted-foreground mt-1">Emotional patterns over time</p>
-                  </div>
+                {/* Mood Registration Panel */}
+                {activeTab === 'chat' && showMoodRegistration && (
+                  <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-foreground">How are you feeling?</h3>
+                      <span className="text-xs text-muted-foreground">Quick check-in</span>
+                    </div>
+                    
+                    {/* Today's Mood Summary */}
+                    {getTodaysMoods().length > 0 && (
+                      <div className="mb-4 p-3 rounded-lg bg-card border border-accent/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">Today's mood</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-lg">{getMoodEmoji(Math.round(getAverageMoodToday()!))}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {getAverageMoodToday()}/5 ({getTodaysMoods().length} check-ins)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex space-x-1">
+                          {getTodaysMoods().slice(0, 5).map((mood, index) => (
+                            <span key={index} className="text-sm" title={new Date(mood.timestamp).toLocaleTimeString()}>
+                              {getMoodEmoji(mood.moodLevel)}
+                            </span>
+                          ))}
+                          {getTodaysMoods().length > 5 && (
+                            <span className="text-xs text-muted-foreground">+{getTodaysMoods().length - 5}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Mood Selection */}
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground">Tap to register your current mood:</p>
+                      
+                      <div className="grid grid-cols-5 gap-2">
+                        {[1, 2, 3, 4, 5].map((level) => (
+                          <Button
+                            key={level}
+                            variant="ghost"
+                            onClick={() => registerMood(level)}
+                            className="h-12 flex flex-col items-center justify-center hover:bg-accent/20 transition-colors"
+                          >
+                            <span className="text-lg mb-1">{getMoodEmoji(level)}</span>
+                            <span className="text-xs text-muted-foreground">{level}</span>
+                          </Button>
+                        ))}
+                      </div>
+                      
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Very Sad</span>
+                        <span>Very Happy</span>
+                      </div>
+                    </div>
+                  </Card>
                 )}
-                
-                {/* Theme selection panel */}
                 {activeTab === 'chat' && showThemes && (
                   <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
                     <div className="flex items-center justify-between mb-3">
@@ -1677,6 +1851,132 @@ function App() {
                     </Button>
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="mood" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1 p-6">
+                  {moodEntries.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Smiley size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-2">No mood entries yet</p>
+                      <p className="text-sm text-muted-foreground mb-4">Start tracking your daily mood with quick check-ins</p>
+                      <Button
+                        onClick={() => setShowMoodRegistration(true)}
+                        className="bg-accent hover:bg-accent/90"
+                      >
+                        <Smiley size={16} className="mr-2" />
+                        First Check-in
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Mood Statistics */}
+                      <Card className="p-4 bg-muted/30">
+                        <h3 className="text-sm font-medium mb-3">Mood Overview</h3>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <p className="text-lg font-semibold">{moodEntries.length}</p>
+                            <p className="text-xs text-muted-foreground">Total Entries</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold">
+                              {moodEntries.length > 0 ? 
+                                Math.round(moodEntries.reduce((sum, entry) => sum + entry.moodLevel, 0) / moodEntries.length * 10) / 10 
+                                : 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Avg Mood</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold">
+                              {getAverageMoodToday() || '—'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Today</p>
+                          </div>
+                        </div>
+                      </Card>
+
+                      {/* Recent Mood Entries */}
+                      <div>
+                        <h3 className="text-sm font-medium mb-3">Recent Check-ins</h3>
+                        <div className="space-y-3">
+                          {moodEntries
+                            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                            .slice(0, 20)
+                            .map((entry) => (
+                              <Card key={entry.id} className="p-3 border-accent/20">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3">
+                                    <span className="text-2xl">{getMoodEmoji(entry.moodLevel)}</span>
+                                    <div>
+                                      <p className="text-sm font-medium">{getMoodLabel(entry.moodLevel)}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {new Date(entry.timestamp).toLocaleDateString('en-US', { 
+                                          weekday: 'short', 
+                                          month: 'short', 
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                      {entry.moodLevel}/5
+                                    </span>
+                                  </div>
+                                </div>
+                                {entry.note && (
+                                  <p className="text-sm text-muted-foreground mt-2 pl-11">
+                                    {entry.note}
+                                  </p>
+                                )}
+                              </Card>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Daily Mood Pattern */}
+                      {moodEntries.length >= 7 && (
+                        <Card className="p-4 bg-muted/30">
+                          <h3 className="text-sm font-medium mb-3">7-Day Pattern</h3>
+                          <div className="space-y-2">
+                            {Array.from({length: 7}, (_, i) => {
+                              const date = new Date()
+                              date.setDate(date.getDate() - i)
+                              const dateStr = date.toDateString()
+                              const dayMoods = moodEntries.filter(entry => 
+                                new Date(entry.timestamp).toDateString() === dateStr
+                              )
+                              const avgMood = dayMoods.length > 0 ? 
+                                Math.round(dayMoods.reduce((sum, mood) => sum + mood.moodLevel, 0) / dayMoods.length) : null
+                              
+                              return (
+                                <div key={i} className="flex items-center justify-between py-1">
+                                  <span className="text-xs text-muted-foreground">
+                                    {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                  </span>
+                                  <div className="flex items-center space-x-2">
+                                    {avgMood ? (
+                                      <>
+                                        <span className="text-sm">{getMoodEmoji(avgMood)}</span>
+                                        <span className="text-xs text-muted-foreground w-8 text-right">
+                                          {avgMood}/5
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">—</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </Card>
+                      )}
+                    </div>
+                  )}
+                </ScrollArea>
               </TabsContent>
 
               <TabsContent value="journal" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
@@ -2041,101 +2341,6 @@ function App() {
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="timeline" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
-                <ScrollArea className="flex-1 p-6">
-                  {memory.patterns.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Clock size={48} className="mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground mb-2">No timeline data yet</p>
-                      <p className="text-sm text-muted-foreground">Your emotional journey will appear here as you continue conversations</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Timeline Header */}
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium">Emotional Timeline</h3>
-                        <Badge variant="secondary" className="text-xs">
-                          {memory.patterns.length} {memory.patterns.length === 1 ? 'day' : 'days'} tracked
-                        </Badge>
-                      </div>
-
-                      {/* Timeline Items */}
-                      <div className="relative">
-                        {/* Timeline Line */}
-                        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border"></div>
-                        
-                        <div className="space-y-6">
-                          {getTimelineData().map((pattern, index) => (
-                            <div key={pattern.date} className="relative flex items-start space-x-4">
-                              {/* Timeline Dot */}
-                              <div className={`w-3 h-3 rounded-full border-2 border-background z-10 ${
-                                pattern.dominantEmotion === 'joyful' ? 'bg-amber-400' :
-                                pattern.dominantEmotion === 'concerned' ? 'bg-blue-500' :
-                                pattern.dominantEmotion === 'contemplative' ? 'bg-purple-400' :
-                                pattern.dominantEmotion === 'supportive' ? 'bg-green-400' :
-                                'bg-slate-400'
-                              }`}></div>
-                              
-                              {/* Timeline Content */}
-                              <Card className="flex-1 p-4 bg-card border-accent/20">
-                                <div className="flex items-start justify-between mb-2">
-                                  <div>
-                                    <h4 className="font-medium text-sm">{pattern.formattedDate}</h4>
-                                    <p className="text-xs text-muted-foreground">
-                                      Dominant: {pattern.dominantEmotion} • Intensity: {pattern.intensity}/5
-                                    </p>
-                                  </div>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={`text-xs ${
-                                      pattern.dominantEmotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
-                                      pattern.dominantEmotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
-                                      pattern.dominantEmotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
-                                      pattern.dominantEmotion === 'supportive' ? 'border-green-400/50 text-green-700' :
-                                      'border-slate-400/50 text-slate-700'
-                                    }`}
-                                  >
-                                    {pattern.dominantEmotion}
-                                  </Badge>
-                                </div>
-                                
-                                {/* Emotional Breakdown */}
-                                {Object.keys(pattern.emotions).length > 1 && (
-                                  <div className="mb-3">
-                                    <p className="text-xs text-muted-foreground mb-2">Emotional mix:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {Object.entries(pattern.emotions)
-                                        .sort((a, b) => b[1] - a[1])
-                                        .map(([emotion, count]) => (
-                                          <Badge key={emotion} variant="secondary" className="text-xs">
-                                            {emotion} ({count})
-                                          </Badge>
-                                        ))}
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Context Keywords */}
-                                {pattern.context.length > 0 && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground mb-2">Topics discussed:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {pattern.context.map((topic) => (
-                                        <Badge key={topic} variant="outline" className="text-xs">
-                                          {topic}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </Card>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </ScrollArea>
               </TabsContent>
             </Tabs>
           </div>
