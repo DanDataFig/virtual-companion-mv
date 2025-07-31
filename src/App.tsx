@@ -12,7 +12,7 @@ interface Message {
   id: string
   text: string
   sender: 'user' | 'avatar'
-  timestamp: Date
+  timestamp: Date | string
   mood?: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
   userEmotion?: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
 }
@@ -31,7 +31,7 @@ interface EmotionalInsight {
   title: string
   description: string
   confidence: number
-  timestamp: Date
+  timestamp: Date | string
   actionable?: boolean
   relatedEmotions: string[]
 }
@@ -40,7 +40,7 @@ interface ConversationMemory {
   patterns: EmotionalPattern[]
   keywords: { [key: string]: number }
   totalConversations: number
-  lastUpdated: Date
+  lastUpdated: Date | string
   insights: EmotionalInsight[]
 }
 
@@ -753,7 +753,7 @@ function App() {
                               <p className={`text-xs opacity-70 ${
                                 message.sender === 'user' ? 'text-primary-foreground' : 'text-muted-foreground'
                               }`}>
-                                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
                               <div className="flex items-center space-x-2">
                                 {message.sender === 'user' && message.userEmotion && (
