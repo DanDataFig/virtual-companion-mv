@@ -1556,9 +1556,7 @@ function App() {
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">Your emotional journey by day</p>
                   </div>
-                
-                {/* Mood Registration Panel */}
-                {activeTab === 'chat' && showMoodRegistration && (
+                )}
                   <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-medium text-foreground">How are you feeling?</h3>
@@ -1615,6 +1613,7 @@ function App() {
                     </div>
                   </Card>
                 )}
+                
                 {activeTab === 'chat' && showThemes && (
                   <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
                     <div className="flex items-center justify-between mb-3">
@@ -2339,8 +2338,6 @@ function App() {
                     </div>
                   )}
                 </ScrollArea>
-              </TabsContent>
-
               </TabsContent>
             </Tabs>
           </div>
