@@ -96,6 +96,43 @@ interface BreathingExercise {
   duration: number // in seconds
 }
 
+interface MeditationSession {
+  id: string
+  title: string
+  description: string
+  type: 'breathing' | 'mindfulness' | 'body-scan' | 'loving-kindness' | 'visualization'
+  duration: number // in minutes
+  guidance: MeditationStep[]
+  breathingPattern?: BreathingExercise
+  backgroundSounds: AmbientSound[]
+  emotion: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  tags: string[]
+}
+
+interface MeditationStep {
+  id: string
+  text: string
+  duration: number // in seconds
+  breathingCue?: {
+    type: 'inhale' | 'hold' | 'exhale' | 'pause'
+    duration: number
+  }
+  soundCue?: string
+}
+
+interface MeditationProgress {
+  sessionId: string
+  completedAt: Date | string
+  durationCompleted: number // in minutes
+  rating?: number // 1-5
+  notes?: string
+  emotionalState: {
+    before: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+    after: 'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'
+  }
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("conversation-history", [])
   const [memory, setMemory] = useKV<ConversationMemory>("emotional-memory", {
@@ -107,6 +144,7 @@ function App() {
   })
   const [journalEntries, setJournalEntries] = useKV<JournalEntry[]>("journal-entries", [])
   const [moodEntries, setMoodEntries] = useKV<MoodEntry[]>("mood-entries", [])
+  const [meditationProgress, setMeditationProgress] = useKV<MeditationProgress[]>("meditation-progress", [])
   const [inputText, setInputText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentMood, setCurrentMood] = useState<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive'>('calm')
@@ -134,11 +172,376 @@ function App() {
     tags: [] as string[],
     tagInput: ''
   })
+  const [activeMeditation, setActiveMeditation] = useState<MeditationSession | null>(null)
+  const [meditationActive, setMeditationActive] = useState(false)
+  const [currentMeditationStep, setCurrentMeditationStep] = useState(0)
+  const [meditationTimeElapsed, setMeditationTimeElapsed] = useState(0)
+  const [meditationStepTimeRemaining, setMeditationStepTimeRemaining] = useState(0)
+  const [showMeditationSessions, setShowMeditationSessions] = useState(false)
+  const [preSessionMood, setPreSessionMood] = useState<'calm' | 'joyful' | 'concerned' | 'contemplative' | 'supportive' | null>(null)
 
-  // Audio context and oscillators for ambient sounds
+  // Audio context and oscillators for ambient sounds and meditation
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorsRef = useRef<{ [key: string]: OscillatorNode }>({})
   const gainNodesRef = useRef<{ [key: string]: GainNode }>({})
+  const meditationTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const breathingTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Comprehensive meditation sessions
+  const meditationSessions: MeditationSession[] = [
+    {
+      id: 'breathing-calm',
+      title: 'Calming Breath',
+      description: 'A gentle 4-7-8 breathing pattern to promote deep relaxation and inner peace',
+      type: 'breathing',
+      duration: 10,
+      difficulty: 'beginner',
+      emotion: 'calm',
+      tags: ['stress-relief', 'relaxation', 'sleep-prep'],
+      breathingPattern: {
+        id: 'calm-478',
+        name: 'Calming 4-7-8 Breath',
+        description: 'Breathe in for 4, hold for 7, exhale for 8',
+        inhaleCount: 4,
+        holdCount: 7,
+        exhaleCount: 8,
+        cycles: 8,
+        frequency: 256,
+        emotion: 'calm',
+        duration: 600
+      },
+      backgroundSounds: [
+        { id: 'meditation-base', name: 'Deep Earth Tone', emotion: 'calm', frequency: 256, volume: 0.015, type: 'sine' },
+        { id: 'meditation-binaural', name: 'Theta Meditation Beat', emotion: 'calm', frequency: 260, volume: 0.015, type: 'sine' },
+        { id: 'meditation-green', name: 'Forest Whisper', emotion: 'calm', frequency: 20, volume: 0.025, type: 'sine' }
+      ],
+      guidance: [
+        {
+          id: 'intro',
+          text: 'Welcome to your calming breath meditation. Find a comfortable position and gently close your eyes.',
+          duration: 10,
+          soundCue: 'chime'
+        },
+        {
+          id: 'breathing-instruction',
+          text: 'We will practice the 4-7-8 breathing pattern. Breathe in through your nose for 4 counts, hold for 7, then exhale slowly through your mouth for 8 counts.',
+          duration: 15,
+        },
+        {
+          id: 'begin-breathing',
+          text: 'Let us begin. Breathe in slowly through your nose...',
+          duration: 4,
+          breathingCue: { type: 'inhale', duration: 4 }
+        },
+        {
+          id: 'hold-breath',
+          text: 'Hold your breath gently...',
+          duration: 7,
+          breathingCue: { type: 'hold', duration: 7 }
+        },
+        {
+          id: 'exhale-breath',
+          text: 'Now exhale slowly through your mouth...',
+          duration: 8,
+          breathingCue: { type: 'exhale', duration: 8 }
+        },
+        {
+          id: 'continue-pattern',
+          text: 'Continue this rhythm at your own pace. Notice how each breath brings deeper relaxation.',
+          duration: 500,
+        },
+        {
+          id: 'closing',
+          text: 'Begin to deepen your breath naturally. Gently wiggle your fingers and toes, and when you are ready, slowly open your eyes.',
+          duration: 20,
+          soundCue: 'chime'
+        }
+      ]
+    },
+    {
+      id: 'mindfulness-present',
+      title: 'Present Moment Awareness',
+      description: 'A guided practice to anchor yourself in the here and now through mindful attention',
+      type: 'mindfulness',
+      duration: 15,
+      difficulty: 'beginner',
+      emotion: 'contemplative',
+      tags: ['mindfulness', 'awareness', 'grounding'],
+      backgroundSounds: [
+        { id: 'mindful-base', name: 'Singing Bowl Resonance', emotion: 'contemplative', frequency: 432, volume: 0.02, type: 'sine' },
+        { id: 'mindful-binaural', name: 'Alpha Awareness Beat', emotion: 'contemplative', frequency: 440, volume: 0.02, type: 'sine' },
+        { id: 'mindful-ambient', name: 'Gentle Rain', emotion: 'contemplative', frequency: 35, volume: 0.02, type: 'sine' }
+      ],
+      guidance: [
+        {
+          id: 'welcome',
+          text: 'Welcome to present moment awareness meditation. Settle into your space and allow your body to relax.',
+          duration: 15,
+        },
+        {
+          id: 'body-awareness',
+          text: 'Begin by noticing your body. Feel the weight of your body supported by the surface beneath you.',
+          duration: 30,
+        },
+        {
+          id: 'breath-anchor',
+          text: 'Now bring your attention to your breath. Notice the natural rhythm of breathing without trying to change it.',
+          duration: 60,
+        },
+        {
+          id: 'sounds',
+          text: 'Expand your awareness to include the sounds around you. Simply notice them without judgment.',
+          duration: 90,
+        },
+        {
+          id: 'thoughts',
+          text: 'If thoughts arise, acknowledge them gently and return your attention to the present moment.',
+          duration: 120,
+        },
+        {
+          id: 'integration',
+          text: 'Rest in this awareness of the present moment. You are here, you are now, you are enough.',
+          duration: 300,
+        },
+        {
+          id: 'closing',
+          text: 'Take a moment to appreciate this time you have given yourself. Gently return to your day.',
+          duration: 25,
+        }
+      ]
+    },
+    {
+      id: 'body-scan-release',
+      title: 'Body Scan for Release',
+      description: 'A systematic practice to release tension and cultivate body awareness',
+      type: 'body-scan',
+      duration: 20,
+      difficulty: 'intermediate',
+      emotion: 'supportive',
+      tags: ['tension-relief', 'body-awareness', 'healing'],
+      backgroundSounds: [
+        { id: 'healing-base', name: 'Heart Healing Frequency', emotion: 'supportive', frequency: 341, volume: 0.018, type: 'sine' },
+        { id: 'healing-binaural', name: 'Theta Healing Beat', emotion: 'supportive', frequency: 347, volume: 0.018, type: 'sine' },
+        { id: 'healing-nature', name: 'Ocean Waves', emotion: 'supportive', frequency: 25, volume: 0.025, type: 'sine' }
+      ],
+      guidance: [
+        {
+          id: 'setup',
+          text: 'Lie down comfortably or sit with your spine straight. Close your eyes and begin to settle in.',
+          duration: 20,
+        },
+        {
+          id: 'feet',
+          text: 'Bring your attention to your feet. Notice any sensations, then consciously release any tension.',
+          duration: 60,
+        },
+        {
+          id: 'legs',
+          text: 'Move your awareness up to your legs. Feel your calves, knees, and thighs. Allow them to soften.',
+          duration: 90,
+        },
+        {
+          id: 'torso',
+          text: 'Shift attention to your torso. Notice your belly, chest, and back. Breathe space into any tightness.',
+          duration: 120,
+        },
+        {
+          id: 'arms',
+          text: 'Focus on your arms, from shoulders to fingertips. Let them be heavy and relaxed.',
+          duration: 80,
+        },
+        {
+          id: 'neck-head',
+          text: 'Bring awareness to your neck, jaw, and face. Release any holding, letting your expression soften.',
+          duration: 100,
+        },
+        {
+          id: 'whole-body',
+          text: 'Now sense your whole body as one unified field of awareness. Rest in this wholeness.',
+          duration: 300,
+        },
+        {
+          id: 'gratitude',
+          text: 'Send gratitude to your body for all it does for you. Slowly begin to move and stretch.',
+          duration: 30,
+        }
+      ]
+    },
+    {
+      id: 'loving-kindness',
+      title: 'Loving-Kindness Meditation',
+      description: 'Cultivate compassion and goodwill toward yourself and others',
+      type: 'loving-kindness',
+      duration: 18,
+      difficulty: 'intermediate',
+      emotion: 'joyful',
+      tags: ['compassion', 'love', 'emotional-healing'],
+      backgroundSounds: [
+        { id: 'love-base', name: 'Heart Chakra Tone', emotion: 'joyful', frequency: 341, volume: 0.02, type: 'sine' },
+        { id: 'love-binaural', name: 'Alpha Love Beat', emotion: 'joyful', frequency: 349, volume: 0.02, type: 'sine' },
+        { id: 'love-ambient', name: 'Gentle Hum', emotion: 'joyful', frequency: 40, volume: 0.015, type: 'sine' }
+      ],
+      guidance: [
+        {
+          id: 'centering',
+          text: 'Sit comfortably and place your hand on your heart. Begin to connect with feelings of warmth and kindness.',
+          duration: 20,
+        },
+        {
+          id: 'self-love',
+          text: 'Direct loving-kindness toward yourself: "May I be happy. May I be healthy. May I be at peace. May I be free from suffering."',
+          duration: 180,
+        },
+        {
+          id: 'loved-one',
+          text: 'Bring to mind someone you love easily. Send them these wishes: "May you be happy. May you be healthy. May you be at peace."',
+          duration: 150,
+        },
+        {
+          id: 'neutral-person',
+          text: 'Think of someone neutral - perhaps a cashier or neighbor. Extend the same kindness: "May you be happy. May you be healthy."',
+          duration: 120,
+        },
+        {
+          id: 'difficult-person',
+          text: 'If you feel ready, think of someone challenging. Offer what kindness you can: "May you find peace. May you be free from suffering."',
+          duration: 120,
+        },
+        {
+          id: 'all-beings',
+          text: 'Expand your circle to include all beings everywhere: "May all beings be happy. May all beings be free from suffering."',
+          duration: 150,
+        },
+        {
+          id: 'closing-love',
+          text: 'Rest in this field of loving-kindness. Let it fill your heart and radiate outward into your day.',
+          duration: 30,
+        }
+      ]
+    },
+    {
+      id: 'visualization-garden',
+      title: 'Inner Garden Visualization',
+      description: 'Journey to a peaceful inner sanctuary where healing and growth flourish',
+      type: 'visualization',
+      duration: 25,
+      difficulty: 'advanced',
+      emotion: 'contemplative',
+      tags: ['visualization', 'healing', 'inner-peace', 'creativity'],
+      backgroundSounds: [
+        { id: 'garden-base', name: 'Earth Mother Tone', emotion: 'contemplative', frequency: 256, volume: 0.015, type: 'sine' },
+        { id: 'garden-binaural', name: 'Theta Journey Beat', emotion: 'contemplative', frequency: 261, volume: 0.015, type: 'sine' },
+        { id: 'garden-nature', name: 'Birds and Breeze', emotion: 'contemplative', frequency: 45, volume: 0.02, type: 'sine' }
+      ],
+      guidance: [
+        {
+          id: 'journey-begin',
+          text: 'Close your eyes and take three deep, cleansing breaths. Imagine yourself walking on a peaceful path.',
+          duration: 30,
+        },
+        {
+          id: 'gate',
+          text: 'Ahead, you see a beautiful gate leading to your inner garden. Approach it slowly and notice its details.',
+          duration: 60,
+        },
+        {
+          id: 'entering',
+          text: 'Open the gate and step into your sanctuary. What do you see? What do you feel?',
+          duration: 90,
+        },
+        {
+          id: 'exploration',
+          text: 'Explore this garden that represents your inner world. Notice the plants, colors, and textures around you.',
+          duration: 180,
+        },
+        {
+          id: 'healing-spot',
+          text: 'Find a special place in this garden where healing happens. Perhaps a tree, a fountain, or a flower bed.',
+          duration: 120,
+        },
+        {
+          id: 'receiving',
+          text: 'Rest in this healing space. Receive whatever gifts this place has for you - wisdom, peace, or renewal.',
+          duration: 300,
+        },
+        {
+          id: 'planting',
+          text: 'Before you leave, plant something new in your garden - an intention, a hope, or a dream.',
+          duration: 90,
+        },
+        {
+          id: 'return',
+          text: 'Walk slowly back to the gate, knowing you can return here anytime. Step back through and return to your body.',
+          duration: 60,
+        },
+        {
+          id: 'integration',
+          text: 'Take a moment to remember what you experienced. Gently open your eyes when you are ready.',
+          duration: 30,
+        }
+      ]
+    },
+    {
+      id: 'anxiety-relief',
+      title: 'Anxiety Relief Breathing',
+      description: 'A gentle breathing practice specifically designed to calm anxiety and racing thoughts',
+      type: 'breathing',
+      duration: 12,
+      difficulty: 'beginner',
+      emotion: 'concerned',
+      tags: ['anxiety', 'stress-relief', 'calming'],
+      breathingPattern: {
+        id: 'anxiety-relief',
+        name: 'Box Breathing for Anxiety',
+        description: 'Equal counts for all phases to create stability',
+        inhaleCount: 4,
+        holdCount: 4,
+        exhaleCount: 4,
+        cycles: 12,
+        frequency: 256,
+        emotion: 'calm',
+        duration: 720
+      },
+      backgroundSounds: [
+        { id: 'anxiety-base', name: 'Grounding Frequency', emotion: 'concerned', frequency: 256, volume: 0.018, type: 'sine' },
+        { id: 'anxiety-binaural', name: 'Calming Alpha Beat', emotion: 'concerned', frequency: 266, volume: 0.018, type: 'sine' },
+        { id: 'anxiety-nature', name: 'Gentle Stream', emotion: 'concerned', frequency: 30, volume: 0.025, type: 'sine' }
+      ],
+      guidance: [
+        {
+          id: 'safety',
+          text: 'You are safe in this moment. Find a comfortable position and know that this feeling will pass.',
+          duration: 15,
+        },
+        {
+          id: 'breath-anchor',
+          text: 'We will use your breath as an anchor. Breathe in for 4 counts, hold for 4, exhale for 4, hold for 4.',
+          duration: 20,
+        },
+        {
+          id: 'box-breathing',
+          text: 'Begin box breathing. In for 4... hold for 4... out for 4... hold for 4. Continue this steady rhythm.',
+          duration: 480,
+          breathingCue: { type: 'inhale', duration: 4 }
+        },
+        {
+          id: 'grounding',
+          text: 'With each breath, feel more grounded and stable. You are returning to your center.',
+          duration: 120,
+        },
+        {
+          id: 'affirmation',
+          text: 'Remind yourself: "I am safe. I am breathing. This moment is okay. I can handle whatever comes."',
+          duration: 60,
+        },
+        {
+          id: 'transition',
+          text: 'Continue breathing naturally. Notice how much calmer you feel now. You have the tools you need.',
+          duration: 25,
+        }
+      ]
+    }
+  ]
 
   // Conversation themes based on emotions
   const conversationThemes: ConversationTheme[] = [
@@ -484,6 +887,12 @@ function App() {
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close()
       }
+      if (meditationTimerRef.current) {
+        clearInterval(meditationTimerRef.current)
+      }
+      if (breathingTimerRef.current) {
+        clearTimeout(breathingTimerRef.current)
+      }
     }
   }, [])
 
@@ -533,6 +942,150 @@ function App() {
     const todaysMoods = getTodaysMoods()
     if (todaysMoods.length === 0) return null
     return Math.round(todaysMoods.reduce((sum, mood) => sum + mood.moodLevel, 0) / todaysMoods.length * 10) / 10
+  }
+
+  // Meditation session management
+  const startMeditationSession = (session: MeditationSession) => {
+    setActiveMeditation(session)
+    setMeditationActive(true)
+    setCurrentMeditationStep(0)
+    setMeditationTimeElapsed(0)
+    setMeditationStepTimeRemaining(session.guidance[0].duration)
+    setPreSessionMood(currentMood)
+    setShowMeditationSessions(false)
+    
+    // Set emotion based on session
+    setCurrentMood(session.emotion)
+    
+    // Start ambient sounds for meditation
+    if (session.backgroundSounds) {
+      stopAmbientSounds()
+      startMeditationAudio(session.backgroundSounds)
+    }
+    
+    // Start the meditation timer
+    runMeditationSession(session)
+  }
+
+  const runMeditationSession = (session: MeditationSession) => {
+    let stepIndex = 0
+    let stepTimeRemaining = session.guidance[0].duration
+
+    const updateTimer = () => {
+      setMeditationTimeElapsed(prev => prev + 1)
+      setMeditationStepTimeRemaining(prev => {
+        const newTime = prev - 1
+        if (newTime <= 0 && stepIndex < session.guidance.length - 1) {
+          // Move to next step
+          stepIndex++
+          setCurrentMeditationStep(stepIndex)
+          const nextStepDuration = session.guidance[stepIndex].duration
+          setMeditationStepTimeRemaining(nextStepDuration)
+          
+          // Handle breathing cues
+          const step = session.guidance[stepIndex]
+          if (step.breathingCue) {
+            handleBreathingCue(step.breathingCue)
+          }
+          
+          return nextStepDuration
+        }
+        return newTime
+      })
+    }
+
+    meditationTimerRef.current = setInterval(updateTimer, 1000)
+
+    // Auto-stop when session is complete
+    setTimeout(() => {
+      completeMeditationSession()
+    }, session.duration * 60 * 1000)
+  }
+
+  const handleBreathingCue = (cue: { type: 'inhale' | 'hold' | 'exhale' | 'pause', duration: number }) => {
+    setBreathingPhase(cue.type as 'inhale' | 'hold' | 'exhale')
+    // The breathing pattern is visual guidance, actual timing managed by meditation session
+  }
+
+  const pauseMeditationSession = () => {
+    setMeditationActive(!meditationActive)
+    if (meditationTimerRef.current) {
+      if (meditationActive) {
+        clearInterval(meditationTimerRef.current)
+      } else {
+        // Resume timer
+        if (activeMeditation) {
+          runMeditationSession(activeMeditation)
+        }
+      }
+    }
+  }
+
+  const stopMeditationSession = () => {
+    if (meditationTimerRef.current) {
+      clearInterval(meditationTimerRef.current)
+    }
+    stopAmbientSounds()
+    setActiveMeditation(null)
+    setMeditationActive(false)
+    setCurrentMeditationStep(0)
+    setMeditationTimeElapsed(0)
+    setMeditationStepTimeRemaining(0)
+    setPreSessionMood(null)
+  }
+
+  const completeMeditationSession = () => {
+    if (!activeMeditation || !preSessionMood) return
+
+    const progress: MeditationProgress = {
+      sessionId: activeMeditation.id,
+      completedAt: new Date(),
+      durationCompleted: Math.round(meditationTimeElapsed / 60),
+      emotionalState: {
+        before: preSessionMood,
+        after: currentMood
+      }
+    }
+
+    setMeditationProgress(current => [progress, ...current.slice(0, 49)]) // Keep last 50 sessions
+    stopMeditationSession()
+    
+    // Show completion message
+    if (messages.length > 0) {
+      const completionMessage: Message = {
+        id: `meditation-complete-${Date.now()}`,
+        text: `Beautiful work completing "${activeMeditation.title}". Take a moment to notice how you feel now. How was that experience for you?`,
+        sender: 'avatar',
+        timestamp: new Date(),
+        mood: 'supportive'
+      }
+      setMessages(prev => [...prev, completionMessage])
+    }
+  }
+
+  const startMeditationAudio = (sounds: AmbientSound[]) => {
+    if (!ambientEnabled) return
+    
+    try {
+      initializeAudio()
+      if (!audioContextRef.current) return
+
+      sounds.forEach((sound, index) => {
+        if (sound.id.includes('green') || sound.id.includes('nature') || sound.id.includes('ambient')) {
+          createHealingGreenNoise(sound)
+        } else {
+          createTherapeuticBinaural(sound, index % 2 === 1)
+        }
+      })
+    } catch (error) {
+      console.warn('Failed to start meditation audio:', error)
+    }
+  }
+
+  const formatMeditationTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
   const toggleAmbientSounds = () => {
     try {
@@ -1128,6 +1681,23 @@ function App() {
 
   // Mood-based visual configurations
   const getMoodConfig = (mood: string) => {
+    // Special meditation mode
+    if (activeMeditation) {
+      return {
+        containerGradient: 'from-purple-400/15 via-indigo-300/8 to-violet-200/12',
+        glowColor: 'from-purple-400/25 to-indigo-300/15',
+        eyeColor: 'bg-purple-400',
+        eyeShadow: 'shadow-purple-400/50',
+        mouthClass: 'w-12 h-3 bg-purple-400/80',
+        animationSpeed: 'animate-pulse duration-3000',
+        orbitals: [
+          { pos: 'top-10 left-10', color: 'bg-purple-400/60', anim: 'animate-pulse duration-4000' },
+          { pos: 'bottom-14 right-14', color: 'bg-indigo-300/70', anim: 'animate-pulse duration-5000' },
+          { pos: 'top-20 right-12', color: 'bg-violet-300/50', anim: 'animate-pulse duration-6000' }
+        ]
+      }
+    }
+
     switch (mood) {
       case 'joyful':
         return {
@@ -1330,9 +1900,15 @@ function App() {
             {/* Status Indicator */}
             <div className="flex flex-col items-center space-y-2">
               <div className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${isTyping ? 'bg-accent animate-pulse' : moodConfig.eyeColor}`}></div>
+                <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${
+                  activeMeditation ? 'bg-purple-400 animate-pulse' :
+                  isTyping ? 'bg-accent animate-pulse' : 
+                  moodConfig.eyeColor
+                }`}></div>
                 <span className="text-sm text-muted-foreground font-medium">
-                  {isTyping ? 'Thinking...' : `${currentMood.charAt(0).toUpperCase() + currentMood.slice(1)} • Listening`}
+                  {activeMeditation ? 'Meditating...' :
+                   isTyping ? 'Thinking...' : 
+                   `${currentMood.charAt(0).toUpperCase() + currentMood.slice(1)} • Listening`}
                 </span>
               </div>
               
@@ -1340,15 +1916,28 @@ function App() {
               {ambientEnabled && (
                 <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
-                  <span>Healing sounds active</span>
+                  <span>{activeMeditation ? 'Meditation sounds active' : 'Healing sounds active'}</span>
                 </div>
               )}
               
               {/* Active Theme Display */}
-              {selectedTheme && (
+              {selectedTheme && !activeMeditation && (
                 <div className="flex items-center space-x-2 text-xs text-muted-foreground bg-card/50 px-3 py-1 rounded-full border border-accent/20">
                   <span>{selectedTheme.icon}</span>
                   <span>{selectedTheme.name}</span>
+                </div>
+              )}
+              
+              {/* Active Meditation Display */}
+              {activeMeditation && (
+                <div className="flex flex-col items-center space-y-1">
+                  <div className="flex items-center space-x-2 text-xs text-muted-foreground bg-purple-50/50 px-3 py-1 rounded-full border border-purple-200/50">
+                    <Wind size={12} />
+                    <span>{activeMeditation.title}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatMeditationTime(meditationTimeElapsed)} / {activeMeditation.duration}min
+                  </div>
                 </div>
               )}
             </div>
@@ -1362,10 +1951,11 @@ function App() {
             {/* Navigation Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
               <div className="p-6 border-b border-border/50">
-                <TabsList className="grid w-full grid-cols-5 mb-4">
+                <TabsList className="grid w-full grid-cols-6 mb-4">
                   <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
                   <TabsTrigger value="mood" className="text-xs">Mood</TabsTrigger>
                   <TabsTrigger value="journal" className="text-xs">Journal</TabsTrigger>
+                  <TabsTrigger value="meditate" className="text-xs">Meditate</TabsTrigger>
                   <TabsTrigger value="insights" className="text-xs">Insights</TabsTrigger>
                   <TabsTrigger value="calendar" className="text-xs">Calendar</TabsTrigger>
                 </TabsList>
@@ -1683,7 +2273,163 @@ function App() {
                   </div>
                 )}
                 
-                {activeTab === 'insights' && (
+                {activeTab === 'meditate' && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                          <Wind size={20} />
+                          Guided Meditation
+                        </h1>
+                        <p className="text-sm text-muted-foreground mt-1">Find peace through guided practice</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {meditationProgress.length > 0 && (
+                          <span className="text-xs text-muted-foreground bg-accent/10 px-2 py-1 rounded-full">
+                            {meditationProgress.length} sessions
+                          </span>
+                        )}
+                        {!activeMeditation && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setShowMeditationSessions(!showMeditationSessions)}
+                            className={`text-muted-foreground hover:text-foreground ${showMeditationSessions ? 'bg-accent/20 text-accent' : ''}`}
+                          >
+                            {showMeditationSessions ? <X size={16} /> : <Plus size={16} />}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Active Meditation Display */}
+                    {activeMeditation && (
+                      <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h3 className="text-sm font-medium text-foreground">{activeMeditation.title}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              Step {currentMeditationStep + 1} of {activeMeditation.guidance.length}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-muted-foreground">
+                              {formatMeditationTime(meditationTimeElapsed)} / {activeMeditation.duration}min
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={pauseMeditationSession}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              {meditationActive ? <Pause size={16} /> : <Play size={16} />}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={stopMeditationSession}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <X size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Current Step Display */}
+                        <div className="space-y-3">
+                          <div className="bg-card/50 rounded-lg p-3">
+                            <p className="text-sm text-foreground leading-relaxed">
+                              {activeMeditation.guidance[currentMeditationStep]?.text}
+                            </p>
+                          </div>
+                          
+                          {/* Breathing Visualization */}
+                          {activeMeditation.guidance[currentMeditationStep]?.breathingCue && (
+                            <div className="flex flex-col items-center space-y-2">
+                              <div className={`w-20 h-20 rounded-full border-2 flex items-center justify-center transition-all duration-1000 ${
+                                breathingPhase === 'inhale' ? 'scale-110 border-accent bg-accent/10' :
+                                breathingPhase === 'hold' ? 'scale-110 border-primary bg-primary/10' :
+                                'scale-90 border-muted bg-muted/20'
+                              }`}>
+                                <span className="text-xs text-muted-foreground capitalize">{breathingPhase}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {meditationStepTimeRemaining}s remaining
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* Progress Bar */}
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-accent h-2 rounded-full transition-all duration-1000"
+                              style={{ 
+                                width: `${(meditationTimeElapsed / (activeMeditation.duration * 60)) * 100}%` 
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                    
+                    {/* Meditation Sessions List */}
+                    {showMeditationSessions && !activeMeditation && (
+                      <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-medium text-foreground">Choose a Practice</h3>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setShowMeditationSessions(false)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <X size={12} />
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {meditationSessions.map((session) => (
+                            <Button
+                              key={session.id}
+                              variant="ghost"
+                              onClick={() => startMeditationSession(session)}
+                              className="h-auto p-3 flex flex-col items-start space-y-2 hover:bg-accent/10 text-left w-full"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <h4 className="font-medium text-sm text-foreground">{session.title}</h4>
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {session.duration}min
+                                  </Badge>
+                                  <Badge variant="outline" className={`text-xs ${
+                                    session.difficulty === 'beginner' ? 'border-green-400/50 text-green-700' :
+                                    session.difficulty === 'intermediate' ? 'border-amber-400/50 text-amber-700' :
+                                    'border-red-400/50 text-red-700'
+                                  }`}>
+                                    {session.difficulty}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {session.description}
+                              </p>
+                              
+                              <div className="flex flex-wrap gap-1">
+                                {session.tags.slice(0, 3).map((tag) => (
+                                  <Badge key={tag} variant="secondary" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                )}
+                
                   <div>
                     <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
                       <Brain size={20} />
@@ -2098,6 +2844,228 @@ function App() {
                           </div>
                         </Card>
                       )}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="meditate" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1 p-6">
+                  {!activeMeditation ? (
+                    <div className="space-y-6">
+                      {/* Meditation Welcome */}
+                      <div className="text-center py-8">
+                        <Wind size={48} className="mx-auto text-muted-foreground mb-4" />
+                        <h2 className="text-lg font-medium text-foreground mb-2">Welcome to Meditation</h2>
+                        <p className="text-sm text-muted-foreground mb-6">
+                          Find peace, clarity, and healing through guided meditation practices
+                        </p>
+                        <Button
+                          onClick={() => setShowMeditationSessions(true)}
+                          className="bg-accent hover:bg-accent/90"
+                        >
+                          <Wind size={16} className="mr-2" />
+                          Start Your Practice
+                        </Button>
+                      </div>
+
+                      {/* Recent Sessions */}
+                      {meditationProgress.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-3">Recent Sessions</h3>
+                          <div className="space-y-3">
+                            {meditationProgress
+                              .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+                              .slice(0, 5)
+                              .map((progress) => {
+                                const session = meditationSessions.find(s => s.id === progress.sessionId)
+                                if (!session) return null
+                                
+                                return (
+                                  <Card key={`${progress.sessionId}-${progress.completedAt}`} className="p-3 border-accent/20">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <h4 className="text-sm font-medium">{session.title}</h4>
+                                        <p className="text-xs text-muted-foreground">
+                                          {progress.durationCompleted}min • {new Date(progress.completedAt).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        {progress.emotionalState.before !== progress.emotionalState.after && (
+                                          <div className="flex items-center space-x-1">
+                                            <Badge variant="outline" className="text-xs">
+                                              {progress.emotionalState.before}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground">→</span>
+                                            <Badge variant="outline" className={`text-xs ${
+                                              progress.emotionalState.after === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                                              progress.emotionalState.after === 'calm' ? 'border-slate-400/50 text-slate-700' :
+                                              progress.emotionalState.after === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                                              progress.emotionalState.after === 'supportive' ? 'border-green-400/50 text-green-700' :
+                                              'border-blue-400/50 text-blue-700'
+                                            }`}>
+                                              {progress.emotionalState.after}
+                                            </Badge>
+                                          </div>
+                                        )}
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => startMeditationSession(session)}
+                                          className="text-muted-foreground hover:text-foreground"
+                                        >
+                                          <Play size={12} />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Practice Statistics */}
+                      {meditationProgress.length > 0 && (
+                        <Card className="p-4 bg-muted/30">
+                          <h3 className="text-sm font-medium mb-3">Your Practice</h3>
+                          <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                              <p className="text-lg font-semibold">{meditationProgress.length}</p>
+                              <p className="text-xs text-muted-foreground">Sessions</p>
+                            </div>
+                            <div>
+                              <p className="text-lg font-semibold">
+                                {Math.round(meditationProgress.reduce((sum, p) => sum + p.durationCompleted, 0))}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Minutes</p>
+                            </div>
+                            <div>
+                              <p className="text-lg font-semibold">
+                                {meditationProgress.length > 0 ? 
+                                  Math.round(meditationProgress.reduce((sum, p) => sum + p.durationCompleted, 0) / meditationProgress.length) 
+                                  : 0}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Avg Duration</p>
+                            </div>
+                          </div>
+                        </Card>
+                      )}
+
+                      {/* Meditation Categories */}
+                      <div>
+                        <h3 className="text-sm font-medium mb-3">Explore by Type</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            { type: 'breathing', label: 'Breathing', icon: '🫁', color: 'blue' },
+                            { type: 'mindfulness', label: 'Mindfulness', icon: '🧘', color: 'purple' },
+                            { type: 'body-scan', label: 'Body Scan', icon: '✨', color: 'green' },
+                            { type: 'loving-kindness', label: 'Love & Kindness', icon: '💚', color: 'amber' },
+                            { type: 'visualization', label: 'Visualization', icon: '🌸', color: 'pink' },
+                          ].map(({ type, label, icon, color }) => {
+                            const sessionsOfType = meditationSessions.filter(s => s.type === type)
+                            return (
+                              <Button
+                                key={type}
+                                variant="ghost"
+                                onClick={() => {
+                                  setShowMeditationSessions(true)
+                                }}
+                                className="h-16 flex flex-col items-center justify-center space-y-1 hover:bg-accent/10"
+                              >
+                                <span className="text-lg">{icon}</span>
+                                <span className="text-xs text-muted-foreground">{label}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {sessionsOfType.length} available
+                                </span>
+                              </Button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Active Meditation Interface */
+                    <div className="h-full flex flex-col items-center justify-center space-y-8">
+                      {/* Session Info */}
+                      <div className="text-center space-y-2">
+                        <h2 className="text-xl font-medium text-foreground">{activeMeditation.title}</h2>
+                        <p className="text-sm text-muted-foreground max-w-md">
+                          {activeMeditation.description}
+                        </p>
+                      </div>
+
+                      {/* Large Breathing Visualization */}
+                      {activeMeditation.guidance[currentMeditationStep]?.breathingCue && (
+                        <div className="flex flex-col items-center space-y-6">
+                          <div className={`w-40 h-40 rounded-full border-4 flex items-center justify-center transition-all duration-2000 ${
+                            breathingPhase === 'inhale' ? 'scale-125 border-accent bg-accent/20 shadow-xl shadow-accent/30' :
+                            breathingPhase === 'hold' ? 'scale-125 border-primary bg-primary/20 shadow-xl shadow-primary/30' :
+                            'scale-75 border-muted bg-muted/30 shadow-lg'
+                          }`}>
+                            <div className="text-center">
+                              <p className="text-lg font-medium capitalize">{breathingPhase}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {activeMeditation.breathingPattern ? 
+                                  (breathingPhase === 'inhale' ? activeMeditation.breathingPattern.inhaleCount :
+                                   breathingPhase === 'hold' ? activeMeditation.breathingPattern.holdCount :
+                                   activeMeditation.breathingPattern.exhaleCount) + 's' 
+                                  : ''}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <p className="text-center text-sm text-muted-foreground max-w-sm">
+                            Follow the circle as it guides your breathing rhythm
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Current Guidance */}
+                      <Card className="w-full max-w-md p-6 bg-card/50 backdrop-blur-sm">
+                        <p className="text-center text-sm leading-relaxed text-foreground">
+                          {activeMeditation.guidance[currentMeditationStep]?.text}
+                        </p>
+                      </Card>
+
+                      {/* Progress and Controls */}
+                      <div className="w-full max-w-md space-y-4">
+                        {/* Progress Bar */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Step {currentMeditationStep + 1} of {activeMeditation.guidance.length}</span>
+                            <span>{formatMeditationTime(meditationTimeElapsed)} / {activeMeditation.duration}min</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-accent h-2 rounded-full transition-all duration-1000"
+                              style={{ 
+                                width: `${(meditationTimeElapsed / (activeMeditation.duration * 60)) * 100}%` 
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        {/* Control Buttons */}
+                        <div className="flex items-center justify-center space-x-4">
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            onClick={pauseMeditationSession}
+                            className="border-accent/30"
+                          >
+                            {meditationActive ? <Pause size={20} /> : <Play size={20} />}
+                          </Button>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            onClick={stopMeditationSession}
+                            className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                          >
+                            <X size={20} />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </ScrollArea>
