@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle, BookOpen, Download, Plus, FileText, Export, Smiley, Wind, Play, Pause, TimerIcon } from "@phosphor-icons/react"
+import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle, BookOpen, Download, Plus, FileText, Export, Smiley, Wind, Play, Pause, TimerIcon, SpeakerSimpleHigh, SpeakerSimpleSlash } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -186,6 +186,14 @@ function App() {
   const gainNodesRef = useRef<{ [key: string]: GainNode }>({})
   const meditationTimerRef = useRef<NodeJS.Timeout | null>(null)
   const breathingTimerRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Text-to-Speech for meditation narration
+  const speechSynthesisRef = useRef<SpeechSynthesis | null>(null)
+  const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const [voiceNarrationEnabled, setVoiceNarrationEnabled] = useState(true)
+  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null)
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [isSpeaking, setIsSpeaking] = useState(false)
 
   // Comprehensive meditation sessions
   const meditationSessions: MeditationSession[] = [
@@ -224,30 +232,30 @@ function App() {
         },
         {
           id: 'breathing-instruction',
-          text: 'We will practice the 4-7-8 breathing pattern. Breathe in through your nose for 4 counts, hold for 7, then exhale slowly through your mouth for 8 counts.',
+          text: 'We will practice the four-seven-eight breathing pattern. Breathe in through your nose for four counts, hold for seven, then exhale slowly through your mouth for eight counts.',
           duration: 15,
         },
         {
           id: 'begin-breathing',
-          text: 'Let us begin. Breathe in slowly through your nose...',
+          text: 'Let us begin. Breathe in slowly through your nose.',
           duration: 4,
           breathingCue: { type: 'inhale', duration: 4 }
         },
         {
           id: 'hold-breath',
-          text: 'Hold your breath gently...',
+          text: 'Hold your breath gently.',
           duration: 7,
           breathingCue: { type: 'hold', duration: 7 }
         },
         {
           id: 'exhale-breath',
-          text: 'Now exhale slowly through your mouth...',
+          text: 'Now exhale slowly through your mouth.',
           duration: 8,
           breathingCue: { type: 'exhale', duration: 8 }
         },
         {
           id: 'continue-pattern',
-          text: 'Continue this rhythm at your own pace. Notice how each breath brings deeper relaxation.',
+          text: 'Continue this rhythm at your own pace. Notice how each breath brings deeper relaxation. Allow your body to soften with each exhale.',
           duration: 500,
         },
         {
@@ -280,32 +288,32 @@ function App() {
         },
         {
           id: 'body-awareness',
-          text: 'Begin by noticing your body. Feel the weight of your body supported by the surface beneath you.',
+          text: 'Begin by noticing your body. Feel the weight of your body supported by the surface beneath you. Notice any areas of tension or comfort.',
           duration: 30,
         },
         {
           id: 'breath-anchor',
-          text: 'Now bring your attention to your breath. Notice the natural rhythm of breathing without trying to change it.',
+          text: 'Now bring your attention to your breath. Notice the natural rhythm of breathing without trying to change it. Feel the air entering and leaving your nostrils.',
           duration: 60,
         },
         {
           id: 'sounds',
-          text: 'Expand your awareness to include the sounds around you. Simply notice them without judgment.',
+          text: 'Expand your awareness to include the sounds around you. Simply notice them without judgment. Let them be part of your present moment experience.',
           duration: 90,
         },
         {
           id: 'thoughts',
-          text: 'If thoughts arise, acknowledge them gently and return your attention to the present moment.',
+          text: 'If thoughts arise, acknowledge them gently like clouds passing in the sky, then return your attention to the present moment.',
           duration: 120,
         },
         {
           id: 'integration',
-          text: 'Rest in this awareness of the present moment. You are here, you are now, you are enough.',
+          text: 'Rest in this awareness of the present moment. You are here, you are now, you are enough. There is nowhere else you need to be.',
           duration: 300,
         },
         {
           id: 'closing',
-          text: 'Take a moment to appreciate this time you have given yourself. Gently return to your day.',
+          text: 'Take a moment to appreciate this time you have given yourself. Gently return to your day with this sense of presence.',
           duration: 25,
         }
       ]
@@ -667,6 +675,190 @@ function App() {
     }
   }
 
+  // Initialize Text-to-Speech
+  const initializeSpeechSynthesis = () => {
+    try {
+      if ('speechSynthesis' in window) {
+        speechSynthesisRef.current = window.speechSynthesis
+        
+        // Load available voices
+        const loadVoices = () => {
+          const voices = speechSynthesisRef.current?.getVoices() || []
+          
+          // Filter for high-quality voices, prefer female voices for meditation
+          const meditationVoices = voices.filter(voice => {
+            const name = voice.name.toLowerCase()
+            const lang = voice.lang.toLowerCase()
+            
+            // Prefer English voices
+            if (!lang.startsWith('en')) return false
+            
+            // Look for high-quality voices (often contain "premium", "neural", "enhanced")
+            const isHighQuality = name.includes('premium') || 
+                                  name.includes('neural') || 
+                                  name.includes('enhanced') ||
+                                  name.includes('natural') ||
+                                  voice.localService === false // Cloud voices are often higher quality
+                                  
+            // Prefer female voices for meditation (traditionally more soothing)
+            const isFemale = name.includes('female') || 
+                            name.includes('woman') ||
+                            name.includes('samantha') ||
+                            name.includes('alex') ||
+                            name.includes('victoria') ||
+                            name.includes('ava') ||
+                            name.includes('serena') ||
+                            name.includes('aria') ||
+                            name.includes('nora') ||
+                            name.includes('jenny') ||
+                            name.includes('michelle')
+            
+            return isHighQuality || isFemale || voice.default
+          })
+          
+          // Fallback to all voices if no preferred ones found
+          const voicesToUse = meditationVoices.length > 0 ? meditationVoices : voices.filter(v => v.lang.startsWith('en'))
+          
+          setAvailableVoices(voicesToUse)
+          
+          // Select default voice (prefer the first high-quality female voice)
+          if (voicesToUse.length > 0 && !selectedVoice) {
+            const defaultVoice = voicesToUse.find(voice => {
+              const name = voice.name.toLowerCase()
+              return name.includes('samantha') || name.includes('alex') || name.includes('ava')
+            }) || voicesToUse[0]
+            
+            setSelectedVoice(defaultVoice)
+          }
+        }
+        
+        // Load voices immediately
+        loadVoices()
+        
+        // Some browsers load voices asynchronously
+        if (speechSynthesisRef.current.onvoiceschanged !== undefined) {
+          speechSynthesisRef.current.onvoiceschanged = loadVoices
+        }
+      }
+    } catch (error) {
+      console.warn('Speech synthesis initialization failed:', error)
+    }
+  }
+
+  // Speak meditation guidance text
+  const speakText = (text: string, options: { 
+    rate?: number
+    pitch?: number
+    volume?: number
+    onStart?: () => void
+    onEnd?: () => void
+  } = {}) => {
+    if (!voiceNarrationEnabled || !speechSynthesisRef.current || !selectedVoice) return
+
+    try {
+      // Check if speech synthesis is available and working
+      if (speechSynthesisRef.current.speaking) {
+        speechSynthesisRef.current.cancel()
+      }
+      
+      // Clean text for better speech (remove special characters, normalize punctuation)
+      const cleanText = text
+        .replace(/["""'']/g, '"')
+        .replace(/[–—]/g, '-')
+        .replace(/\.\.\./g, '...')
+        .replace(/([.!?])\s*([A-Z])/g, '$1 $2') // Ensure proper pauses between sentences
+        .replace(/\b(\d+)-(\d+)-(\d+)\b/g, '$1 $2 $3') // Convert "4-7-8" to "4 7 8" for better pronunciation
+        .trim()
+      
+      const utterance = new SpeechSynthesisUtterance(cleanText)
+      
+      // Configure voice settings for meditation
+      utterance.voice = selectedVoice
+      utterance.rate = options.rate || 0.8  // Slower pace for meditation
+      utterance.pitch = options.pitch || 0.9 // Slightly lower pitch for calmness
+      utterance.volume = options.volume || 0.8
+      
+      // Event handlers
+      utterance.onstart = () => {
+        setIsSpeaking(true)
+        options.onStart?.()
+      }
+      
+      utterance.onend = () => {
+        setIsSpeaking(false)
+        currentUtteranceRef.current = null
+        options.onEnd?.()
+      }
+      
+      utterance.onerror = (event) => {
+        console.warn('Speech synthesis error:', event.error)
+        setIsSpeaking(false)
+        currentUtteranceRef.current = null
+        
+        // If there's a critical error, disable voice narration
+        if (event.error === 'not-allowed' || event.error === 'network') {
+          setVoiceNarrationEnabled(false)
+        }
+        
+        options.onEnd?.()
+      }
+      
+      // Handle interruption (user navigates away, etc.)
+      utterance.onpause = () => {
+        setIsSpeaking(false)
+      }
+      
+      utterance.onresume = () => {
+        setIsSpeaking(true)
+      }
+      
+      currentUtteranceRef.current = utterance
+      speechSynthesisRef.current.speak(utterance)
+      
+    } catch (error) {
+      console.warn('Failed to speak text:', error)
+      setIsSpeaking(false)
+      setVoiceNarrationEnabled(false) // Disable on critical error
+      options.onEnd?.()
+    }
+  }
+
+  // Stop current speech
+  const stopSpeaking = () => {
+    if (speechSynthesisRef.current) {
+      speechSynthesisRef.current.cancel()
+      setIsSpeaking(false)
+      currentUtteranceRef.current = null
+    }
+  }
+
+  // Toggle voice narration
+  const toggleVoiceNarration = () => {
+    const newState = !voiceNarrationEnabled
+    setVoiceNarrationEnabled(newState)
+    
+    if (!newState && isSpeaking) {
+      stopSpeaking()
+    }
+    
+    // Provide feedback about the change
+    if (activeMeditation) {
+      const statusText = newState ? 
+        "Voice guidance enabled. You'll hear narration for each step." : 
+        "Voice guidance disabled. You can still see the text instructions."
+      
+      // If enabling voice and we have a selected voice, speak the status
+      if (newState && selectedVoice) {
+        setTimeout(() => {
+          speakText(statusText, {
+            rate: 0.8,
+            pitch: 0.9,
+            volume: 0.9
+          })
+        }, 500)
+      }
+    }
+  }
   // Initialize audio context
   const initializeAudio = () => {
     try {
@@ -880,10 +1072,16 @@ function App() {
     }
   }, [currentMood, ambientEnabled])
 
+  // Initialize systems on mount
+  useEffect(() => {
+    initializeSpeechSynthesis()
+  }, [])
+
   // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       stopAmbientSounds()
+      stopSpeaking() // Stop any ongoing speech
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close()
       }
@@ -971,6 +1169,15 @@ function App() {
     let stepIndex = 0
     let stepTimeRemaining = session.guidance[0].duration
 
+    // Speak the first guidance step
+    if (voiceNarrationEnabled && session.guidance[0]) {
+      speakText(session.guidance[0].text, {
+        rate: 0.7,
+        pitch: 0.8,
+        volume: 0.9
+      })
+    }
+
     const updateTimer = () => {
       setMeditationTimeElapsed(prev => prev + 1)
       setMeditationStepTimeRemaining(prev => {
@@ -986,6 +1193,17 @@ function App() {
           const step = session.guidance[stepIndex]
           if (step.breathingCue) {
             handleBreathingCue(step.breathingCue)
+          }
+          
+          // Speak the new guidance step with a slight delay to avoid overlap
+          if (voiceNarrationEnabled && step.text) {
+            setTimeout(() => {
+              speakText(step.text, {
+                rate: 0.7,
+                pitch: 0.8,
+                volume: 0.9
+              })
+            }, 500) // 500ms delay for natural flow
           }
           
           return nextStepDuration
@@ -1008,14 +1226,29 @@ function App() {
   }
 
   const pauseMeditationSession = () => {
-    setMeditationActive(!meditationActive)
+    const newActiveState = !meditationActive
+    setMeditationActive(newActiveState)
+    
     if (meditationTimerRef.current) {
       if (meditationActive) {
+        // Pausing - stop timer and speech
         clearInterval(meditationTimerRef.current)
+        stopSpeaking()
       } else {
-        // Resume timer
+        // Resuming - restart timer and possibly speak current step
         if (activeMeditation) {
           runMeditationSession(activeMeditation)
+          
+          // Speak current step when resuming if voice is enabled
+          if (voiceNarrationEnabled && activeMeditation.guidance[currentMeditationStep]) {
+            setTimeout(() => {
+              speakText(activeMeditation.guidance[currentMeditationStep].text, {
+                rate: 0.7,
+                pitch: 0.8,
+                volume: 0.9
+              })
+            }, 1000) // Delay to allow user to settle back into meditation
+          }
         }
       }
     }
@@ -1025,6 +1258,7 @@ function App() {
     if (meditationTimerRef.current) {
       clearInterval(meditationTimerRef.current)
     }
+    stopSpeaking() // Stop any ongoing speech
     stopAmbientSounds()
     setActiveMeditation(null)
     setMeditationActive(false)
@@ -1037,6 +1271,9 @@ function App() {
   const completeMeditationSession = () => {
     if (!activeMeditation || !preSessionMood) return
 
+    // Stop any ongoing speech
+    stopSpeaking()
+
     const progress: MeditationProgress = {
       sessionId: activeMeditation.id,
       completedAt: new Date(),
@@ -1048,19 +1285,43 @@ function App() {
     }
 
     setMeditationProgress(current => [progress, ...current.slice(0, 49)]) // Keep last 50 sessions
-    stopMeditationSession()
     
-    // Show completion message
-    if (messages.length > 0) {
-      const completionMessage: Message = {
-        id: `meditation-complete-${Date.now()}`,
-        text: `Beautiful work completing "${activeMeditation.title}". Take a moment to notice how you feel now. How was that experience for you?`,
-        sender: 'avatar',
-        timestamp: new Date(),
-        mood: 'supportive'
+    // Speak completion message if voice is enabled
+    const completionText = `Beautiful work completing your ${activeMeditation.title} session. Take a moment to notice how you feel now.`
+    if (voiceNarrationEnabled) {
+      speakText(completionText, {
+        rate: 0.8,
+        pitch: 0.9,
+        volume: 0.9,
+        onEnd: () => {
+          // Add completion message to chat after speech ends
+          if (messages.length > 0) {
+            const completionMessage: Message = {
+              id: `meditation-complete-${Date.now()}`,
+              text: `${completionText} How was that experience for you?`,
+              sender: 'avatar',
+              timestamp: new Date(),
+              mood: 'supportive'
+            }
+            setMessages(prev => [...prev, completionMessage])
+          }
+        }
+      })
+    } else {
+      // Add completion message immediately if no voice
+      if (messages.length > 0) {
+        const completionMessage: Message = {
+          id: `meditation-complete-${Date.now()}`,
+          text: `${completionText} How was that experience for you?`,
+          sender: 'avatar',
+          timestamp: new Date(),
+          mood: 'supportive'
+        }
+        setMessages(prev => [...prev, completionMessage])
       }
-      setMessages(prev => [...prev, completionMessage])
     }
+    
+    stopMeditationSession()
   }
 
   const startMeditationAudio = (sounds: AmbientSound[]) => {
@@ -1920,6 +2181,14 @@ function App() {
                 </div>
               )}
               
+              {/* Voice Narration Status */}
+              {activeMeditation && voiceNarrationEnabled && (
+                <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                  <div className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-accent animate-pulse' : 'bg-muted'}`}></div>
+                  <span>{isSpeaking ? 'Speaking guidance...' : 'Voice guidance ready'}</span>
+                </div>
+              )}
+              
               {/* Active Theme Display */}
               {selectedTheme && !activeMeditation && (
                 <div className="flex items-center space-x-2 text-xs text-muted-foreground bg-card/50 px-3 py-1 rounded-full border border-accent/20">
@@ -2289,6 +2558,15 @@ function App() {
                             {meditationProgress.length} sessions
                           </span>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={toggleVoiceNarration}
+                          className={`text-muted-foreground hover:text-foreground ${voiceNarrationEnabled ? 'bg-accent/20 text-accent' : ''}`}
+                          title={voiceNarrationEnabled ? 'Disable voice guidance' : 'Enable voice guidance'}
+                        >
+                          {voiceNarrationEnabled ? <SpeakerSimpleHigh size={16} /> : <SpeakerSimpleSlash size={16} />}
+                        </Button>
                         {!activeMeditation && (
                           <Button
                             size="sm"
@@ -2316,6 +2594,15 @@ function App() {
                             <span className="text-xs text-muted-foreground">
                               {formatMeditationTime(meditationTimeElapsed)} / {activeMeditation.duration}min
                             </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={toggleVoiceNarration}
+                              className={`text-muted-foreground hover:text-foreground ${voiceNarrationEnabled ? 'bg-accent/20 text-accent' : ''}`}
+                              title={voiceNarrationEnabled ? 'Disable voice guidance' : 'Enable voice guidance'}
+                            >
+                              {voiceNarrationEnabled ? <SpeakerSimpleHigh size={16} /> : <SpeakerSimpleSlash size={16} />}
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -2367,6 +2654,76 @@ function App() {
                                 width: `${(meditationTimeElapsed / (activeMeditation.duration * 60)) * 100}%` 
                               }}
                             ></div>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                    
+                    {/* Voice Settings Panel */}
+                    {!activeMeditation && availableVoices.length > 0 && (
+                      <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                            <SpeakerSimpleHigh size={16} />
+                            Voice Guidance Settings
+                          </h3>
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-xs px-2 py-1 rounded-full ${voiceNarrationEnabled ? 'bg-accent/20 text-accent' : 'bg-muted text-muted-foreground'}`}>
+                              {voiceNarrationEnabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {/* Voice Selection */}
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-2 block">Narrator Voice</label>
+                            <select
+                              value={selectedVoice?.name || ''}
+                              onChange={(e) => {
+                                const voice = availableVoices.find(v => v.name === e.target.value)
+                                setSelectedVoice(voice || null)
+                              }}
+                              className="w-full p-2 text-sm bg-background border border-accent/30 rounded-md focus:outline-none focus:border-accent"
+                              disabled={!voiceNarrationEnabled}
+                            >
+                              {availableVoices.map((voice) => (
+                                <option key={voice.name} value={voice.name}>
+                                  {voice.name} ({voice.lang})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          {/* Voice Test */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Test voice</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (selectedVoice && voiceNarrationEnabled) {
+                                  speakText("Welcome to your meditation practice. Let's begin this journey together.", {
+                                    rate: 0.7,
+                                    pitch: 0.8,
+                                    volume: 0.9
+                                  })
+                                }
+                              }}
+                              disabled={!voiceNarrationEnabled || !selectedVoice || isSpeaking}
+                              className="text-xs"
+                            >
+                              {isSpeaking ? 'Speaking...' : 'Test Voice'}
+                            </Button>
+                          </div>
+                          
+                          {/* Voice Description */}
+                          <div className="text-xs text-muted-foreground bg-card/50 rounded-lg p-3">
+                            <p>
+                              Voice guidance provides gentle narration throughout your meditation session, 
+                              helping you stay focused and relaxed. You can toggle it on or off at any time 
+                              during your practice.
+                            </p>
                           </div>
                         </div>
                       </Card>
@@ -2430,6 +2787,7 @@ function App() {
                   </div>
                 )}
                 
+                {activeTab === 'insights' && (
                   <div>
                     <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
                       <Brain size={20} />
@@ -3051,6 +3409,15 @@ function App() {
                           <Button
                             size="lg"
                             variant="outline"
+                            onClick={toggleVoiceNarration}
+                            className={`border-accent/30 ${voiceNarrationEnabled ? 'bg-accent/10 text-accent' : ''}`}
+                            title={voiceNarrationEnabled ? 'Disable voice guidance' : 'Enable voice guidance'}
+                          >
+                            {voiceNarrationEnabled ? <SpeakerSimpleHigh size={20} /> : <SpeakerSimpleSlash size={20} />}
+                          </Button>
+                          <Button
+                            size="lg"
+                            variant="outline"
                             onClick={pauseMeditationSession}
                             className="border-accent/30"
                           >
@@ -3065,6 +3432,14 @@ function App() {
                             <X size={20} />
                           </Button>
                         </div>
+                        
+                        {/* Voice Status */}
+                        {voiceNarrationEnabled && (
+                          <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+                            <div className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-accent animate-pulse' : 'bg-muted'}`}></div>
+                            <span>{isSpeaking ? 'Voice guidance active' : 'Voice guidance ready'}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
