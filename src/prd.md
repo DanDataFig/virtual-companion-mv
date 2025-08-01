@@ -45,12 +45,12 @@
 - **Font Selection**: Inter - highly legible, modern, approachable
 - **Typographic Hierarchy**: Clear size/weight relationships for headers, body, captions
 
-### Visual Hierarchy & Layout
+
 - **Attention Direction**: Avatar takes visual priority, tools are secondary
 - **Grid System**: Simple two-column layout (avatar left, tools right)
 - **Content Density**: Generous spacing, uncluttered interface
 
-### UI Elements & Component Selection
+- **Data Persistence**: Use useKV for mood entries and diary entries
 - **Primary Components**: Cards for content areas, simple buttons, basic forms
 - **Component States**: Subtle hover effects, gentle transitions
 - **Mobile Adaptation**: Stack layout vertically on small screens
@@ -63,15 +63,4 @@
 ## Implementation Considerations
 - **Data Persistence**: Use useKV for mood entries and diary entries
 - **State Management**: React state for current UI state, useKV for persistent data
-- **Responsive Design**: Mobile-first approach with desktop enhancement
-
-## Core User Flow
-1. User sees calming avatar face
-2. Can quickly log mood with emoji scale
-3. Can write diary entry with optional mood tagging
-4. Can review past entries and mood patterns
-
-## Success Metrics
-- User returns to log mood regularly
-- Diary entries show emotional progression
-- Interface feels calming and supportive
+- **Responsive Design**: Mobile-first approach with desktop enhancement## Core User Flow1. User sees calming avatar face2. Can quickly log mood with emoji scale3. Can write diary entry with optional mood tagging4. Can review past entries and mood patterns## Success Metrics- User returns to log mood regularly- Diary entries show emotional progression- Interface feels calming and supportive
