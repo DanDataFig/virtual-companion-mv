@@ -1614,65 +1614,6 @@ function App() {
                   </Card>
                 )}
                 
-                {activeTab === 'chat' && showThemes && (
-                  <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-medium text-foreground">Conversation Themes</h3>
-                      {selectedTheme && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={suggestThemePrompt}
-                          className="text-xs"
-                        >
-                          <Sparkle size={12} className="mr-1" />
-                          Suggest prompt
-                        </Button>
-                      )}
-                    </div>
-                    
-                    {selectedTheme && (
-                      <div className="mb-4 p-3 rounded-lg bg-card border border-accent/20">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="text-lg">{selectedTheme.icon}</span>
-                          <h4 className="text-sm font-medium">{selectedTheme.name}</h4>
-                          <Badge variant="outline" className={`text-xs ${
-                            selectedTheme.emotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
-                            selectedTheme.emotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
-                            selectedTheme.emotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
-                            selectedTheme.emotion === 'supportive' ? 'border-green-400/50 text-green-700' :
-                            'border-slate-400/50 text-slate-700'
-                          }`}>
-                            {selectedTheme.emotion}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{selectedTheme.description}</p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedTheme(null)}
-                          className="mt-2 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          Clear theme
-                        </Button>
-                      </div>
-                    )}
-                    
-                    <div className="grid grid-cols-1 gap-2">
-                      {conversationThemes.map((theme) => (
-                        <Button
-                          key={theme.id}
-                          variant="ghost"
-                          onClick={() => applyTheme(theme)}
-                          className={`justify-start h-auto p-3 text-left ${
-                            selectedTheme?.id === theme.id ? 'bg-accent/20 border border-accent/30' : 'hover:bg-card'
-                          }`}
-                        >
-                          <div className="flex items-start space-x-3 w-full">
-                            <span className="text-lg mt-0.5">{theme.icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <p className="text-sm font-medium truncate">{theme.name}</p>
                                 <Badge variant="outline" className={`text-xs ${
                                   theme.emotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
                                   theme.emotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
