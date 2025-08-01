@@ -2821,8 +2821,8 @@ function App() {
                 )}
               </div>
               
-              {/* Conversation Themes Panel - only show in chat tab */}
-              {activeTab === 'chat' && showThemes && (
+                {/* Conversation Themes Panel - only show in chat tab */}
+                {activeTab === 'chat' && showThemes && (
                   <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-medium text-foreground">Conversation Themes</h3>
@@ -2866,8 +2866,8 @@ function App() {
                   </Card>
                 )}
               
-              {/* Memory Insights Panel - only show in chat tab */}
-              {activeTab === 'chat' && showMemoryInsights && memory.patterns.length > 0 && (
+                {/* Memory Insights Panel - only show in chat tab */}
+                {activeTab === 'chat' && showMemoryInsights && memory.patterns.length > 0 && (
                   <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
                     <h3 className="text-sm font-medium text-foreground mb-3">Emotional Journey</h3>
                     <div className="space-y-3">
