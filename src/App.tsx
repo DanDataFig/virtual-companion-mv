@@ -2820,102 +2820,106 @@ function App() {
                   </div>
                 )}
               </div>
-              
-                {/* Conversation Themes Panel - only show in chat tab */}
-                {activeTab === 'chat' && showThemes && (
-                  <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-medium text-foreground">Conversation Themes</h3>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setShowThemes(false)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X size={12} />
-                      </Button>
-                    </div>
-                    
-                    <div className="grid gap-3">
-                      {conversationThemes.map((theme) => (
-                        <Button
-                          key={theme.id}
-                          variant="ghost"
-                          onClick={() => applyTheme(theme)}
-                          className="h-auto p-3 flex items-start space-x-3 hover:bg-accent/10 text-left"
-                        >
-                          <span className="text-lg mt-0.5">{theme.icon}</span>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-sm text-foreground">{theme.name}</h4>
-                              <Badge variant="outline" className={`text-xs ${
-                                theme.emotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
-                                theme.emotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
-                                theme.emotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
-                                theme.emotion === 'supportive' ? 'border-green-400/50 text-green-700' :
-                                'border-slate-400/50 text-slate-700'
-                              }`}>
-                                {theme.emotion}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{theme.description}</p>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </Card>
-                )}
-              
-                {/* Memory Insights Panel - only show in chat tab */}
-                {activeTab === 'chat' && showMemoryInsights && memory.patterns.length > 0 && (
-                  <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
-                    <h3 className="text-sm font-medium text-foreground mb-3">Emotional Journey</h3>
-                    <div className="space-y-3">
-                      {/* Recent Patterns */}
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">Recent emotional patterns:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {memory.patterns.slice(0, 7).map((pattern, index) => (
-                            <Badge 
-                              key={pattern.date} 
-                              variant="outline" 
-                              className={`text-xs ${
-                                pattern.dominantEmotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
-                                pattern.dominantEmotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
-                                pattern.dominantEmotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
-                                pattern.dominantEmotion === 'supportive' ? 'border-green-400/50 text-green-700' :
-                                'border-accent/50'
-                              }`}
-                            >
-                              {pattern.dominantEmotion}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Frequent Topics */}
-                      {Object.keys(memory.keywords).length > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-2">Common themes:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {Object.entries(memory.keywords)
-                              .sort((a, b) => b[1] - a[1])
-                              .slice(0, 5)
-                              .map(([keyword, count]) => (
-                                <Badge key={keyword} variant="secondary" className="text-xs">
-                                  {keyword} ({count})
-                                </Badge>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                )}
-              </div>
+
 
               {/* Tab Content */}
               <TabsContent value="chat" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                {/* Conversation Themes Panel - only show in chat tab */}
+                {showThemes && (
+                  <div className="p-6 pb-0">
+                    <Card className="p-4 bg-muted/30 border-accent/20">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-medium text-foreground">Conversation Themes</h3>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowThemes(false)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X size={12} />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid gap-3">
+                        {conversationThemes.map((theme) => (
+                          <Button
+                            key={theme.id}
+                            variant="ghost"
+                            onClick={() => applyTheme(theme)}
+                            className="h-auto p-3 flex items-start space-x-3 hover:bg-accent/10 text-left"
+                          >
+                            <span className="text-lg mt-0.5">{theme.icon}</span>
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-sm text-foreground">{theme.name}</h4>
+                                <Badge variant="outline" className={`text-xs ${
+                                  theme.emotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                                  theme.emotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                                  theme.emotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                                  theme.emotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                                  'border-slate-400/50 text-slate-700'
+                                }`}>
+                                  {theme.emotion}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{theme.description}</p>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    </Card>
+                  </div>
+                )}
+                
+                {/* Memory Insights Panel - only show in chat tab */}
+                {showMemoryInsights && memory.patterns.length > 0 && (
+                  <div className="px-6 pb-0">
+                    <Card className="p-4 bg-muted/30 border-accent/20">
+                      <h3 className="text-sm font-medium text-foreground mb-3">Emotional Journey</h3>
+                      <div className="space-y-3">
+                        {/* Recent Patterns */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-2">Recent emotional patterns:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {memory.patterns.slice(0, 7).map((pattern, index) => (
+                              <Badge 
+                                key={pattern.date} 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  pattern.dominantEmotion === 'joyful' ? 'border-amber-400/50 text-amber-700' :
+                                  pattern.dominantEmotion === 'concerned' ? 'border-blue-500/50 text-blue-700' :
+                                  pattern.dominantEmotion === 'contemplative' ? 'border-purple-400/50 text-purple-700' :
+                                  pattern.dominantEmotion === 'supportive' ? 'border-green-400/50 text-green-700' :
+                                  'border-accent/50'
+                                }`}
+                              >
+                                {pattern.dominantEmotion}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Frequent Topics */}
+                        {Object.keys(memory.keywords).length > 0 && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-2">Common themes:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(memory.keywords)
+                                .sort((a, b) => b[1] - a[1])
+                                .slice(0, 5)
+                                .map(([keyword, count]) => (
+                                  <Badge key={keyword} variant="secondary" className="text-xs">
+                                    {keyword} ({count})
+                                  </Badge>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  </div>
+                )}
+                
                 {/* Messages */}
                 <ScrollArea className="flex-1 p-6">
                   <div className="space-y-6">
