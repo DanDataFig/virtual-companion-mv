@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle, BookOpen, Download, Plus, FileText, Export, Smiley } from "@phosphor-icons/react"
+import { Send, Mic, ChartLine, X, Calendar, Clock, Brain, TrendUp, Lightbulb, Heart, Palette, SpeakerHigh, SpeakerX, Sparkle, BookOpen, Download, Plus, FileText, Export, Smiley, Wind, Play, Pause, TimerIcon } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -83,6 +83,19 @@ interface MoodEntry {
   note?: string
 }
 
+interface BreathingExercise {
+  id: string
+  name: string
+  description: string
+  inhaleCount: number
+  holdCount: number
+  exhaleCount: number
+  cycles: number
+  frequency: number // Hz for binaural beats
+  emotion: 'calm' | 'energize' | 'focus' | 'sleep'
+  duration: number // in seconds
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("conversation-history", [])
   const [memory, setMemory] = useKV<ConversationMemory>("emotional-memory", {
@@ -105,6 +118,13 @@ function App() {
   const [showThemes, setShowThemes] = useState(false)
   const [showJournalForm, setShowJournalForm] = useState(false)
   const [showMoodRegistration, setShowMoodRegistration] = useState(false)
+  const [showBreathingExercise, setShowBreathingExercise] = useState(false)
+  const [currentBreathingExercise, setCurrentBreathingExercise] = useState<BreathingExercise | null>(null)
+  const [breathingActive, setBreathingActive] = useState(false)
+  const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'hold' | 'exhale'>('inhale')
+  const [breathingCycleCount, setBreathingCycleCount] = useState(0)
+  const [breathingTimeRemaining, setBreathingTimeRemaining] = useState(0)
+  const [breathingPhaseProgress, setBreathingPhaseProgress] = useState(0)
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null)
   const [journalForm, setJournalForm] = useState({
     title: '',
@@ -115,13 +135,78 @@ function App() {
     tagInput: ''
   })
 
-  // Audio context and oscillators for ambient sounds
+  // Audio context and oscillators for ambient sounds and breathing
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorsRef = useRef<{ [key: string]: OscillatorNode }>({})
   const gainNodesRef = useRef<{ [key: string]: GainNode }>({})
+  const breathingTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const breathingPhaseTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Predefined breathing exercises
+  const breathingExercises: BreathingExercise[] = [
+    {
+      id: 'box-breathing',
+      name: 'Box Breathing',
+      description: 'Equal count breathing for balance and calm',
+      inhaleCount: 4,
+      holdCount: 4,
+      exhaleCount: 4,
+      cycles: 8,
+      frequency: 60, // Base frequency for calm
+      emotion: 'calm',
+      duration: 288 // 4+4+4 = 12 seconds per cycle * 8 cycles
+    },
+    {
+      id: 'triangle-breathing',
+      name: 'Triangle Breathing',
+      description: 'Three-phase breathing for mindfulness',
+      inhaleCount: 4,
+      holdCount: 4,
+      exhaleCount: 4,
+      cycles: 6,
+      frequency: 65,
+      emotion: 'focus',
+      duration: 216
+    },
+    {
+      id: 'energize-breathing',
+      name: 'Energizing Breath',
+      description: 'Short inhale, long exhale for energy',
+      inhaleCount: 2,
+      holdCount: 1,
+      exhaleCount: 4,
+      cycles: 10,
+      frequency: 100,
+      emotion: 'energize',
+      duration: 210
+    },
+    {
+      id: 'sleep-breathing',
+      name: '4-7-8 Sleep Breath',
+      description: 'Extended exhale for relaxation and sleep',
+      inhaleCount: 4,
+      holdCount: 7,
+      exhaleCount: 8,
+      cycles: 4,
+      frequency: 45,
+      emotion: 'sleep',
+      duration: 304
+    },
+    {
+      id: 'coherent-breathing',
+      name: 'Heart Coherence',
+      description: 'Synchronized breathing for emotional coherence',
+      inhaleCount: 5,
+      holdCount: 0,
+      exhaleCount: 5,
+      cycles: 12,
+      frequency: 70,
+      emotion: 'calm',
+      duration: 360
+    }
+  ]
 
   // Conversation themes based on emotions
-  const conversationThemes: ConversationTheme[] = [
     {
       id: 'gratitude',
       name: 'Gratitude & Appreciation',
@@ -412,6 +497,7 @@ function App() {
   useEffect(() => {
     return () => {
       stopAmbientSounds()
+      stopBreathingExercise()
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close()
       }
@@ -464,6 +550,197 @@ function App() {
     const todaysMoods = getTodaysMoods()
     if (todaysMoods.length === 0) return null
     return Math.round(todaysMoods.reduce((sum, mood) => sum + mood.moodLevel, 0) / todaysMoods.length * 10) / 10
+  }
+
+  // Breathing exercise functions
+  const startBreathingExercise = (exercise: BreathingExercise) => {
+    try {
+      setCurrentBreathingExercise(exercise)
+      setBreathingActive(true)
+      setBreathingPhase('inhale')
+      setBreathingCycleCount(0)
+      setBreathingTimeRemaining(exercise.duration)
+      setBreathingPhaseProgress(0)
+
+      // Initialize audio for breathing sounds
+      initializeAudio()
+      startBreathingAudio(exercise)
+
+      // Start the breathing cycle
+      runBreathingCycle(exercise, 0)
+
+      // Overall timer
+      breathingTimerRef.current = setInterval(() => {
+        setBreathingTimeRemaining(prev => {
+          if (prev <= 1) {
+            stopBreathingExercise()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+
+    } catch (error) {
+      console.warn('Failed to start breathing exercise:', error)
+    }
+  }
+
+  const stopBreathingExercise = () => {
+    setBreathingActive(false)
+    setCurrentBreathingExercise(null)
+    setBreathingPhase('inhale')
+    setBreathingCycleCount(0)
+    setBreathingTimeRemaining(0)
+    setBreathingPhaseProgress(0)
+
+    // Clear timers
+    if (breathingTimerRef.current) {
+      clearInterval(breathingTimerRef.current)
+      breathingTimerRef.current = null
+    }
+    if (breathingPhaseTimerRef.current) {
+      clearTimeout(breathingPhaseTimerRef.current)
+      breathingPhaseTimerRef.current = null
+    }
+
+    // Stop breathing audio
+    stopBreathingAudio()
+  }
+
+  const runBreathingCycle = (exercise: BreathingExercise, cycleNumber: number) => {
+    if (cycleNumber >= exercise.cycles || !breathingActive) {
+      stopBreathingExercise()
+      return
+    }
+
+    setBreathingCycleCount(cycleNumber + 1)
+
+    // Inhale phase
+    setBreathingPhase('inhale')
+    animatePhaseProgress(exercise.inhaleCount, () => {
+      if (!breathingActive) return
+
+      // Hold phase (if any)
+      if (exercise.holdCount > 0) {
+        setBreathingPhase('hold')
+        animatePhaseProgress(exercise.holdCount, () => {
+          if (!breathingActive) return
+
+          // Exhale phase
+          setBreathingPhase('exhale')
+          animatePhaseProgress(exercise.exhaleCount, () => {
+            // Next cycle
+            setTimeout(() => runBreathingCycle(exercise, cycleNumber + 1), 500)
+          })
+        })
+      } else {
+        // Skip hold, go to exhale
+        setBreathingPhase('exhale')
+        animatePhaseProgress(exercise.exhaleCount, () => {
+          setTimeout(() => runBreathingCycle(exercise, cycleNumber + 1), 500)
+        })
+      }
+    })
+  }
+
+  const animatePhaseProgress = (duration: number, onComplete: () => void) => {
+    setBreathingPhaseProgress(0)
+    const startTime = Date.now()
+    const durationMs = duration * 1000
+
+    const updateProgress = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / durationMs, 1)
+      
+      setBreathingPhaseProgress(progress * 100)
+
+      if (progress >= 1) {
+        onComplete()
+      } else {
+        requestAnimationFrame(updateProgress)
+      }
+    }
+
+    requestAnimationFrame(updateProgress)
+  }
+
+  const startBreathingAudio = (exercise: BreathingExercise) => {
+    try {
+      if (!audioContextRef.current) return
+
+      // Create binaural beat for breathing
+      const leftOsc = audioContextRef.current.createOscillator()
+      const rightOsc = audioContextRef.current.createOscillator()
+      const leftGain = audioContextRef.current.createGain()
+      const rightGain = audioContextRef.current.createGain()
+      const merger = audioContextRef.current.createChannelMerger(2)
+
+      // Set frequencies for binaural beat effect
+      leftOsc.frequency.setValueAtTime(exercise.frequency, audioContextRef.current.currentTime)
+      rightOsc.frequency.setValueAtTime(exercise.frequency + 8, audioContextRef.current.currentTime) // 8Hz difference
+
+      leftOsc.type = 'sine'
+      rightOsc.type = 'sine'
+
+      // Very quiet volume for breathing guidance
+      leftGain.gain.setValueAtTime(0, audioContextRef.current.currentTime)
+      leftGain.gain.linearRampToValueAtTime(0.03, audioContextRef.current.currentTime + 2)
+      rightGain.gain.setValueAtTime(0, audioContextRef.current.currentTime)
+      rightGain.gain.linearRampToValueAtTime(0.03, audioContextRef.current.currentTime + 2)
+
+      // Connect to stereo channels
+      leftOsc.connect(leftGain)
+      rightOsc.connect(rightGain)
+      leftGain.connect(merger, 0, 0)
+      rightGain.connect(merger, 0, 1)
+      merger.connect(audioContextRef.current.destination)
+
+      leftOsc.start()
+      rightOsc.start()
+
+      oscillatorsRef.current['breathing-left'] = leftOsc
+      oscillatorsRef.current['breathing-right'] = rightOsc
+      gainNodesRef.current['breathing-left'] = leftGain
+      gainNodesRef.current['breathing-right'] = rightGain
+
+    } catch (error) {
+      console.warn('Failed to start breathing audio:', error)
+    }
+  }
+
+  const stopBreathingAudio = () => {
+    try {
+      ['breathing-left', 'breathing-right'].forEach(key => {
+        if (oscillatorsRef.current[key]) {
+          try {
+            oscillatorsRef.current[key].stop()
+          } catch (e) {
+            // Already stopped
+          }
+          delete oscillatorsRef.current[key]
+        }
+        if (gainNodesRef.current[key]) {
+          delete gainNodesRef.current[key]
+        }
+      })
+    } catch (error) {
+      console.warn('Failed to stop breathing audio:', error)
+    }
+  }
+
+  const getBreathingInstruction = () => {
+    if (!currentBreathingExercise) return ''
+    
+    switch (breathingPhase) {
+      case 'inhale':
+        return `Breathe in slowly for ${currentBreathingExercise.inhaleCount} seconds`
+      case 'hold':
+        return `Hold your breath for ${currentBreathingExercise.holdCount} seconds`
+      case 'exhale':
+        return `Breathe out slowly for ${currentBreathingExercise.exhaleCount} seconds`
+      default:
+        return ''
+    }
   }
   const toggleAmbientSounds = () => {
     try {
@@ -1220,6 +1497,93 @@ function App() {
           {/* Avatar Container */}
           <div className="relative z-10 flex flex-col items-center justify-center space-y-8">
             
+            {/* Breathing Exercise Overlay */}
+            {breathingActive && currentBreathingExercise && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/90 backdrop-blur-sm rounded-xl">
+                <div className="text-center space-y-6 p-8">
+                  <h2 className="text-2xl font-semibold text-foreground">{currentBreathingExercise.name}</h2>
+                  
+                  {/* Large Breathing Visual Guide */}
+                  <div className="relative w-48 h-48 mx-auto">
+                    {/* Outer ring - pulsing with breath */}
+                    <div className={`absolute inset-0 rounded-full border-4 transition-all duration-1000 ease-in-out ${
+                      breathingPhase === 'inhale' ? 'border-green-400 scale-125 shadow-lg shadow-green-400/50' :
+                      breathingPhase === 'hold' ? 'border-blue-400 scale-110 shadow-lg shadow-blue-400/50' :
+                      'border-purple-400 scale-95 shadow-lg shadow-purple-400/50'
+                    }`}></div>
+                    
+                    {/* Middle ring */}
+                    <div className={`absolute inset-6 rounded-full transition-all duration-1000 ease-in-out ${
+                      breathingPhase === 'inhale' ? 'bg-green-400/20 scale-125' :
+                      breathingPhase === 'hold' ? 'bg-blue-400/20 scale-110' :
+                      'bg-purple-400/20 scale-95'
+                    }`}></div>
+                    
+                    {/* Inner core */}
+                    <div className={`absolute inset-12 rounded-full transition-all duration-1000 ease-in-out ${
+                      breathingPhase === 'inhale' ? 'bg-green-400/40 scale-125 animate-pulse' :
+                      breathingPhase === 'hold' ? 'bg-blue-400/40 scale-110' :
+                      'bg-purple-400/40 scale-95 animate-pulse'
+                    }`}></div>
+                    
+                    {/* Center text */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`text-3xl font-bold transition-colors duration-500 ${
+                        breathingPhase === 'inhale' ? 'text-green-600' :
+                        breathingPhase === 'hold' ? 'text-blue-600' :
+                        'text-purple-600'
+                      }`}>
+                        {breathingPhase.toUpperCase()}
+                      </span>
+                      <span className="text-sm text-muted-foreground mt-1">
+                        {breathingPhase === 'inhale' ? currentBreathingExercise.inhaleCount :
+                         breathingPhase === 'hold' ? currentBreathingExercise.holdCount :
+                         currentBreathingExercise.exhaleCount}s
+                      </span>
+                    </div>
+                    
+                    {/* Progress arc */}
+                    <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="45"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeDasharray={`${breathingPhaseProgress * 2.827} 282.7`}
+                        className={`transition-all duration-100 ${
+                          breathingPhase === 'inhale' ? 'text-green-400' :
+                          breathingPhase === 'hold' ? 'text-blue-400' :
+                          'text-purple-400'
+                        }`}
+                      />
+                    </svg>
+                  </div>
+                  
+                  {/* Instructions */}
+                  <div className="space-y-3">
+                    <p className="text-lg text-foreground">{getBreathingInstruction()}</p>
+                    <div className="flex justify-center items-center space-x-6 text-sm text-muted-foreground">
+                      <span>Cycle {breathingCycleCount}/{currentBreathingExercise.cycles}</span>
+                      <span>•</span>
+                      <span>{Math.floor(breathingTimeRemaining / 60)}:{(breathingTimeRemaining % 60).toString().padStart(2, '0')} remaining</span>
+                    </div>
+                  </div>
+                  
+                  {/* Controls */}
+                  <Button
+                    onClick={stopBreathingExercise}
+                    variant="outline"
+                    className="mt-6"
+                  >
+                    <Pause size={16} className="mr-2" />
+                    End Session
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             {/* Main Avatar Display */}
             <div className="relative">
               {/* Avatar Face Container */}
@@ -1261,9 +1625,16 @@ function App() {
             {/* Status Indicator */}
             <div className="flex flex-col items-center space-y-2">
               <div className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${isTyping ? 'bg-accent animate-pulse' : moodConfig.eyeColor}`}></div>
+                <div className={`w-3 h-3 rounded-full transition-colors duration-500 ${
+                  breathingActive ? (
+                    breathingPhase === 'inhale' ? 'bg-green-400 animate-pulse' :
+                    breathingPhase === 'hold' ? 'bg-blue-400' :
+                    'bg-purple-400 animate-pulse'
+                  ) : isTyping ? 'bg-accent animate-pulse' : moodConfig.eyeColor
+                }`}></div>
                 <span className="text-sm text-muted-foreground font-medium">
-                  {isTyping ? 'Thinking...' : `${currentMood.charAt(0).toUpperCase() + currentMood.slice(1)} • Listening`}
+                  {breathingActive ? `${breathingPhase.charAt(0).toUpperCase() + breathingPhase.slice(1)} • ${currentBreathingExercise?.name}` :
+                   isTyping ? 'Thinking...' : `${currentMood.charAt(0).toUpperCase() + currentMood.slice(1)} • Listening`}
                 </span>
               </div>
               
@@ -1293,8 +1664,9 @@ function App() {
             {/* Navigation Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
               <div className="p-6 border-b border-border/50">
-                <TabsList className="grid w-full grid-cols-5 mb-4">
+                <TabsList className="grid w-full grid-cols-6 mb-4">
                   <TabsTrigger value="chat" className="text-xs">Chat</TabsTrigger>
+                  <TabsTrigger value="breathe" className="text-xs">Breathe</TabsTrigger>
                   <TabsTrigger value="mood" className="text-xs">Mood</TabsTrigger>
                   <TabsTrigger value="journal" className="text-xs">Journal</TabsTrigger>
                   <TabsTrigger value="insights" className="text-xs">Insights</TabsTrigger>
@@ -1360,7 +1732,146 @@ function App() {
                   </div>
                 )}
                 
-                {activeTab === 'mood' && (
+                {activeTab === 'breathe' && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                          <Wind size={20} />
+                          Breathing Guide
+                        </h1>
+                        <p className="text-sm text-muted-foreground mt-1">Guided breathing with synchronized sounds</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {breathingActive && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={stopBreathingExercise}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Pause size={16} />
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowBreathingExercise(!showBreathingExercise)}
+                          className={`text-muted-foreground hover:text-foreground ${showBreathingExercise ? 'bg-accent/20 text-accent' : ''}`}
+                        >
+                          {showBreathingExercise ? <X size={16} /> : <Plus size={16} />}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Active Breathing Session */}
+                    {breathingActive && currentBreathingExercise && (
+                      <Card className="mt-4 p-6 bg-muted/30 border-accent/20">
+                        <div className="text-center space-y-4">
+                          <h3 className="text-lg font-medium text-foreground">{currentBreathingExercise.name}</h3>
+                          
+                          {/* Breathing Visual Guide */}
+                          <div className="relative w-32 h-32 mx-auto">
+                            <div className={`absolute inset-0 rounded-full border-4 transition-all duration-1000 ${
+                              breathingPhase === 'inhale' ? 'border-green-400 scale-110' :
+                              breathingPhase === 'hold' ? 'border-blue-400 scale-105' :
+                              'border-purple-400 scale-90'
+                            }`}></div>
+                            <div className={`absolute inset-4 rounded-full transition-all duration-1000 ${
+                              breathingPhase === 'inhale' ? 'bg-green-400/30 scale-110' :
+                              breathingPhase === 'hold' ? 'bg-blue-400/30 scale-105' :
+                              'bg-purple-400/30 scale-90'
+                            }`}></div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className={`w-16 h-16 rounded-full transition-all duration-1000 ${
+                                breathingPhase === 'inhale' ? 'bg-green-400 animate-pulse' :
+                                breathingPhase === 'hold' ? 'bg-blue-400' :
+                                'bg-purple-400 animate-pulse'
+                              }`}></div>
+                            </div>
+                          </div>
+                          
+                          {/* Instructions */}
+                          <div className="space-y-2">
+                            <p className="text-lg font-medium text-foreground capitalize">{breathingPhase}</p>
+                            <p className="text-sm text-muted-foreground">{getBreathingInstruction()}</p>
+                          </div>
+                          
+                          {/* Progress */}
+                          <div className="space-y-2">
+                            <div className="w-full bg-muted rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all ${
+                                  breathingPhase === 'inhale' ? 'bg-green-400' :
+                                  breathingPhase === 'hold' ? 'bg-blue-400' :
+                                  'bg-purple-400'
+                                }`}
+                                style={{ width: `${breathingPhaseProgress}%` }}
+                              ></div>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>Cycle {breathingCycleCount}/{currentBreathingExercise.cycles}</span>
+                              <span>{Math.floor(breathingTimeRemaining / 60)}:{(breathingTimeRemaining % 60).toString().padStart(2, '0')} remaining</span>
+                            </div>
+                          </div>
+                          
+                          <Button
+                            onClick={stopBreathingExercise}
+                            variant="outline"
+                            className="mt-4"
+                          >
+                            <Pause size={16} className="mr-2" />
+                            Stop Session
+                          </Button>
+                        </div>
+                      </Card>
+                    )}
+                    
+                    {/* Breathing Exercise Selection */}
+                    {showBreathingExercise && !breathingActive && (
+                      <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
+                        <h3 className="text-sm font-medium text-foreground mb-3">Choose a breathing exercise</h3>
+                        
+                        <div className="space-y-3">
+                          {breathingExercises.map((exercise) => (
+                            <div key={exercise.id} className="p-3 border border-accent/20 rounded-lg hover:border-accent/40 transition-colors">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-sm text-foreground">{exercise.name}</h4>
+                                  <p className="text-xs text-muted-foreground mt-1">{exercise.description}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => startBreathingExercise(exercise)}
+                                  className="bg-accent hover:bg-accent/90 ml-3"
+                                >
+                                  <Play size={12} className="mr-1" />
+                                  Start
+                                </Button>
+                              </div>
+                              
+                              <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+                                <div className="flex items-center space-x-4">
+                                  <span>🔄 {exercise.cycles} cycles</span>
+                                  <span>⏱️ {Math.floor(exercise.duration / 60)}:{(exercise.duration % 60).toString().padStart(2, '0')}</span>
+                                  <span className={`px-2 py-1 rounded-full ${
+                                    exercise.emotion === 'calm' ? 'bg-blue-100 text-blue-700' :
+                                    exercise.emotion === 'energize' ? 'bg-orange-100 text-orange-700' :
+                                    exercise.emotion === 'focus' ? 'bg-purple-100 text-purple-700' :
+                                    'bg-indigo-100 text-indigo-700'
+                                  }`}>
+                                    {exercise.emotion}
+                                  </span>
+                                </div>
+                                <span>{exercise.inhaleCount}-{exercise.holdCount > 0 ? exercise.holdCount + '-' : ''}{exercise.exhaleCount}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                )}
                   <div>
                     <div className="flex items-center justify-between">
                       <div>
@@ -1908,7 +2419,78 @@ function App() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="mood" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+              <TabsContent value="breathe" className="flex-1 m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1 p-6">
+                  {!breathingActive ? (
+                    <div className="space-y-6">
+                      {/* Breathing Exercise Cards */}
+                      <div className="grid gap-4">
+                        {breathingExercises.map((exercise) => (
+                          <Card key={exercise.id} className="p-4 border-accent/20 hover:border-accent/40 transition-colors cursor-pointer" onClick={() => startBreathingExercise(exercise)}>
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <h3 className="font-medium text-lg text-foreground mb-1">{exercise.name}</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">{exercise.description}</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  startBreathingExercise(exercise)
+                                }}
+                                className="bg-accent hover:bg-accent/90 ml-4"
+                              >
+                                <Play size={16} className="mr-2" />
+                                Start
+                              </Button>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                                <div className="flex items-center space-x-1">
+                                  <TimerIcon size={14} />
+                                  <span>{Math.floor(exercise.duration / 60)}:{(exercise.duration % 60).toString().padStart(2, '0')}</span>
+                                </div>
+                                <span>🔄 {exercise.cycles} cycles</span>
+                                <span className="text-xs">{exercise.inhaleCount}-{exercise.holdCount > 0 ? exercise.holdCount + '-' : ''}{exercise.exhaleCount} pattern</span>
+                              </div>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  exercise.emotion === 'calm' ? 'border-blue-400/50 text-blue-700' :
+                                  exercise.emotion === 'energize' ? 'border-orange-400/50 text-orange-700' :
+                                  exercise.emotion === 'focus' ? 'border-purple-400/50 text-purple-700' :
+                                  'border-indigo-400/50 text-indigo-700'
+                                }`}
+                              >
+                                {exercise.emotion}
+                              </Badge>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      {/* Benefits Info */}
+                      <Card className="p-4 bg-muted/30 border-accent/20">
+                        <h3 className="text-sm font-medium text-foreground mb-3">Benefits of Guided Breathing</h3>
+                        <div className="space-y-2 text-sm text-muted-foreground">
+                          <p>• Reduces stress and anxiety through nervous system regulation</p>
+                          <p>• Improves focus and mental clarity with synchronized audio cues</p>
+                          <p>• Enhances emotional balance with binaural beat frequencies</p>
+                          <p>• Promotes better sleep and relaxation with targeted exercises</p>
+                          <p>• Builds mindfulness through intentional breath awareness</p>
+                        </div>
+                      </Card>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Wind size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">Breathing session in progress</p>
+                      <p className="text-sm text-muted-foreground mt-2">Switch to the main view to see your breathing guide</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
                 <ScrollArea className="flex-1 p-6">
                   {moodEntries.length === 0 ? (
                     <div className="text-center py-12">
