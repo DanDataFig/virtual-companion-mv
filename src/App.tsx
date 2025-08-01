@@ -2819,62 +2819,7 @@ function App() {
                     <p className="text-sm text-muted-foreground mt-1">Your emotional journey by day</p>
                   </div>
                 )}
-                  <Card className="mt-4 p-4 bg-muted/30 border-accent/20">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-medium text-foreground">How are you feeling?</h3>
-                      <span className="text-xs text-muted-foreground">Quick check-in</span>
-                    </div>
-                    
-                    {/* Today's Mood Summary */}
-                    {getTodaysMoods().length > 0 && (
-                      <div className="mb-4 p-3 rounded-lg bg-card border border-accent/20">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-muted-foreground">Today's mood</span>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-lg">{getMoodEmoji(Math.round(getAverageMoodToday()!))}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {getAverageMoodToday()}/5 ({getTodaysMoods().length} check-ins)
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex space-x-1">
-                          {getTodaysMoods().slice(0, 5).map((mood, index) => (
-                            <span key={index} className="text-sm" title={new Date(mood.timestamp).toLocaleTimeString()}>
-                              {getMoodEmoji(mood.moodLevel)}
-                            </span>
-                          ))}
-                          {getTodaysMoods().length > 5 && (
-                            <span className="text-xs text-muted-foreground">+{getTodaysMoods().length - 5}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Mood Selection */}
-                    <div className="space-y-3">
-                      <p className="text-xs text-muted-foreground">Tap to register your current mood:</p>
-                      
-                      <div className="grid grid-cols-5 gap-2">
-                        {[1, 2, 3, 4, 5].map((level) => (
-                          <Button
-                            key={level}
-                            variant="ghost"
-                            onClick={() => registerMood(level)}
-                            className="h-12 flex flex-col items-center justify-center hover:bg-accent/20 transition-colors"
-                          >
-                            <span className="text-lg mb-1">{getMoodEmoji(level)}</span>
-                            <span className="text-xs text-muted-foreground">{level}</span>
-                          </Button>
-                        ))}
-                      </div>
-                      
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Very Sad</span>
-                        <span>Very Happy</span>
-                      </div>
-                    </div>
-                  </Card>
-                )}
+              </div>
                 
                 {/* Conversation Themes Panel - only show in chat tab */}
                 {activeTab === 'chat' && showThemes && (
