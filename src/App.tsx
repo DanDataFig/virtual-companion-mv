@@ -208,33 +208,33 @@ function App() {
     }
   ]
 
-  // Generate ambient sounds based on current mood
+  // Generate ambient sounds based on current mood - binaural beats and deep tones
   const createAmbientSound = (emotion: string): AmbientSound[] => {
     switch (emotion) {
       case 'joyful':
         return [
-          { id: 'joy-1', name: 'Bright Harmony', emotion: 'joyful', frequency: 432, volume: 0.1, type: 'sine' },
-          { id: 'joy-2', name: 'Gentle Sparkle', emotion: 'joyful', frequency: 528, volume: 0.08, type: 'triangle' }
+          { id: 'joy-1', name: 'Alpha Joy Beat', emotion: 'joyful', frequency: 100, volume: 0.05, type: 'sine' }, // Base at 100Hz
+          { id: 'joy-2', name: 'Joy Binaural', emotion: 'joyful', frequency: 110, volume: 0.05, type: 'sine' }  // 10Hz binaural (alpha waves)
         ]
       case 'concerned':
         return [
-          { id: 'concern-1', name: 'Deep Presence', emotion: 'concerned', frequency: 256, volume: 0.12, type: 'sine' },
-          { id: 'concern-2', name: 'Grounding Tone', emotion: 'concerned', frequency: 174, volume: 0.1, type: 'triangle' }
+          { id: 'concern-1', name: 'Deep Earth Tone', emotion: 'concerned', frequency: 80, volume: 0.08, type: 'sine' },
+          { id: 'concern-2', name: 'Grounding Beat', emotion: 'concerned', frequency: 87, volume: 0.08, type: 'sine' }   // 7Hz binaural (theta)
         ]
       case 'contemplative':
         return [
-          { id: 'contemp-1', name: 'Thoughtful Resonance', emotion: 'contemplative', frequency: 396, volume: 0.1, type: 'sine' },
-          { id: 'contemp-2', name: 'Reflective Space', emotion: 'contemplative', frequency: 285, volume: 0.08, type: 'triangle' }
+          { id: 'contemp-1', name: 'Theta Reflection', emotion: 'contemplative', frequency: 90, volume: 0.06, type: 'sine' },
+          { id: 'contemp-2', name: 'Deep Thought Beat', emotion: 'contemplative', frequency: 96, volume: 0.06, type: 'sine' } // 6Hz binaural (theta)
         ]
       case 'supportive':
         return [
-          { id: 'support-1', name: 'Healing Frequency', emotion: 'supportive', frequency: 417, volume: 0.11, type: 'sine' },
-          { id: 'support-2', name: 'Nurturing Tone', emotion: 'supportive', frequency: 639, volume: 0.09, type: 'triangle' }
+          { id: 'support-1', name: 'Heart Resonance', emotion: 'supportive', frequency: 110, volume: 0.07, type: 'sine' },
+          { id: 'support-2', name: 'Healing Beat', emotion: 'supportive', frequency: 118, volume: 0.07, type: 'sine' }     // 8Hz binaural (alpha)
         ]
       default: // calm
         return [
-          { id: 'calm-1', name: 'Peaceful Flow', emotion: 'calm', frequency: 528, volume: 0.08, type: 'sine' },
-          { id: 'calm-2', name: 'Centered Breath', emotion: 'calm', frequency: 432, volume: 0.06, type: 'triangle' }
+          { id: 'calm-1', name: 'Deep Green Noise', emotion: 'calm', frequency: 60, volume: 0.04, type: 'sine' },
+          { id: 'calm-2', name: 'Delta Peace Beat', emotion: 'calm', frequency: 63, volume: 0.04, type: 'sine' }          // 3Hz binaural (delta)
         ]
     }
   }
@@ -253,7 +253,7 @@ function App() {
     }
   }
 
-  // Start ambient sounds
+  // Start ambient sounds with enhanced binaural and noise generation
   const startAmbientSounds = (emotion: string) => {
     if (!ambientEnabled) return
     
@@ -266,26 +266,17 @@ function App() {
 
       const sounds = createAmbientSound(emotion)
       
-      sounds.forEach(sound => {
+      sounds.forEach((sound, index) => {
         try {
-          const oscillator = audioContextRef.current!.createOscillator()
-          const gainNode = audioContextRef.current!.createGain()
-          
-          oscillator.type = sound.type
-          oscillator.frequency.setValueAtTime(sound.frequency, audioContextRef.current!.currentTime)
-          
-          gainNode.gain.setValueAtTime(0, audioContextRef.current!.currentTime)
-          gainNode.gain.linearRampToValueAtTime(sound.volume, audioContextRef.current!.currentTime + 2)
-          
-          oscillator.connect(gainNode)
-          gainNode.connect(audioContextRef.current!.destination)
-          
-          oscillator.start()
-          
-          oscillatorsRef.current[sound.id] = oscillator
-          gainNodesRef.current[sound.id] = gainNode
+          if (sound.id.includes('Green') || sound.id.includes('Deep')) {
+            // Create noise-based sound for green noise effect
+            createNoiseSound(sound)
+          } else {
+            // Create binaural beat
+            createBinauralSound(sound, index === 1)
+          }
         } catch (error) {
-          console.warn('Failed to create oscillator:', error)
+          console.warn('Failed to create sound:', error)
         }
       })
     } catch (error) {
@@ -293,13 +284,111 @@ function App() {
     }
   }
 
-  // Stop ambient sounds
+  // Create binaural beat effect
+  const createBinauralSound = (sound: AmbientSound, isRightEar: boolean = false) => {
+    try {
+      const oscillator = audioContextRef.current!.createOscillator()
+      const gainNode = audioContextRef.current!.createGain()
+      const panner = audioContextRef.current!.createStereoPanner()
+      
+      // Pan left or right for binaural effect
+      panner.pan.setValueAtTime(isRightEar ? 1 : -1, audioContextRef.current!.currentTime)
+      
+      oscillator.type = 'sine' // Always use sine for pure binaural beats
+      oscillator.frequency.setValueAtTime(sound.frequency, audioContextRef.current!.currentTime)
+      
+      // Gentle fade in
+      gainNode.gain.setValueAtTime(0, audioContextRef.current!.currentTime)
+      gainNode.gain.linearRampToValueAtTime(sound.volume, audioContextRef.current!.currentTime + 3)
+      
+      // Add subtle frequency modulation for more organic feel
+      const lfo = audioContextRef.current!.createOscillator()
+      const lfoGain = audioContextRef.current!.createGain()
+      lfo.type = 'sine'
+      lfo.frequency.setValueAtTime(0.1, audioContextRef.current!.currentTime) // Very slow modulation
+      lfoGain.gain.setValueAtTime(0.5, audioContextRef.current!.currentTime)  // Subtle depth
+      
+      lfo.connect(lfoGain)
+      lfoGain.connect(oscillator.frequency)
+      lfo.start()
+      
+      oscillator.connect(gainNode)
+      gainNode.connect(panner)
+      panner.connect(audioContextRef.current!.destination)
+      
+      oscillator.start()
+      
+      oscillatorsRef.current[sound.id] = oscillator
+      gainNodesRef.current[sound.id] = gainNode
+      
+      // Store LFO for cleanup
+      oscillatorsRef.current[sound.id + '_lfo'] = lfo
+      
+    } catch (error) {
+      console.warn('Failed to create binaural sound:', error)
+    }
+  }
+
+  // Create deep noise sound (simulating green noise)
+  const createNoiseSound = (sound: AmbientSound) => {
+    try {
+      const bufferSize = 4096
+      const buffer = audioContextRef.current!.createBuffer(2, bufferSize, audioContextRef.current!.sampleRate)
+      
+      // Generate filtered noise for green noise approximation
+      for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+        const channelData = buffer.getChannelData(channel)
+        let lastOut = 0
+        
+        for (let i = 0; i < bufferSize; i++) {
+          // Generate pink/brown noise (1/f characteristic for green noise approximation)
+          const white = Math.random() * 2 - 1
+          // Simple low-pass filter to create deeper, more soothing noise
+          lastOut = lastOut * 0.96 + white * 0.04
+          channelData[i] = lastOut * 0.3 // Reduce amplitude for background ambience
+        }
+      }
+      
+      const noiseSource = audioContextRef.current!.createBufferSource()
+      const gainNode = audioContextRef.current!.createGain()
+      const filter = audioContextRef.current!.createBiquadFilter()
+      
+      // Deep low-pass filter for soothing effect
+      filter.type = 'lowpass'
+      filter.frequency.setValueAtTime(sound.frequency * 2, audioContextRef.current!.currentTime)
+      filter.Q.setValueAtTime(0.7, audioContextRef.current!.currentTime)
+      
+      noiseSource.buffer = buffer
+      noiseSource.loop = true
+      
+      gainNode.gain.setValueAtTime(0, audioContextRef.current!.currentTime)
+      gainNode.gain.linearRampToValueAtTime(sound.volume, audioContextRef.current!.currentTime + 4)
+      
+      noiseSource.connect(filter)
+      filter.connect(gainNode)
+      gainNode.connect(audioContextRef.current!.destination)
+      
+      noiseSource.start()
+      
+      oscillatorsRef.current[sound.id] = noiseSource as any
+      gainNodesRef.current[sound.id] = gainNode
+      
+    } catch (error) {
+      console.warn('Failed to create noise sound:', error)
+    }
+  }
+
+  // Stop ambient sounds - enhanced cleanup
   const stopAmbientSounds = () => {
-    Object.values(oscillatorsRef.current).forEach(oscillator => {
+    Object.entries(oscillatorsRef.current).forEach(([key, oscillator]) => {
       try {
-        oscillator.stop()
+        if (oscillator) {
+          if ('stop' in oscillator) {
+            oscillator.stop()
+          }
+        }
       } catch (e) {
-        // Oscillator already stopped
+        // Already stopped or invalid
       }
     })
     
