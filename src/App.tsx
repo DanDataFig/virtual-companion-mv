@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -6,8 +6,11 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Smiley, BookOpen, Plus, X, Edit3, Trash2 } from "@phosphor-icons/react"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { Smiley, BookOpen, Plus, X, Edit3, Trash2, TrendUp, CalendarBlank } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, Area, AreaChart, Cell, PieChart, Pie } from "recharts"
+import { generateDemoMoodData, generateDemoDiaryData } from './demo-data'
 
 interface MoodEntry {
   id: string
@@ -44,6 +47,99 @@ function App() {
     tags: [] as string[],
     tagInput: ''
   })
+
+  // Chart configuration for mood trends
+  const chartConfig = {
+    mood: {
+      label: "Mood Level",
+      color: "hsl(var(--accent))",
+    },
+    average: {
+      label: "Average",
+      color: "hsl(var(--muted-foreground))",
+    }
+  }
+
+  // Process mood data for trending analysis
+  const moodTrendsData = useMemo(() => {
+    if (moodEntries.length === 0) return []
+    
+    // Sort entries by date
+    const sortedEntries = [...moodEntries].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+    
+    // Group by day and calculate daily averages
+    const dailyMoods = new Map<string, { sum: number; count: number; entries: MoodEntry[] }>()
+    
+    sortedEntries.forEach(entry => {
+      const dateKey = new Date(entry.timestamp).toDateString()
+      const existing = dailyMoods.get(dateKey) || { sum: 0, count: 0, entries: [] }
+      dailyMoods.set(dateKey, {
+        sum: existing.sum + entry.level,
+        count: existing.count + 1,
+        entries: [...existing.entries, entry]
+      })
+    })
+    
+    // Convert to chart data format
+    return Array.from(dailyMoods.entries()).map(([date, data]) => ({
+      date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      fullDate: date,
+      mood: Math.round((data.sum / data.count) * 10) / 10,
+      count: data.count,
+      entries: data.entries
+    })).slice(-14) // Last 14 days
+  }, [moodEntries])
+
+  // Weekly mood distribution
+  const weeklyMoodDistribution = useMemo(() => {
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    const recent = moodEntries.slice(0, 21) // Last 3 weeks of entries
+    
+    recent.forEach(entry => {
+      distribution[entry.level as keyof typeof distribution]++
+    })
+    
+    return Object.entries(distribution).map(([level, count]) => ({
+      mood: getMoodLabel(parseInt(level)),
+      level: parseInt(level),
+      count,
+      percentage: recent.length > 0 ? Math.round((count / recent.length) * 100) : 0,
+      emoji: getMoodEmoji(parseInt(level))
+    }))
+  }, [moodEntries])
+
+  // Mood insights
+  const moodInsights = useMemo(() => {
+    if (moodEntries.length < 3) return null
+    
+    const recent = moodEntries.slice(0, 7) // Last week
+    const previous = moodEntries.slice(7, 14) // Previous week
+    
+    const recentAvg = recent.reduce((sum, entry) => sum + entry.level, 0) / recent.length
+    const previousAvg = previous.length > 0 
+      ? previous.reduce((sum, entry) => sum + entry.level, 0) / previous.length 
+      : recentAvg
+    
+    const trend = recentAvg - previousAvg
+    const mostCommonMood = weeklyMoodDistribution.reduce((prev, current) => 
+      current.count > prev.count ? current : prev
+    )
+    
+    return {
+      recentAverage: Math.round(recentAvg * 10) / 10,
+      trend: Math.round(trend * 10) / 10,
+      trendDirection: trend > 0.2 ? 'improving' : trend < -0.2 ? 'declining' : 'stable',
+      mostCommonMood,
+      totalEntries: moodEntries.length,
+      entriesThisWeek: recent.length,
+      bestDay: moodTrendsData.reduce((best, current) => 
+        current.mood > best.mood ? current : best, 
+        { mood: 0, date: '', fullDate: '' }
+      )
+    }
+  }, [moodEntries, weeklyMoodDistribution, moodTrendsData])
 
   // Get mood emoji
   const getMoodEmoji = (level: number): string => {
@@ -160,6 +256,15 @@ function App() {
     setDiaryEntries(current => current.filter(entry => entry.id !== id))
   }
 
+  // Demo data loader (for testing)
+  const loadDemoData = () => {
+    const demoMoods = generateDemoMoodData()
+    const demoDiary = generateDemoDiaryData()
+    setMoodEntries(demoMoods)
+    setDiaryEntries(demoDiary)
+    setActiveTab('trends')
+  }
+
   // Avatar face configuration based on current mood
   const getAvatarConfig = () => {
     const mood = getRecentAverageMood()
@@ -253,9 +358,10 @@ function App() {
               
               {/* Tab Navigation */}
               <div className="mb-6">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="face">Face</TabsTrigger>
                   <TabsTrigger value="mood">Mood</TabsTrigger>
+                  <TabsTrigger value="trends">Trends</TabsTrigger>
                   <TabsTrigger value="diary">Diary</TabsTrigger>
                 </TabsList>
               </div>
@@ -290,6 +396,17 @@ function App() {
                       <BookOpen size={16} className="mr-2" />
                       Write in Diary
                     </Button>
+
+                    {moodEntries.length >= 3 && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => setActiveTab('trends')}
+                        className="border-accent/40 hover:bg-accent/10"
+                      >
+                        <TrendUp size={16} className="mr-2" />
+                        View Trends
+                      </Button>
+                    )}
                   </div>
 
                   {/* Recent activity summary */}
@@ -309,6 +426,23 @@ function App() {
                             <p className="text-muted-foreground">diary entries</p>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Demo data loader - only show if no data exists */}
+                  {moodEntries.length === 0 && diaryEntries.length === 0 && (
+                    <div className="mt-8 pt-6 border-t border-border/50">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-3">Want to see how trends work?</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={loadDemoData}
+                          className="text-xs"
+                        >
+                          Load sample data
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -394,6 +528,276 @@ function App() {
                             </div>
                           </Card>
                         ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+
+              {/* Trends Tab */}
+              <TabsContent value="trends" className="flex-1 flex flex-col">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-medium">Mood Trends</h2>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <TrendUp size={16} />
+                    <span>Pattern Analysis</span>
+                  </div>
+                </div>
+
+                <ScrollArea className="flex-1">
+                  {moodEntries.length < 3 ? (
+                    <div className="text-center py-12">
+                      <TrendUp size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-4">Not enough data for trends</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Log at least 3 mood entries to see your emotional patterns
+                      </p>
+                      <Button onClick={() => setActiveTab('mood')}>
+                        Start tracking mood
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      
+                      {/* Insights Summary */}
+                      {moodInsights && (
+                        <Card className="p-6">
+                          <h3 className="font-medium mb-4 flex items-center">
+                            <CalendarBlank size={16} className="mr-2" />
+                            Weekly Insights
+                          </h3>
+                          
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-accent">{moodInsights.recentAverage}</p>
+                              <p className="text-sm text-muted-foreground">Average Mood</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-primary">{moodInsights.entriesThisWeek}</p>
+                              <p className="text-sm text-muted-foreground">Entries This Week</p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Trend:</span>
+                              <div className="flex items-center space-x-2">
+                                <Badge 
+                                  variant={
+                                    moodInsights.trendDirection === 'improving' ? 'default' :
+                                    moodInsights.trendDirection === 'declining' ? 'destructive' : 'secondary'
+                                  }
+                                  className="text-xs"
+                                >
+                                  {moodInsights.trendDirection === 'improving' && '↗'} 
+                                  {moodInsights.trendDirection === 'declining' && '↘'} 
+                                  {moodInsights.trendDirection === 'stable' && '→'} 
+                                  {moodInsights.trendDirection}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {moodInsights.trend > 0 ? '+' : ''}{moodInsights.trend}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Most common:</span>
+                              <div className="flex items-center space-x-1">
+                                <span>{moodInsights.mostCommonMood.emoji}</span>
+                                <span>{moodInsights.mostCommonMood.mood}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ({moodInsights.mostCommonMood.percentage}%)
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {moodInsights.bestDay.mood > 0 && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Best day:</span>
+                                <div className="flex items-center space-x-1">
+                                  <span>{getMoodEmoji(Math.round(moodInsights.bestDay.mood))}</span>
+                                  <span>{moodInsights.bestDay.date}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    ({moodInsights.bestDay.mood}/5)
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </Card>
+                      )}
+
+                      {/* Mood Timeline Chart */}
+                      {moodTrendsData.length > 0 && (
+                        <Card className="p-6">
+                          <h3 className="font-medium mb-4">14-Day Mood Timeline</h3>
+                          <ChartContainer config={chartConfig} className="h-64">
+                            <AreaChart data={moodTrendsData}>
+                              <defs>
+                                <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3}/>
+                                  <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0.05}/>
+                                </linearGradient>
+                              </defs>
+                              <XAxis 
+                                dataKey="date" 
+                                tick={{ fontSize: 11 }}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <YAxis 
+                                domain={[1, 5]} 
+                                tick={{ fontSize: 11 }}
+                                axisLine={false}
+                                tickLine={false}
+                                tickFormatter={(value) => `${value}`}
+                              />
+                              <ChartTooltip 
+                                content={
+                                  <ChartTooltipContent 
+                                    formatter={(value, name) => [
+                                      `${value}/5 ${getMoodEmoji(Math.round(Number(value)))}`,
+                                      "Average Mood"
+                                    ]}
+                                    labelFormatter={(label, payload) => {
+                                      const data = payload?.[0]?.payload
+                                      return `${label} (${data?.count} ${data?.count === 1 ? 'entry' : 'entries'})`
+                                    }}
+                                  />
+                                } 
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="mood"
+                                stroke="hsl(var(--accent))"
+                                fillOpacity={1}
+                                fill="url(#moodGradient)"
+                                strokeWidth={2}
+                                dot={{ 
+                                  fill: "hsl(var(--accent))", 
+                                  strokeWidth: 2, 
+                                  stroke: "hsl(var(--background))",
+                                  r: 4 
+                                }}
+                              />
+                            </AreaChart>
+                          </ChartContainer>
+                        </Card>
+                      )}
+
+                      {/* Mood Distribution */}
+                      <Card className="p-6">
+                        <h3 className="font-medium mb-4">Recent Mood Distribution</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Based on your last {Math.min(moodEntries.length, 21)} entries
+                        </p>
+                        
+                        <ChartContainer config={chartConfig} className="h-48">
+                          <BarChart data={weeklyMoodDistribution} layout="horizontal">
+                            <XAxis type="number" hide />
+                            <YAxis 
+                              dataKey="mood" 
+                              type="category" 
+                              tick={{ fontSize: 11 }}
+                              axisLine={false}
+                              tickLine={false}
+                              width={60}
+                            />
+                            <ChartTooltip 
+                              content={
+                                <ChartTooltipContent 
+                                  formatter={(value, name, props) => [
+                                    `${value} entries (${props.payload.percentage}%)`,
+                                    `${props.payload.emoji} ${props.payload.mood}`
+                                  ]}
+                                  hideLabel={true}
+                                />
+                              } 
+                            />
+                            <Bar 
+                              dataKey="count" 
+                              fill="hsl(var(--accent))"
+                              radius={[0, 4, 4, 0]}
+                            >
+                              {weeklyMoodDistribution.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={
+                                    entry.level === 1 ? 'hsl(220, 50%, 60%)' :
+                                    entry.level === 2 ? 'hsl(220, 30%, 70%)' :
+                                    entry.level === 3 ? 'hsl(var(--muted-foreground))' :
+                                    entry.level === 4 ? 'hsl(120, 40%, 60%)' :
+                                    'hsl(60, 80%, 60%)'
+                                  }
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ChartContainer>
+                        
+                        {/* Distribution percentages */}
+                        <div className="grid grid-cols-5 gap-2 mt-4">
+                          {weeklyMoodDistribution.map((item) => (
+                            <div key={item.level} className="text-center">
+                              <div className="text-lg mb-1">{item.emoji}</div>
+                              <div className="text-sm font-medium">{item.percentage}%</div>
+                              <div className="text-xs text-muted-foreground">{item.count}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+
+                      {/* Pattern Recognition */}
+                      {moodTrendsData.length >= 7 && (
+                        <Card className="p-6">
+                          <h3 className="font-medium mb-4">Pattern Recognition</h3>
+                          <div className="space-y-3">
+                            
+                            {/* Weekly pattern analysis */}
+                            <div className="p-4 bg-muted/30 rounded-lg">
+                              <h4 className="text-sm font-medium mb-2">Weekly Pattern</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {(() => {
+                                  const recent = moodTrendsData.slice(-7)
+                                  const avgWeekend = recent.filter((_, i) => i === 0 || i === 6).reduce((sum, d) => sum + d.mood, 0) / 2
+                                  const avgWeekday = recent.filter((_, i) => i > 0 && i < 6).reduce((sum, d) => sum + d.mood, 0) / 5
+                                  
+                                  if (avgWeekend > avgWeekday + 0.3) {
+                                    return "You tend to feel better on weekends. Consider bringing some weekend activities into your weekdays."
+                                  } else if (avgWeekday > avgWeekend + 0.3) {
+                                    return "Your weekdays are generally better than weekends. You might thrive with structure and routine."
+                                  } else {
+                                    return "Your mood is fairly consistent throughout the week. Great emotional stability!"
+                                  }
+                                })()}
+                              </p>
+                            </div>
+
+                            {/* Consistency analysis */}
+                            <div className="p-4 bg-muted/30 rounded-lg">
+                              <h4 className="text-sm font-medium mb-2">Emotional Consistency</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {(() => {
+                                  const recentMoods = moodEntries.slice(0, 14).map(e => e.level)
+                                  const variance = recentMoods.reduce((sum, mood) => {
+                                    const avg = recentMoods.reduce((s, m) => s + m, 0) / recentMoods.length
+                                    return sum + Math.pow(mood - avg, 2)
+                                  }, 0) / recentMoods.length
+                                  
+                                  if (variance < 0.5) {
+                                    return "Your mood has been very stable recently. This suggests good emotional regulation."
+                                  } else if (variance < 1.5) {
+                                    return "Your mood shows normal variation. This is healthy emotional responsiveness."
+                                  } else {
+                                    return "Your mood has been quite variable. Consider what factors might be influencing these changes."
+                                  }
+                                })()}
+                              </p>
+                            </div>
+
+                          </div>
+                        </Card>
+                      )}
+
                     </div>
                   )}
                 </ScrollArea>
