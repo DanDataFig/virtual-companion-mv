@@ -75,14 +75,36 @@ body {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
 }
 
-/* Infinity loop animation */
-@keyframes rotate-infinity {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* Slow pulse animation for circles */
+@keyframes pulse-slow {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% { 
+    transform: scale(1.05);
+    opacity: 1;
+  }
 }
 
-.animate-spin-slow {
-  animation: rotate-infinity 8s linear infinite;
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* Breathing glow animation */
+@keyframes breathe-glow {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% { 
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.animate-breathe-glow {
+  animation: breathe-glow 2s ease-in-out infinite;
 }
 
 /* Floating animation for avatar */
@@ -103,43 +125,6 @@ body {
 
 .animate-breathe {
   animation: breathe 2s ease-in-out infinite;
-}
-
-/* Breathing float animation for avatar during breathing exercises */
-@keyframes breathe-float {
-  0%, 100% { transform: translateY(0px) scale(1); }
-  25% { transform: translateY(-8px) scale(1.05); }
-  50% { transform: translateY(-15px) scale(1.1); }
-  75% { transform: translateY(-8px) scale(1.05); }
-}
-
-.animate-breathe-float {
-  animation: breathe-float 13s ease-in-out infinite;
-}
-
-/* Infinity breathing animation */
-@keyframes breathe-infinity {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  25% { transform: rotate(90deg) scale(1.1); }
-  50% { transform: rotate(180deg) scale(1.2); }
-  75% { transform: rotate(270deg) scale(1.1); }
-}
-
-.animate-breathe-infinity {
-  animation: breathe-infinity 13s ease-in-out infinite;
-}
-
-/* Glow effects */
-.glow-purple {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-}
-
-.glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-}
-
-.glow-green {
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
 }
 
 /* Message bubble animations */
