@@ -1,81 +1,76 @@
 # Companion App - Product Requirements Document
 
 ## Core Purpose & Success
-- **Mission Statement**: A compassionate AI emotional companion that provides empathetic conversation and guided breathing exercises for emotional wellbeing.
-- **Success Indicators**: Users feel emotionally supported, complete breathing exercises regularly, and maintain consistent mood tracking.
-- **Experience Qualities**: Calming, empathetic, healing.
+- **Mission Statement**: A compassionate AI emotional companion that provides empathetic conversation and mood tracking with dynamic visual feedback that responds to conversation intensity.
+- **Success Indicators**: Users feel emotionally supported, experience responsive visual feedback during conversations, and maintain consistent mood tracking.
+- **Experience Qualities**: Calming, empathetic, responsive.
 
 ## Project Classification & Approach
-- **Complexity Level**: Light Application - two core features with shared state
-- **Primary User Activity**: Interacting - emotional support through conversation and breathing exercises
+- **Complexity Level**: Light Application - two core features with intelligent visual responsiveness
+- **Primary User Activity**: Interacting - emotional support through conversation with real-time visual feedback
 
 ## Essential Features
 
-### 1. AI Companion Chat
-- **Functionality**: Real-time conversation with an empathetic AI that responds to user emotional state and mood history
-- **Purpose**: Provide emotional support and understanding through natural dialogue
-- **Success Criteria**: AI responses feel appropriate to user's emotional context and mood patterns
+### 1. AI Companion Chat with Intensity Visualization
+- **Functionality**: Real-time conversation with an empathetic AI companion represented by animated overlapping circles that respond to conversation intensity
+- **Purpose**: Provide emotional support through natural dialogue with visual feedback that reflects engagement levels
+- **Success Criteria**: AI responses feel appropriate to user's emotional context, visual circles respond dynamically to conversation intensity
 
-### 2. Quick Mood Check-in
-- **Functionality**: 5-point emoji scale (😢 to 😊) for rapid mood logging
-- **Purpose**: Track emotional patterns and inform AI companion context
-- **Success Criteria**: Simple one-tap mood entry with visual feedback
+### 2. Real-time Conversation Intensity Animation
+- **Functionality**: Circles change color, scale, animation speed, and glow based on analyzed conversation intensity (word choice, punctuation, length, emotional content)
+- **Purpose**: Create immersive feedback that makes the companion feel alive and responsive to user engagement
+- **Success Criteria**: Visual feedback feels natural and enhances emotional connection without being distracting
 
-### 3. Guided Breathing Exercises
-- **Functionality**: Synchronized breathing exercises with animated infinity loop avatar guidance
-- **Purpose**: Provide active emotional regulation tool through structured breathing
-- **Success Criteria**: Clear visual guidance with 4-6-4-2 breathing pattern (inhale-hold-exhale-pause)
+### 3. Quick Mood Check-in
+- **Functionality**: 5-point emoji scale (😢 to 😊) for rapid mood logging that influences companion visual state
+- **Purpose**: Track emotional patterns and inform both AI companion context and visual representation
+- **Success Criteria**: Simple one-tap mood entry with immediate visual feedback in companion appearance
 
 ## Design Direction
 
 ### Visual Tone & Identity
-- **Emotional Response**: Peaceful, safe, healing, present
-- **Design Personality**: Minimalist, organic, ethereal, human-centered
-- **Visual Metaphors**: Infinity loops representing continuous presence and flow, gentle breathing rhythms
-- **Simplicity Spectrum**: Minimal interface - focused on emotional connection over technical complexity
+- **Emotional Response**: Responsive, alive, empathetic, present
+- **Design Personality**: Organic, ethereal, dynamically responsive, human-centered
+- **Visual Metaphors**: Overlapping circles representing connection and presence, intensity-based animation representing emotional resonance
+- **Simplicity Spectrum**: Minimal interface focused on emotional connection through dynamic visual feedback
 
 ### Color Strategy
-- **Color Scheme Type**: Analogous with calming blues and cyans
-- **Primary Color**: Deep slate (oklch(0.10 0.01 240)) - grounding, safe background
-- **Secondary Colors**: Soft blues and cyans - breathing and active states
-- **Accent Color**: Purple (oklch(0.55 0.18 280)) - user interaction and warmth
-- **Color Psychology**: Blues promote calm and trust, purples add warmth without stimulation
-- **Breathing Mode**: Cyan to indigo gradient - represents breath flow and healing energy
+- **Color Scheme Type**: Mood-responsive gradients (blue/indigo for calm, green/teal for positive, purple/pink for neutral)
+- **Primary Color**: Deep slate (oklch(0.10 0.01 240)) - grounding background
+- **Dynamic Colors**: Circles shift between color palettes based on mood and conversation intensity
+- **Intensity Amplification**: Higher intensity = deeper colors, stronger glow effects, enhanced contrast
+- **Color Psychology**: Blues promote calm, greens indicate positive engagement, purples represent balanced interaction
 
-### Typography System
-- **Font Selection**: Inter - clean, readable, friendly
-- **Typographic Hierarchy**: Large breathing instructions, medium status text, small metadata
-- **Reading Priority**: Breathing guidance > mood state > conversation
+### Avatar Animation System
+- **Base State**: Two overlapping circles with gentle pulsing (3-4 second cycles)
+- **Intensity Response**: Animation speed increases, scale grows, glow intensifies based on conversation analysis
+- **Mood Integration**: Color palettes shift based on user's recent mood entries
+- **Real-time Feedback**: Circles respond to typing for immediate visual connection
+- **High Intensity Effects**: Ripple animations appear around circles during peak engagement
 
-### Avatar & Animation
-- **Infinity Loop Design**: Continuous flowing loops representing eternal presence and support
-- **Breathing Synchronization**: Avatar scales and colors shift to match breathing phases
-- **Mood Reflection**: Colors adapt to user's recent mood patterns
-- **Motion Purpose**: Guide breathing rhythm, provide comfort through continuous presence
-
-### Breathing Exercise Interface
-- **Visual Guidance**: Expanding/contracting circle synchronized with breathing phases
-- **Progress Indicators**: Session timer, cycle counter, completion progress
-- **Instruction Text**: Clear phase guidance ("Breathe in slowly...", "Hold gently...")
-- **Ambient Colors**: Calming cyan-to-blue gradient throughout breathing session
+### Conversation Intensity Analysis
+- **Word Analysis**: Emotional keywords (excited, amazing, terrible, etc.) increase intensity
+- **Punctuation Weight**: Exclamation marks and question marks add intensity points
+- **Message Length**: Longer messages indicate higher engagement
+- **Caps Detection**: ALL CAPS text significantly increases intensity
+- **Intensity Decay**: Visual effects gradually return to baseline after conversation pauses
 
 ## Implementation Considerations
-- **State Management**: useKV for persistent mood tracking and breathing session history
-- **Responsive Design**: Mobile-first single column layout
-- **Animation Performance**: Smooth 60fps breathing animations with CSS transforms
-- **Accessibility**: Clear visual hierarchy, readable text, intuitive touch targets
+- **Real-time Analysis**: Client-side intensity calculation for immediate visual response
+- **Performance**: Smooth animations at 60fps using CSS transforms and transitions
+- **State Management**: useKV for persistent mood tracking and conversation history
+- **Responsive Design**: Mobile-first with large touch targets for voice/mood controls
 
 ## Core User Flow
-1. Open app → See infinity loop avatar reflecting current emotional state
-2. Quick mood check-in via emoji scale (optional)
-3. Choose between:
-   - Chat with AI companion for emotional support
-   - Start guided breathing exercise for active regulation
-4. Breathing mode: Follow infinity loop and visual guides through breathing cycles
-5. Return to normal mode with session completion tracking
+1. Open app → See overlapping circle companion in neutral state
+2. Quick mood check-in (optional) → Circles adapt color palette
+3. Start typing → Circles begin responding to intensity in real-time
+4. Send message → Full intensity analysis triggers enhanced visual feedback
+5. AI responds → Companion maintains contextual mood while awaiting next interaction
+6. High-intensity conversations → Additional ripple effects and enhanced glow
 
 ## Success Metrics
-- Regular breathing exercise completion (target: 3+ minutes per session)
-- Consistent mood tracking entries
-- Meaningful AI conversation engagement
-- User reports of emotional benefit and calm
+- Visual feedback feels natural and enhances emotional connection
+- Users engage longer due to responsive visual feedback
+- Conversation intensity accurately reflects user emotional state
+- Mood tracking integration provides meaningful context for companion behavior

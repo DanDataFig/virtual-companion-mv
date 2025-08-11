@@ -127,7 +127,41 @@ body {
   animation: breathe 2s ease-in-out infinite;
 }
 
-/* Message bubble animations */
+/* Intensity-based ripple animation */
+@keyframes intensity-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.animate-intensity-ripple {
+  animation: intensity-ripple 2s ease-out infinite;
+}
+
+/* Enhanced breathing glow with intensity */
+@keyframes breathe-glow-intense {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% { 
+    transform: scale(1.4);
+    opacity: 1;
+  }
+}
+
+.animate-breathe-glow-intense {
+  animation: breathe-glow-intense 1.5s ease-in-out infinite;
+}
 @keyframes slideInLeft {
   from {
     opacity: 0;
