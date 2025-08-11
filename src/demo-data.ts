@@ -1,11 +1,11 @@
 // Demo data generator for testing mood trends
 export const generateDemoMoodData = () => {
-  const now = new Date
   const now = new Date();
+  const demoData = [];
   
-    const entriesPerDay = Math.floor(Math.random() * 3
-    for (let j = 0; j < entriesPe
-      entryTime.setHours(Math.floor(Math.random() * 16) + 6); // 6 AM
+  // Generate mood entries for the past 21 days
+  for (let i = 0; i < 21; i++) {
+    const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
     
     // Add 1-3 entries per day with varied timing
     const entriesPerDay = Math.floor(Math.random() * 3) + 1;
@@ -14,22 +14,31 @@ export const generateDemoMoodData = () => {
       const entryTime = new Date(date);
       entryTime.setHours(Math.floor(Math.random() * 16) + 6); // 6 AM to 10 PM
       entryTime.setMinutes(Math.floor(Math.random() * 60));
-    }
-  
-};
-export const generateDemoDiaryData = () => {
-    { title: "Morning Reflection", content: "Started the day with some q
-    { title: "Challenging Day", content: "Today felt overwhelming with everything on my plat
-    { 
-    { title: "Nature Therapy", cont
-  ];
-  const 
-  cons
-  
-  const numEntries = Math.floor(Math.random() * 5) +
-  for (let i = 0; i < num
-    const entryDate = new Da
-    
+      
+      // Generate mood with some realistic patterns
+      let mood = 3; // Start neutral
+      
+      // Weekend boost
+      if (entryTime.getDay() === 0 || entryTime.getDay() === 6) {
+        mood += Math.random() > 0.3 ? 1 : 0;
+      }
+      
+      // Evening dip
+      if (entryTime.getHours() > 20) {
+        mood -= Math.random() > 0.4 ? 1 : 0;
+      }
+      
+      // Random variation
+      mood += Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+      
+      // Clamp to 1-5 range
+      mood = Math.max(1, Math.min(5, mood));
+      
+      demoData.push({
+        id: `demo-mood-${i}-${j}-${Date.now()}`,
+        level: mood,
+        timestamp: entryTime
+      });
     }
   }
   
@@ -62,29 +71,38 @@ export const generateDemoDiaryData = () => {
     entryDate.setHours(Math.floor(Math.random() * 6) + 18); // Evening entries
     
     const topicIndex = Math.floor(Math.random() * topics.length);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    const selectedTopic = topics[topicIndex];
+    
+    // Generate 1-3 random tags
+    const entryTags = [];
+    const numTags = Math.floor(Math.random() * 3) + 1;
+    
+    for (let j = 0; j < numTags; j++) {
+      const randomTag = tags[Math.floor(Math.random() * tags.length)];
+      if (!entryTags.includes(randomTag)) {
+        entryTags.push(randomTag);
+      }
+    }
+    
+    // Generate mood based on content sentiment
+    let mood = 3;
+    if (selectedTopic.title.includes("Gratitude") || selectedTopic.title.includes("Creative") || selectedTopic.title.includes("Nature")) {
+      mood = Math.floor(Math.random() * 2) + 4; // 4-5
+    } else if (selectedTopic.title.includes("Challenging")) {
+      mood = Math.floor(Math.random() * 2) + 2; // 2-3
+    } else {
+      mood = Math.floor(Math.random() * 3) + 3; // 3-5
+    }
+    
+    demoData.push({
+      id: `demo-diary-${i}-${Date.now()}`,
+      title: selectedTopic.title,
+      content: selectedTopic.content,
+      mood: mood,
+      tags: entryTags,
+      timestamp: entryDate
+    });
+  }
+  
+  return demoData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+};
