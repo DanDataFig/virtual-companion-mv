@@ -1,11 +1,11 @@
 // Demo data generator for testing mood trends
 export const generateDemoMoodData = () => {
-  const demoData = [];
+  const now = new Date
   const now = new Date();
   
-  // Generate 30-50 mood entries over the past 3 weeks
-  for (let i = 20; i >= 0; i--) {
-    const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+    const entriesPerDay = Math.floor(Math.random() * 3
+    for (let j = 0; j < entriesPe
+      entryTime.setHours(Math.floor(Math.random() * 16) + 6); // 6 AM
     
     // Add 1-3 entries per day with varied timing
     const entriesPerDay = Math.floor(Math.random() * 3) + 1;
@@ -14,22 +14,22 @@ export const generateDemoMoodData = () => {
       const entryTime = new Date(date);
       entryTime.setHours(Math.floor(Math.random() * 16) + 6); // 6 AM to 10 PM
       entryTime.setMinutes(Math.floor(Math.random() * 60));
-      
-      // Create realistic mood patterns with some volatility
-      const trendFactor = i / 20; // Earlier dates have different baseline
-      const baseMood = 2.5 + (Math.sin(i * 0.3) * 0.8); // Sine wave pattern
-      const randomVariation = (Math.random() - 0.5) * 2; // ±1 variation
-      const weekendBoost = ([0, 6].includes(entryTime.getDay())) ? 0.5 : 0; // Weekend bonus
-      
-      const finalMood = Math.round(
-        Math.max(1, Math.min(5, baseMood + randomVariation + weekendBoost))
-      );
-      
-      demoData.push({
-        id: `demo-mood-${entryTime.getTime()}-${j}`,
-        level: finalMood,
-        timestamp: entryTime
-      });
+    }
+  
+};
+export const generateDemoDiaryData = () => {
+    { title: "Morning Reflection", content: "Started the day with some q
+    { title: "Challenging Day", content: "Today felt overwhelming with everything on my plat
+    { 
+    { title: "Nature Therapy", cont
+  ];
+  const 
+  cons
+  
+  const numEntries = Math.floor(Math.random() * 5) +
+  for (let i = 0; i < num
+    const entryDate = new Da
+    
     }
   }
   
@@ -62,30 +62,29 @@ export const generateDemoDiaryData = () => {
     entryDate.setHours(Math.floor(Math.random() * 6) + 18); // Evening entries
     
     const topicIndex = Math.floor(Math.random() * topics.length);
-    const topic = topics[topicIndex];
-    
-    // Select 1-3 random tags
-    const numTags = Math.floor(Math.random() * 3) + 1;
-    const selectedTags = [];
-    for (let j = 0; j < numTags; j++) {
-      const tagIndex = Math.floor(Math.random() * tags.length);
-      if (!selectedTags.includes(tags[tagIndex])) {
-        selectedTags.push(tags[tagIndex]);
-      }
-    }
-    
-    // Mood correlates with content sentiment
-    const mood = Math.floor(Math.random() * 2) + 3 + (topic.content.includes("amazing") || topic.content.includes("beautiful") || topic.content.includes("grateful") ? 1 : 0);
-    
-    demoData.push({
-      id: `demo-diary-${entryDate.getTime()}`,
-      title: topic.title,
-      content: topic.content,
-      mood: Math.min(5, mood),
-      tags: selectedTags,
-      timestamp: entryDate
-    });
-  }
-  
-  return demoData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
