@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX } from "@phosphor-icons/react"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -42,19 +42,81 @@ function App() {
   const [selectedBackground, setSelectedBackground] = useState<string | null>(null)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const [chatScrollOffset, setChatScrollOffset] = useState(0) // For message pagination
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  
+  // Swipe gesture state
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
+  // Chat navigation constants
+  const MESSAGES_PER_PAGE = 6
+  const SWIPE_THRESHOLD = 50 // Minimum distance for swipe detection
+
+  // Calculate visible messages based on scroll offset
+  const getVisibleMessages = () => {
+    const totalMessages = messages.length
+    const startIndex = Math.max(0, totalMessages - MESSAGES_PER_PAGE - chatScrollOffset)
+    const endIndex = Math.max(MESSAGES_PER_PAGE, totalMessages - chatScrollOffset)
+    return messages.slice(startIndex, endIndex)
+  }
+
+  const visibleMessages = getVisibleMessages()
+  const canScrollBack = chatScrollOffset < messages.length - MESSAGES_PER_PAGE
+  const canScrollForward = chatScrollOffset > 0
+
+  // Swipe gesture handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    })
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    })
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+
+    const distanceX = touchStart.x - touchEnd.x
+    const distanceY = touchStart.y - touchEnd.y
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY)
+
+    if (isHorizontalSwipe && Math.abs(distanceX) > SWIPE_THRESHOLD) {
+      if (distanceX > 0) {
+        // Swipe left - go to newer messages
+        navigateChat('forward')
+      } else {
+        // Swipe right - go to older messages
+        navigateChat('back')
       }
     }
-  }, [messages])
+  }
+
+  // Chat navigation functions
+  const navigateChat = (direction: 'back' | 'forward') => {
+    if (direction === 'back' && canScrollBack) {
+      setChatScrollOffset(prev => Math.min(prev + MESSAGES_PER_PAGE, messages.length - MESSAGES_PER_PAGE))
+    } else if (direction === 'forward' && canScrollForward) {
+      setChatScrollOffset(prev => Math.max(prev - MESSAGES_PER_PAGE, 0))
+    }
+  }
+
+  // Reset scroll offset when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0) {
+      setChatScrollOffset(0) // Always show latest messages when new ones arrive
+    }
+  }, [messages.length])
 
   // Text-to-Speech function
   const speakText = (text: string) => {
@@ -493,32 +555,94 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
         {/* Chat Messages Overlay - Lower 1/4 of screen */}
         {showChat && messages.length > 0 && (
           <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32 h-1/4 min-h-[160px]">
-            <Card className="h-full bg-black/40 border-white/10 backdrop-blur-md">
-              <ScrollArea ref={scrollAreaRef} className="h-full p-2 sm:p-4">
-                <div className="space-y-2 sm:space-y-3">
-                  {messages.slice(-6).map((message) => (
-                    <div 
-                      key={message.id} 
-                      className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                        message.sender === 'user' 
-                          ? 'bg-white/20 text-white backdrop-blur-sm' 
-                          : 'bg-purple-500/30 text-white backdrop-blur-sm'
-                      }`}>
-                        {message.content}
-                        {message.sender === 'companion' && isSpeaking && (
-                          <div className="flex items-center mt-1 space-x-1">
-                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce"></div>
-                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+            <Card className="h-full bg-black/40 border-white/10 backdrop-blur-md relative">
+              {/* Chat Navigation Header */}
+              <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-2 bg-black/20 backdrop-blur-sm border-b border-white/10 rounded-t-lg">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateChat('back')}
+                  disabled={!canScrollBack}
+                  className={`text-white/70 hover:text-white hover:bg-white/10 min-w-[36px] h-8 ${
+                    !canScrollBack ? 'opacity-30' : ''
+                  }`}
+                >
+                  <CaretLeft size={16} />
+                </Button>
+                
+                <div className="text-center text-white/60 text-xs">
+                  {chatScrollOffset > 0 ? (
+                    <span>Older messages • Swipe to navigate</span>
+                  ) : (
+                    <span>Recent • Swipe for history</span>
+                  )}
                 </div>
-              </ScrollArea>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateChat('forward')}
+                  disabled={!canScrollForward}
+                  className={`text-white/70 hover:text-white hover:bg-white/10 min-w-[36px] h-8 ${
+                    !canScrollForward ? 'opacity-30' : ''
+                  }`}
+                >
+                  <CaretRight size={16} />
+                </Button>
+              </div>
+
+              {/* Chat Messages with Swipe Support */}
+              <div 
+                ref={chatContainerRef}
+                className="h-full pt-10 pb-2"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                <ScrollArea ref={scrollAreaRef} className="h-full p-2 sm:p-4">
+                  <div className="space-y-2 sm:space-y-3">
+                    {visibleMessages.map((message, index) => (
+                      <div 
+                        key={message.id} 
+                        className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-slide-in-${message.sender === 'user' ? 'right' : 'left'}`}
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                          message.sender === 'user' 
+                            ? 'bg-white/20 text-white backdrop-blur-sm' 
+                            : 'bg-purple-500/30 text-white backdrop-blur-sm'
+                        }`}>
+                          {message.content}
+                          {message.sender === 'companion' && isSpeaking && index === visibleMessages.length - 1 && (
+                            <div className="flex items-center mt-1 space-x-1">
+                              <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce"></div>
+                              <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Swipe indicator dots */}
+              {messages.length > MESSAGES_PER_PAGE && (
+                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                  {Array.from({ length: Math.ceil(messages.length / MESSAGES_PER_PAGE) }).map((_, index) => {
+                    const isActive = index === Math.floor(chatScrollOffset / MESSAGES_PER_PAGE)
+                    return (
+                      <div
+                        key={index}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                          isActive ? 'bg-white/60' : 'bg-white/20'
+                        }`}
+                      />
+                    )
+                  })}
+                </div>
+              )}
             </Card>
           </div>
         )}
@@ -701,6 +825,16 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
 
           {/* Status Indicators */}
           <div className="flex justify-center space-x-2 sm:space-x-4 flex-wrap gap-2">
+            {/* Chat Navigation Status */}
+            {showChat && messages.length > MESSAGES_PER_PAGE && (
+              <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-200 border-cyan-400/30 backdrop-blur-sm text-xs px-2 py-1">
+                {chatScrollOffset > 0 
+                  ? `Viewing older messages (${Math.floor(chatScrollOffset / MESSAGES_PER_PAGE) + 1}/${Math.ceil(messages.length / MESSAGES_PER_PAGE)})`
+                  : `Latest messages (${messages.length} total)`
+                }
+              </Badge>
+            )}
+            
             {/* Current Mood Indicator */}
             {moodEntries.length > 0 && (
               <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
