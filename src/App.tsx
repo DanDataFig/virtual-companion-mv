@@ -733,8 +733,7 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
           )}
         </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
 export default App
