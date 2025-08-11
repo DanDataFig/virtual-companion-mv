@@ -490,9 +490,9 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
           </div>
         </div>
 
-        {/* Chat Messages Overlay */}
+        {/* Chat Messages Overlay - Lower 1/4 of screen */}
         {showChat && messages.length > 0 && (
-          <div className="absolute inset-x-4 top-20 bottom-32">
+          <div className="absolute inset-x-4 bottom-32 h-1/4">
             <Card className="h-full bg-black/40 border-white/10 backdrop-blur-md">
               <ScrollArea ref={scrollAreaRef} className="h-full p-4">
                 <div className="space-y-3">
