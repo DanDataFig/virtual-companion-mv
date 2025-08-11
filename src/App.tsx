@@ -738,15 +738,3 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
 }
 
 export default App
-              <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm">
-                Intensity: {Math.round(conversationIntensity)}/100
-              </Badge>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default App
