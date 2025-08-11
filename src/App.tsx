@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, Phone } from "@phosphor-icons/react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -35,7 +36,15 @@ function App() {
   const [showChat, setShowChat] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [conversationIntensity, setConversationIntensity] = useState(30) // Base intensity
+  const [isVideoActive, setIsVideoActive] = useState(false)
+  const [currentCamera, setCurrentCamera] = useState<'front' | 'back'>('front')
+  const [showBackgroundSelector, setShowBackgroundSelector] = useState(false)
+  const [selectedBackground, setSelectedBackground] = useState<string | null>(null)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [voiceEnabled, setVoiceEnabled] = useState(true)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -46,6 +55,106 @@ function App() {
       }
     }
   }, [messages])
+
+  // Text-to-Speech function
+  const speakText = (text: string) => {
+    if (!voiceEnabled) return
+    
+    // Stop any current speech
+    window.speechSynthesis.cancel()
+    
+    const utterance = new SpeechSynthesisUtterance(text)
+    
+    // Configure voice settings for a more natural companion voice
+    utterance.rate = 0.9
+    utterance.pitch = 1.1
+    utterance.volume = 0.8
+    
+    // Try to find a female voice for the companion
+    const voices = window.speechSynthesis.getVoices()
+    const femaleVoice = voices.find(voice => 
+      voice.name.toLowerCase().includes('female') || 
+      voice.name.toLowerCase().includes('woman') ||
+      voice.name.toLowerCase().includes('zira') ||
+      voice.name.toLowerCase().includes('hazel')
+    )
+    
+    if (femaleVoice) {
+      utterance.voice = femaleVoice
+    }
+    
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => setIsSpeaking(false)
+    utterance.onerror = () => setIsSpeaking(false)
+    
+    window.speechSynthesis.speak(utterance)
+  }
+
+  // Stop speech
+  const stopSpeaking = () => {
+    window.speechSynthesis.cancel()
+    setIsSpeaking(false)
+  }
+
+  // Camera access functions
+  const startVideo = async () => {
+    try {
+      const constraints = {
+        video: {
+          facingMode: currentCamera === 'front' ? 'user' : 'environment'
+        }
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      streamRef.current = stream
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+      
+      setIsVideoActive(true)
+    } catch (error) {
+      console.error('Error accessing camera:', error)
+    }
+  }
+
+  const stopVideo = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    setIsVideoActive(false)
+  }
+
+  const switchCamera = async () => {
+    const newCamera = currentCamera === 'front' ? 'back' : 'front'
+    setCurrentCamera(newCamera)
+    
+    if (isVideoActive) {
+      stopVideo()
+      // Small delay to ensure cleanup
+      setTimeout(() => {
+        startVideo()
+      }, 100)
+    }
+  }
+
+  // Background options
+  const backgroundOptions = [
+    { id: 'none', name: 'None', preview: 'transparent' },
+    { id: 'forest', name: 'Forest', preview: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)' },
+    { id: 'ocean', name: 'Ocean', preview: 'linear-gradient(135deg, #667db6 0%, #0082c8 100%)' },
+    { id: 'sunset', name: 'Sunset', preview: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' },
+    { id: 'space', name: 'Space', preview: 'linear-gradient(135deg, #2c3e50 0%, #000428 100%)' },
+    { id: 'aurora', name: 'Aurora', preview: 'linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%)' }
+  ]
+
+  // Cleanup video on unmount
+  useEffect(() => {
+    return () => {
+      stopVideo()
+    }
+  }, [])
 
   // Analyze conversation intensity based on message content
   const analyzeIntensity = (content: string): number => {
@@ -180,6 +289,11 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
       }
 
       setMessages(current => [...current, companionMessage])
+      
+      // Speak the companion's response if voice is enabled
+      if (voiceEnabled) {
+        speakText(response)
+      }
     } catch (error) {
       console.error('Error getting AI response:', error)
       const errorMessage: Message = {
@@ -260,12 +374,44 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
     }
   }
 
+  // Get dynamic background style
+  const getBackgroundStyle = () => {
+    const baseStyle = "min-h-screen flex flex-col relative overflow-hidden"
+    
+    if (!selectedBackground || selectedBackground === 'none') {
+      return `${baseStyle} bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`
+    }
+    
+    const bgOption = backgroundOptions.find(bg => bg.id === selectedBackground)
+    if (bgOption && bgOption.preview !== 'transparent') {
+      return `${baseStyle}`
+    }
+    
+    return `${baseStyle} bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`
+  }
+
   const circleColors = getCircleColors()
   const animationSpeed = getAnimationSpeed()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
-      <div className="flex-1 flex flex-col">
+    <div 
+      className={getBackgroundStyle()}
+      style={selectedBackground && selectedBackground !== 'none' ? {
+        background: backgroundOptions.find(bg => bg.id === selectedBackground)?.preview
+      } : undefined}
+    >
+      {/* Video background overlay when active */}
+      {isVideoActive && (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+        />
+      )}
+      
+      <div className="flex-1 flex flex-col relative z-10">
         
         {/* Main Avatar Area - Takes up most of the screen */}
         <div className="flex-1 flex items-center justify-center relative overflow-hidden">
@@ -360,11 +506,84 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
                           : 'bg-purple-500/30 text-white backdrop-blur-sm'
                       }`}>
                         {message.content}
+                        {message.sender === 'companion' && isSpeaking && (
+                          <div className="flex items-center mt-1 space-x-1">
+                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce"></div>
+                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               </ScrollArea>
+            </Card>
+          </div>
+        )}
+
+        {/* Background Selector Overlay */}
+        {showBackgroundSelector && (
+          <div className="absolute inset-x-4 top-20 bottom-32">
+            <Card className="p-6 bg-black/40 border-white/10 backdrop-blur-md">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-white text-lg font-medium">Choose Background</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowBackgroundSelector(false)}
+                  className="text-white hover:bg-white/10"
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {backgroundOptions.map((bg) => (
+                  <Button
+                    key={bg.id}
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedBackground(bg.id)
+                      setShowBackgroundSelector(false)
+                    }}
+                    className={`h-20 flex flex-col items-center justify-center space-y-2 border-2 transition-all ${
+                      selectedBackground === bg.id 
+                        ? 'border-purple-400 bg-purple-500/20' 
+                        : 'border-white/10 hover:border-white/30'
+                    }`}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-full"
+                      style={{ background: bg.preview }}
+                    />
+                    <span className="text-xs text-white">{bg.name}</span>
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Camera controls */}
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <h4 className="text-white text-sm font-medium mb-3">Camera</h4>
+                <div className="flex space-x-3">
+                  <Button
+                    variant="ghost"
+                    onClick={isVideoActive ? stopVideo : startVideo}
+                    className={`flex-1 ${isVideoActive ? 'bg-red-500/20 text-red-200' : 'bg-green-500/20 text-green-200'}`}
+                  >
+                    <VideoCamera size={16} className="mr-2" />
+                    {isVideoActive ? 'Stop Camera' : 'Start Camera'}
+                  </Button>
+                  {isVideoActive && (
+                    <Button
+                      variant="ghost"
+                      onClick={switchCamera}
+                      className="bg-blue-500/20 text-blue-200"
+                    >
+                      <CameraRotate size={16} />
+                    </Button>
+                  )}
+                </div>
+              </div>
             </Card>
           </div>
         )}
@@ -395,14 +614,19 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
         <div className="p-6 space-y-4">
           
           {/* Call-style Controls */}
-          <div className="flex justify-center items-center space-x-8">
-            {/* Video Call */}
+          <div className="flex justify-center items-center space-x-6">
+            {/* Video/Background */}
             <Button
               size="lg"
               variant="ghost"
-              className="w-16 h-16 rounded-full bg-green-600/90 hover:bg-green-700 text-white backdrop-blur-sm"
+              onClick={() => setShowBackgroundSelector(!showBackgroundSelector)}
+              className={`w-16 h-16 rounded-full text-white backdrop-blur-sm transition-colors ${
+                isVideoActive 
+                  ? 'bg-green-600/90 hover:bg-green-700' 
+                  : 'bg-blue-600/90 hover:bg-blue-700'
+              }`}
             >
-              <VideoCamera size={24} />
+              {isVideoActive ? <VideoCamera size={24} /> : <Image size={24} />}
             </Button>
             
             {/* Voice Chat */}
@@ -417,6 +641,28 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
               }`}
             >
               {isListening ? <MicrophoneSlash size={24} /> : <Microphone size={24} />}
+            </Button>
+            
+            {/* Voice Response Toggle */}
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => {
+                if (isSpeaking) {
+                  stopSpeaking()
+                } else {
+                  setVoiceEnabled(!voiceEnabled)
+                }
+              }}
+              className={`w-16 h-16 rounded-full text-white backdrop-blur-sm transition-colors ${
+                voiceEnabled && !isSpeaking
+                  ? 'bg-green-600/90 hover:bg-green-700' 
+                  : isSpeaking
+                  ? 'bg-red-600/90 hover:bg-red-700'
+                  : 'bg-gray-600/90 hover:bg-gray-700'
+              }`}
+            >
+              {isSpeaking ? <SpeakerX size={24} /> : <SpeakerHigh size={24} />}
             </Button>
             
             {/* Mood Check */}
@@ -452,18 +698,33 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
             </Button>
           </div>
 
-          {/* Current Mood Indicator */}
-          {moodEntries.length > 0 && (
-            <div className="text-center">
+          {/* Status Indicators */}
+          <div className="flex justify-center space-x-4">
+            {/* Current Mood Indicator */}
+            {moodEntries.length > 0 && (
               <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm">
-                Current mood: {getMoodEmoji(moodEntries[0].level)} {moodEntries[0].level}/5
+                Mood: {getMoodEmoji(moodEntries[0].level)} {moodEntries[0].level}/5
               </Badge>
-            </div>
-          )}
+            )}
+            
+            {/* Voice Status */}
+            <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm ${
+              voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
+            }`}>
+              Voice: {voiceEnabled ? 'On' : 'Off'}
+            </Badge>
+            
+            {/* Camera Status */}
+            {isVideoActive && (
+              <Badge variant="secondary" className="bg-blue-500/20 text-blue-200 border-white/20 backdrop-blur-sm">
+                Camera: {currentCamera === 'front' ? 'Front' : 'Back'}
+              </Badge>
+            )}
+          </div>
 
           {/* Conversation Intensity Debug (for testing) */}
           {conversationIntensity !== 30 && (
-            <div className="text-center mt-2">
+            <div className="text-center">
               <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm">
                 Intensity: {Math.round(conversationIntensity)}/100
               </Badge>
