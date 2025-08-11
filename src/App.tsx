@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley } from "@phosphor-icons/react"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, Wind, Pause, Play } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -20,14 +20,29 @@ interface MoodEntry {
   timestamp: Date
 }
 
+interface BreathingSession {
+  id: string
+  duration: number // in minutes
+  timestamp: Date
+  completed: boolean
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("chat-messages", [])
   const [moodEntries, setMoodEntries] = useKV<MoodEntry[]>("mood-entries", [])
+  const [breathingSessions, setBreathingSessions] = useKV<BreathingSession[]>("breathing-sessions", [])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showMoodSelector, setShowMoodSelector] = useState(false)
   const [currentMood, setCurrentMood] = useState(3)
+  const [isBreathing, setIsBreathing] = useState(false)
+  const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'hold' | 'exhale' | 'pause'>('inhale')
+  const [breathingCycle, setBreathingCycle] = useState(0)
+  const [breathingTimer, setBreathingTimer] = useState(0)
+  const [breathingDuration, setBreathingDuration] = useState(5) // minutes
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const breathingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const sessionStartRef = useRef<Date | null>(null)
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -38,6 +53,52 @@ function App() {
       }
     }
   }, [messages])
+
+  // Breathing exercise logic
+  useEffect(() => {
+    if (!isBreathing) return
+
+    const phases = [
+      { name: 'inhale', duration: 4000 },   // 4 seconds inhale
+      { name: 'hold', duration: 2000 },     // 2 seconds hold
+      { name: 'exhale', duration: 6000 },   // 6 seconds exhale
+      { name: 'pause', duration: 1000 }     // 1 second pause
+    ]
+
+    let currentPhaseIndex = 0
+    let phaseStartTime = Date.now()
+    
+    const updateBreathing = () => {
+      const elapsed = Date.now() - phaseStartTime
+      const currentPhase = phases[currentPhaseIndex]
+      
+      if (elapsed >= currentPhase.duration) {
+        currentPhaseIndex = (currentPhaseIndex + 1) % phases.length
+        if (currentPhaseIndex === 0) {
+          setBreathingCycle(prev => prev + 1)
+        }
+        phaseStartTime = Date.now()
+        setBreathingPhase(phases[currentPhaseIndex].name as any)
+      }
+      
+      setBreathingTimer(Date.now() - (sessionStartRef.current?.getTime() || Date.now()))
+    }
+
+    breathingIntervalRef.current = setInterval(updateBreathing, 100)
+
+    return () => {
+      if (breathingIntervalRef.current) {
+        clearInterval(breathingIntervalRef.current)
+      }
+    }
+  }, [isBreathing])
+
+  // Auto-stop breathing after set duration
+  useEffect(() => {
+    if (isBreathing && breathingTimer >= breathingDuration * 60 * 1000) {
+      stopBreathing(true)
+    }
+  }, [breathingTimer, breathingDuration, isBreathing])
 
   // Calculate current companion mood based on user's recent mood entries
   const getCompanionMood = () => {
@@ -70,6 +131,35 @@ function App() {
     setMoodEntries(current => [newEntry, ...current.slice(0, 49)])
     setCurrentMood(level)
     setShowMoodSelector(false)
+  }
+
+  // Start breathing exercise
+  const startBreathing = () => {
+    setIsBreathing(true)
+    setBreathingPhase('inhale')
+    setBreathingCycle(0)
+    setBreathingTimer(0)
+    sessionStartRef.current = new Date()
+  }
+
+  // Stop breathing exercise
+  const stopBreathing = (completed: boolean = false) => {
+    setIsBreathing(false)
+    
+    if (sessionStartRef.current) {
+      const session: BreathingSession = {
+        id: `breathing-${Date.now()}`,
+        duration: Math.round(breathingTimer / 60000), // Convert to minutes
+        timestamp: sessionStartRef.current,
+        completed
+      }
+      setBreathingSessions(current => [session, ...current.slice(0, 49)])
+    }
+    
+    sessionStartRef.current = null
+    setBreathingPhase('inhale')
+    setBreathingCycle(0)
+    setBreathingTimer(0)
   }
 
   // Send message to AI companion
@@ -141,33 +231,74 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
     }
   }
 
-  // Infinity loop animation configuration based on mood
+  // Infinity loop animation configuration based on mood or breathing
   const getInfinityConfig = () => {
+    if (isBreathing) {
+      // Breathing mode - sync with breathing phases
+      const baseScale = breathingPhase === 'inhale' ? 1.2 : 
+                       breathingPhase === 'hold' ? 1.2 : 
+                       breathingPhase === 'exhale' ? 0.8 : 1.0
+      
+      return {
+        color: 'from-cyan-400 via-blue-500 to-indigo-600',
+        glow: 'drop-shadow-[0_0_30px_rgba(59,130,246,0.7)]',
+        speed: 'animate-breathe-infinity',
+        scale: baseScale,
+        breathing: true
+      }
+    }
+    
+    // Normal mood-based configuration
     switch (companionMood) {
       case 1:
       case 2:
         return {
           color: 'from-blue-400 via-blue-500 to-blue-600',
           glow: 'drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]',
-          speed: 'animate-spin-slow'
+          speed: 'animate-spin-slow',
+          scale: 1,
+          breathing: false
         }
       case 4:
       case 5:
         return {
           color: 'from-green-400 via-emerald-500 to-green-600',
           glow: 'drop-shadow-[0_0_20px_rgba(34,197,94,0.5)]',
-          speed: 'animate-spin'
+          speed: 'animate-spin',
+          scale: 1,
+          breathing: false
         }
       default:
         return {
           color: 'from-purple-400 via-pink-500 to-purple-600',
           glow: 'drop-shadow-[0_0_20px_rgba(168,85,247,0.5)]',
-          speed: 'animate-spin'
+          speed: 'animate-spin',
+          scale: 1,
+          breathing: false
         }
     }
   }
 
   const infinityConfig = getInfinityConfig()
+
+  // Get breathing instruction text
+  const getBreathingInstruction = () => {
+    switch (breathingPhase) {
+      case 'inhale': return 'Breathe in slowly...'
+      case 'hold': return 'Hold your breath...'
+      case 'exhale': return 'Breathe out gently...'
+      case 'pause': return 'Relax...'
+      default: return 'Ready to breathe'
+    }
+  }
+
+  // Format time display
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000)
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -177,19 +308,25 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
         <div className="flex-shrink-0 text-center py-8">
           <div className="relative mb-6">
             {/* Infinity loop avatar */}
-            <div className="w-40 h-20 mx-auto relative flex items-center justify-center animate-float">
+            <div className={`w-40 h-20 mx-auto relative flex items-center justify-center ${
+              infinityConfig.breathing ? 'animate-breathe-float' : 'animate-float'
+            }`}>
               <svg 
                 viewBox="0 0 160 80" 
-                className={`w-full h-full filter ${infinityConfig.glow}`}
+                className={`w-full h-full filter ${infinityConfig.glow} transition-transform duration-1000`}
+                style={{ 
+                  transform: `scale(${infinityConfig.scale})`,
+                  transition: infinityConfig.breathing ? 'transform 4s ease-in-out' : 'transform 0.3s ease'
+                }}
               >
                 {/* Infinity symbol path */}
                 <path
                   d="M 20 40 C 20 20, 40 20, 40 40 C 40 60, 20 60, 20 40 M 40 40 C 40 20, 60 20, 60 40 C 60 60, 40 60, 40 40 M 60 40 C 60 20, 80 20, 80 40 C 80 60, 60 60, 60 40 M 80 40 C 80 20, 100 20, 100 40 C 100 60, 80 60, 80 40 M 100 40 C 100 20, 120 20, 120 40 C 120 60, 100 60, 100 40 M 120 40 C 120 20, 140 20, 140 40 C 140 60, 120 60, 120 40"
                   fill="none"
                   stroke="url(#infinityGradient)"
-                  strokeWidth="3"
+                  strokeWidth={infinityConfig.breathing ? "4" : "3"}
                   strokeLinecap="round"
-                  className={`${infinityConfig.speed}`}
+                  className={infinityConfig.breathing ? '' : infinityConfig.speed}
                   style={{ 
                     animationDuration: companionMood <= 2 ? '8s' : '4s',
                     transformOrigin: 'center'
@@ -197,25 +334,43 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
                 />
                 
                 {/* Pulsing dots along the path */}
-                <circle cx="20" cy="40" r="2" fill="url(#dotGradient)" className="animate-pulse">
-                  <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" />
+                <circle cx="20" cy="40" r={infinityConfig.breathing ? "3" : "2"} fill="url(#dotGradient)" className="animate-pulse">
+                  <animate 
+                    attributeName="opacity" 
+                    values={infinityConfig.breathing ? "0.5;1;0.5" : "0.3;1;0.3"} 
+                    dur={infinityConfig.breathing ? "4s" : "2s"} 
+                    repeatCount="indefinite" 
+                  />
                 </circle>
-                <circle cx="80" cy="40" r="2" fill="url(#dotGradient)" className="animate-pulse">
-                  <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
+                <circle cx="80" cy="40" r={infinityConfig.breathing ? "3" : "2"} fill="url(#dotGradient)" className="animate-pulse">
+                  <animate 
+                    attributeName="opacity" 
+                    values={infinityConfig.breathing ? "1;0.5;1" : "1;0.3;1"} 
+                    dur={infinityConfig.breathing ? "4s" : "2s"} 
+                    repeatCount="indefinite" 
+                  />
                 </circle>
-                <circle cx="140" cy="40" r="2" fill="url(#dotGradient)" className="animate-pulse">
-                  <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" />
+                <circle cx="140" cy="40" r={infinityConfig.breathing ? "3" : "2"} fill="url(#dotGradient)" className="animate-pulse">
+                  <animate 
+                    attributeName="opacity" 
+                    values={infinityConfig.breathing ? "0.5;1;0.5" : "0.3;1;0.3"} 
+                    dur={infinityConfig.breathing ? "4s" : "2s"} 
+                    repeatCount="indefinite" 
+                  />
                 </circle>
                 
                 <defs>
                   <linearGradient id="infinityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor={
+                      infinityConfig.breathing ? "#22d3ee" :
                       companionMood <= 2 ? "#60a5fa" : companionMood >= 4 ? "#34d399" : "#a855f7"
                     } />
                     <stop offset="50%" stopColor={
+                      infinityConfig.breathing ? "#3b82f6" :
                       companionMood <= 2 ? "#3b82f6" : companionMood >= 4 ? "#10b981" : "#ec4899"
                     } />
                     <stop offset="100%" stopColor={
+                      infinityConfig.breathing ? "#4f46e5" :
                       companionMood <= 2 ? "#2563eb" : companionMood >= 4 ? "#059669" : "#9333ea"
                     } />
                   </linearGradient>
@@ -229,66 +384,131 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
             
             {/* Status indicator */}
             <div className="text-center mt-4">
-              <div className="flex items-center justify-center space-x-2 text-sm text-slate-300">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-breathe"></div>
-                <span>Present • {getMoodEmoji(companionMood)} Feeling {companionMood}/5</span>
-              </div>
+              {isBreathing ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center space-x-2 text-sm text-cyan-300">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-breathe"></div>
+                    <span>Breathing • {getBreathingInstruction()}</span>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {formatTime(breathingTimer)} • {breathingCycle} cycles
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center space-x-2 text-sm text-slate-300">
+                  <div className="w-2 h-2 rounded-full bg-green-400 animate-breathe"></div>
+                  <span>Present • {getMoodEmoji(companionMood)} Feeling {companionMood}/5</span>
+                </div>
+              )}
             </div>
           </div>
           
-          <h1 className="text-xl font-medium text-white mb-2">Your Companion</h1>
-          <p className="text-sm text-slate-400">I'm here to listen and be with you</p>
+          <h1 className="text-xl font-medium text-white mb-2">
+            {isBreathing ? "Breathing Together" : "Your Companion"}
+          </h1>
+          <p className="text-sm text-slate-400">
+            {isBreathing ? "Follow the rhythm and breathe deeply" : "I'm here to listen and be with you"}
+          </p>
         </div>
 
-        {/* Chat Messages */}
+        {/* Chat Messages or Breathing Interface */}
         <Card className="flex-1 bg-slate-800/50 border-slate-700 backdrop-blur-sm mb-4 overflow-hidden">
-          <ScrollArea ref={scrollAreaRef} className="h-full p-4">
-            {messages.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-4xl mb-4">{getMoodEmoji(3)}</div>
-                <p className="text-slate-400 mb-4">Start a conversation</p>
-                <p className="text-sm text-slate-500">Share what's on your mind. I'm here to listen.</p>
-              </div>
-            ) : (
+          {isBreathing ? (
+            /* Breathing Exercise Interface */
+            <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-6">
               <div className="space-y-4">
-                {messages.map((message) => (
+                <h2 className="text-2xl font-semibold text-white">
+                  {getBreathingInstruction()}
+                </h2>
+                <div className="text-lg text-slate-300">
+                  Cycle {breathingCycle + 1}
+                </div>
+                <div className="text-sm text-slate-400">
+                  {formatTime(breathingTimer)} / {breathingDuration}:00
+                </div>
+              </div>
+              
+              {/* Breathing Phase Visual */}
+              <div className="w-24 h-24 rounded-full border-4 border-cyan-400/30 flex items-center justify-center relative">
+                <div 
+                  className={`w-16 h-16 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-1000 ${
+                    breathingPhase === 'inhale' ? 'scale-110' : 
+                    breathingPhase === 'hold' ? 'scale-110' : 
+                    'scale-75'
+                  }`}
+                />
+                <div className="absolute inset-0 rounded-full border-2 border-cyan-400/50 animate-ping" />
+              </div>
+              
+              {/* Breathing Tips */}
+              <div className="text-xs text-slate-500 max-w-xs">
+                {breathingPhase === 'inhale' && "Fill your lungs slowly and deeply"}
+                {breathingPhase === 'hold' && "Hold gently, don't strain"}
+                {breathingPhase === 'exhale' && "Release slowly and completely"}
+                {breathingPhase === 'pause' && "Rest and prepare for the next breath"}
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full max-w-xs">
+                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
                   <div 
-                    key={message.id} 
-                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} ${
-                      message.sender === 'user' ? 'animate-slide-in-right' : 'animate-slide-in-left'
-                    }`}
-                  >
-                    <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                      message.sender === 'user' 
-                        ? 'bg-purple-600 text-white shadow-lg' 
-                        : 'bg-slate-700 text-slate-100 shadow-lg'
-                    }`}>
-                      <p className="text-sm leading-relaxed">{message.content}</p>
-                      <p className="text-xs opacity-60 mt-1">
-                        {new Date(message.timestamp).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Loading indicator */}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-slate-700 text-slate-100 rounded-2xl px-4 py-2">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-300"
+                    style={{ 
+                      width: `${Math.min((breathingTimer / (breathingDuration * 60 * 1000)) * 100, 100)}%` 
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <ScrollArea ref={scrollAreaRef} className="h-full p-4">
+              {messages.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">{getMoodEmoji(3)}</div>
+                  <p className="text-slate-400 mb-4">Start a conversation</p>
+                  <p className="text-sm text-slate-500">Share what's on your mind. I'm here to listen.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message) => (
+                    <div 
+                      key={message.id} 
+                      className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} ${
+                        message.sender === 'user' ? 'animate-slide-in-right' : 'animate-slide-in-left'
+                      }`}
+                    >
+                      <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                        message.sender === 'user' 
+                          ? 'bg-purple-600 text-white shadow-lg' 
+                          : 'bg-slate-700 text-slate-100 shadow-lg'
+                      }`}>
+                        <p className="text-sm leading-relaxed">{message.content}</p>
+                        <p className="text-xs opacity-60 mt-1">
+                          {new Date(message.timestamp).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </ScrollArea>
+                  ))}
+                  
+                  {/* Loading indicator */}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-slate-700 text-slate-100 rounded-2xl px-4 py-2">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+          )}
         </Card>
 
         {/* Mood Selector */}
@@ -331,10 +551,15 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
             
             <Button
               size="lg"
-              variant="ghost" 
-              className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white"
+              variant="ghost"
+              onClick={isBreathing ? () => stopBreathing() : startBreathing}
+              className={`w-14 h-14 rounded-full ${
+                isBreathing 
+                  ? 'bg-cyan-600 hover:bg-cyan-700' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white transition-colors`}
             >
-              <MicrophoneSlash size={24} />
+              {isBreathing ? <Pause size={24} /> : <Wind size={24} />}
             </Button>
             
             <Button
@@ -348,23 +573,25 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
           </div>
 
           {/* Message Input */}
-          <div className="flex space-x-2">
-            <Input
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Share what's on your mind..."
-              className="flex-1 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-purple-500"
-              disabled={isLoading}
-            />
-            <Button 
-              onClick={sendMessage} 
-              disabled={!inputMessage.trim() || isLoading}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              <PaperPlaneTilt size={16} />
-            </Button>
-          </div>
+          {!isBreathing && (
+            <div className="flex space-x-2">
+              <Input
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Share what's on your mind..."
+                className="flex-1 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-400 focus:border-purple-500"
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={sendMessage} 
+                disabled={!inputMessage.trim() || isLoading}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <PaperPlaneTilt size={16} />
+              </Button>
+            </div>
+          )}
 
           {/* Recent mood indicator */}
           {moodEntries.length > 0 && (

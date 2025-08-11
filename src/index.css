@@ -105,6 +105,30 @@ body {
   animation: breathe 2s ease-in-out infinite;
 }
 
+/* Breathing float animation for avatar during breathing exercises */
+@keyframes breathe-float {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  25% { transform: translateY(-8px) scale(1.05); }
+  50% { transform: translateY(-15px) scale(1.1); }
+  75% { transform: translateY(-8px) scale(1.05); }
+}
+
+.animate-breathe-float {
+  animation: breathe-float 13s ease-in-out infinite;
+}
+
+/* Infinity breathing animation */
+@keyframes breathe-infinity {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(90deg) scale(1.1); }
+  50% { transform: rotate(180deg) scale(1.2); }
+  75% { transform: rotate(270deg) scale(1.1); }
+}
+
+.animate-breathe-infinity {
+  animation: breathe-infinity 13s ease-in-out infinite;
+}
+
 /* Glow effects */
 .glow-purple {
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
