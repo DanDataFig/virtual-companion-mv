@@ -412,6 +412,7 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
       )}
       
       <div className="flex-1 flex flex-col relative z-10">
+      <div className="flex-1 flex flex-col">
         
         {/* Main Avatar Area - Takes up most of the screen */}
         <div className="flex-1 flex items-center justify-center relative overflow-hidden">
@@ -725,6 +726,18 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
           {/* Conversation Intensity Debug (for testing) */}
           {conversationIntensity !== 30 && (
             <div className="text-center">
+              <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm">
+                Intensity: {Math.round(conversationIntensity)}/100
+              </Badge>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default App
               <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm">
                 Intensity: {Math.round(conversationIntensity)}/100
               </Badge>
