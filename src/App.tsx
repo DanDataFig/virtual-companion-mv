@@ -415,30 +415,30 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
       <div className="flex-1 flex flex-col">
         
         {/* Main Avatar Area - Takes up most of the screen */}
-        <div className="flex-1 flex items-center justify-center relative overflow-hidden">
+        <div className="flex-1 flex items-center justify-center relative overflow-hidden px-4">
           
           {/* Background gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-transparent to-slate-900/50" />
           
-          {/* Overlapping Circles Avatar */}
+          {/* Overlapping Circles Avatar - Responsive sizing */}
           <div className="relative">
             {/* First Circle */}
             <div 
-              className={`w-80 h-80 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-pulse-slow opacity-90 blur-sm transition-all duration-500`}
+              className={`w-60 h-60 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-pulse-slow opacity-90 blur-sm transition-all duration-500`}
               style={{
                 animationDuration: `${animationSpeed}ms`,
-                filter: `drop-shadow(0 0 40px ${circleColors.glow})`,
+                filter: `drop-shadow(0 0 30px ${circleColors.glow})`,
                 transform: `scale(${1 + (conversationIntensity / 1000)})`
               }}
             />
             
             {/* Second Circle - Overlapping */}
             <div 
-              className={`w-80 h-80 rounded-full bg-gradient-to-br ${circleColors.circle2} animate-pulse-slow opacity-80 absolute top-0 left-16 blur-sm transition-all duration-500`}
+              className={`w-60 h-60 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-full bg-gradient-to-br ${circleColors.circle2} animate-pulse-slow opacity-80 absolute top-0 left-12 sm:left-14 md:left-16 blur-sm transition-all duration-500`}
               style={{
                 animationDuration: `${animationSpeed * 1.3}ms`,
                 animationDelay: '1s',
-                filter: `drop-shadow(0 0 40px ${circleColors.glow})`,
+                filter: `drop-shadow(0 0 30px ${circleColors.glow})`,
                 transform: `scale(${1 + (conversationIntensity / 1200)})`
               }}
             />
@@ -446,9 +446,9 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
             {/* Center glow effect - responds to intensity */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <div 
-                className="w-32 h-32 rounded-full bg-white/20 animate-breathe-glow transition-all duration-300"
+                className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-white/20 animate-breathe-glow transition-all duration-300"
                 style={{
-                  filter: `drop-shadow(0 0 60px ${circleColors.glow})`,
+                  filter: `drop-shadow(0 0 40px ${circleColors.glow})`,
                   transform: `scale(${0.8 + (conversationIntensity / 200)})`,
                   opacity: 0.4 + (conversationIntensity / 250)
                 }}
@@ -459,7 +459,7 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
             {conversationIntensity > 60 && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <div 
-                  className="w-96 h-96 rounded-full border-2 border-white/10 animate-ping"
+                  className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full border-2 border-white/10 animate-ping"
                   style={{
                     animationDuration: `${Math.max(800, 2000 - conversationIntensity * 10)}ms`
                   }}
@@ -468,7 +468,7 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
             )}
             
             {/* Activity indicator */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+            <div className="absolute -bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2">
               {isLoading ? (
                 <div className="flex items-center space-x-2 text-white/80">
                   <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
@@ -492,16 +492,16 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
 
         {/* Chat Messages Overlay - Lower 1/4 of screen */}
         {showChat && messages.length > 0 && (
-          <div className="absolute inset-x-4 bottom-32 h-1/4">
+          <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32 h-1/4 min-h-[160px]">
             <Card className="h-full bg-black/40 border-white/10 backdrop-blur-md">
-              <ScrollArea ref={scrollAreaRef} className="h-full p-4">
-                <div className="space-y-3">
+              <ScrollArea ref={scrollAreaRef} className="h-full p-2 sm:p-4">
+                <div className="space-y-2 sm:space-y-3">
                   {messages.slice(-6).map((message) => (
                     <div 
                       key={message.id} 
                       className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
+                      <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                         message.sender === 'user' 
                           ? 'bg-white/20 text-white backdrop-blur-sm' 
                           : 'bg-purple-500/30 text-white backdrop-blur-sm'
@@ -525,15 +525,15 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
 
         {/* Background Selector Overlay */}
         {showBackgroundSelector && (
-          <div className="absolute inset-x-4 top-20 bottom-32">
-            <Card className="p-6 bg-black/40 border-white/10 backdrop-blur-md">
+          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
+            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white text-lg font-medium">Choose Background</h3>
+                <h3 className="text-white text-base sm:text-lg font-medium">Choose Background</h3>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowBackgroundSelector(false)}
-                  className="text-white hover:bg-white/10"
+                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
                 >
                   <X size={18} />
                 </Button>
@@ -547,14 +547,14 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
                       setSelectedBackground(bg.id)
                       setShowBackgroundSelector(false)
                     }}
-                    className={`h-20 flex flex-col items-center justify-center space-y-2 border-2 transition-all ${
+                    className={`h-16 sm:h-20 flex flex-col items-center justify-center space-y-2 border-2 transition-all min-w-[120px] ${
                       selectedBackground === bg.id 
                         ? 'border-purple-400 bg-purple-500/20' 
                         : 'border-white/10 hover:border-white/30'
                     }`}
                   >
                     <div 
-                      className="w-8 h-8 rounded-full"
+                      className="w-6 h-6 sm:w-8 sm:h-8 rounded-full"
                       style={{ background: bg.preview }}
                     />
                     <span className="text-xs text-white">{bg.name}</span>
@@ -563,22 +563,22 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
               </div>
               
               {/* Camera controls */}
-              <div className="mt-6 pt-4 border-t border-white/10">
+              <div className="mt-4 sm:mt-6 pt-4 border-t border-white/10">
                 <h4 className="text-white text-sm font-medium mb-3">Camera</h4>
                 <div className="flex space-x-3">
                   <Button
                     variant="ghost"
                     onClick={isVideoActive ? stopVideo : startVideo}
-                    className={`flex-1 ${isVideoActive ? 'bg-red-500/20 text-red-200' : 'bg-green-500/20 text-green-200'}`}
+                    className={`flex-1 min-h-[44px] ${isVideoActive ? 'bg-red-500/20 text-red-200' : 'bg-green-500/20 text-green-200'}`}
                   >
                     <VideoCamera size={16} className="mr-2" />
-                    {isVideoActive ? 'Stop Camera' : 'Start Camera'}
+                    <span className="text-sm">{isVideoActive ? 'Stop Camera' : 'Start Camera'}</span>
                   </Button>
                   {isVideoActive && (
                     <Button
                       variant="ghost"
                       onClick={switchCamera}
-                      className="bg-blue-500/20 text-blue-200"
+                      className="bg-blue-500/20 text-blue-200 min-w-[44px] min-h-[44px]"
                     >
                       <CameraRotate size={16} />
                     </Button>
@@ -591,18 +591,18 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
 
         {/* Mood Selector Overlay */}
         {showMoodSelector && (
-          <div className="absolute inset-x-4 bottom-32">
-            <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+          <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32">
+            <Card className="p-4 sm:p-4 bg-black/40 border-white/10 backdrop-blur-md">
               <h3 className="text-white text-sm font-medium mb-3 text-center">How are you feeling?</h3>
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 {[1, 2, 3, 4, 5].map((level) => (
                   <Button
                     key={level}
                     variant="ghost"
                     onClick={() => registerMood(level)}
-                    className="h-12 w-12 flex flex-col items-center justify-center hover:bg-white/10 rounded-xl"
+                    className="h-16 w-16 min-w-[60px] flex flex-col items-center justify-center hover:bg-white/10 rounded-xl touch-manipulation"
                   >
-                    <span className="text-xl">{getMoodEmoji(level)}</span>
+                    <span className="text-2xl sm:text-xl">{getMoodEmoji(level)}</span>
                     <span className="text-xs text-white/60">{level}</span>
                   </Button>
                 ))}
@@ -612,22 +612,22 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
         )}
 
         {/* Bottom Controls */}
-        <div className="p-6 space-y-4">
+        <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-safe">
           
           {/* Call-style Controls */}
-          <div className="flex justify-center items-center space-x-6">
+          <div className="flex justify-center items-center space-x-4 sm:space-x-6">
             {/* Video/Background */}
             <Button
               size="lg"
               variant="ghost"
               onClick={() => setShowBackgroundSelector(!showBackgroundSelector)}
-              className={`w-16 h-16 rounded-full text-white backdrop-blur-sm transition-colors ${
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
                 isVideoActive 
-                  ? 'bg-green-600/90 hover:bg-green-700' 
-                  : 'bg-blue-600/90 hover:bg-blue-700'
+                  ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
+                  : 'bg-blue-600/90 hover:bg-blue-700 active:bg-blue-800'
               }`}
             >
-              {isVideoActive ? <VideoCamera size={24} /> : <Image size={24} />}
+              {isVideoActive ? <VideoCamera size={20} /> : <Image size={20} />}
             </Button>
             
             {/* Voice Chat */}
@@ -635,13 +635,13 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
               size="lg"
               variant="ghost"
               onClick={() => setIsListening(!isListening)}
-              className={`w-16 h-16 rounded-full text-white backdrop-blur-sm transition-colors ${
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
                 isListening 
-                  ? 'bg-red-600/90 hover:bg-red-700' 
-                  : 'bg-blue-600/90 hover:bg-blue-700'
+                  ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800' 
+                  : 'bg-blue-600/90 hover:bg-blue-700 active:bg-blue-800'
               }`}
             >
-              {isListening ? <MicrophoneSlash size={24} /> : <Microphone size={24} />}
+              {isListening ? <MicrophoneSlash size={20} /> : <Microphone size={20} />}
             </Button>
             
             {/* Voice Response Toggle */}
@@ -655,15 +655,15 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
                   setVoiceEnabled(!voiceEnabled)
                 }
               }}
-              className={`w-16 h-16 rounded-full text-white backdrop-blur-sm transition-colors ${
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
                 voiceEnabled && !isSpeaking
-                  ? 'bg-green-600/90 hover:bg-green-700' 
+                  ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
                   : isSpeaking
-                  ? 'bg-red-600/90 hover:bg-red-700'
-                  : 'bg-gray-600/90 hover:bg-gray-700'
+                  ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800'
+                  : 'bg-gray-600/90 hover:bg-gray-700 active:bg-gray-800'
               }`}
             >
-              {isSpeaking ? <SpeakerX size={24} /> : <SpeakerHigh size={24} />}
+              {isSpeaking ? <SpeakerX size={20} /> : <SpeakerHigh size={20} />}
             </Button>
             
             {/* Mood Check */}
@@ -671,27 +671,27 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
               size="lg"
               variant="ghost"
               onClick={() => setShowMoodSelector(!showMoodSelector)}
-              className="w-16 h-16 rounded-full bg-purple-600/90 hover:bg-purple-700 text-white backdrop-blur-sm"
+              className="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full bg-purple-600/90 hover:bg-purple-700 active:bg-purple-800 text-white backdrop-blur-sm touch-manipulation"
             >
-              <Smiley size={24} />
+              <Smiley size={20} />
             </Button>
           </div>
 
           {/* Text Input */}
-          <div className="flex space-x-3">
+          <div className="flex space-x-2 sm:space-x-3">
             <Input
               value={inputMessage}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               onFocus={() => setShowChat(true)}
               placeholder="Type your message..."
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 backdrop-blur-sm rounded-full px-6 py-3"
+              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 backdrop-blur-sm rounded-full px-4 sm:px-6 py-3 min-h-[48px] text-base"
               disabled={isLoading}
             />
             <Button 
               onClick={sendMessage} 
               disabled={!inputMessage.trim() || isLoading}
-              className={`bg-purple-600/90 hover:bg-purple-700 rounded-full px-6 backdrop-blur-sm transition-all duration-300 ${
+              className={`bg-purple-600/90 hover:bg-purple-700 active:bg-purple-800 rounded-full px-4 sm:px-6 backdrop-blur-sm transition-all duration-300 min-w-[48px] min-h-[48px] touch-manipulation ${
                 conversationIntensity > 60 ? 'animate-pulse shadow-lg shadow-purple-500/30' : ''
               }`}
             >
@@ -700,16 +700,16 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
           </div>
 
           {/* Status Indicators */}
-          <div className="flex justify-center space-x-4">
+          <div className="flex justify-center space-x-2 sm:space-x-4 flex-wrap gap-2">
             {/* Current Mood Indicator */}
             {moodEntries.length > 0 && (
-              <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm">
+              <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
                 Mood: {getMoodEmoji(moodEntries[0].level)} {moodEntries[0].level}/5
               </Badge>
             )}
             
             {/* Voice Status */}
-            <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm ${
+            <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm text-xs px-2 py-1 ${
               voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
             }`}>
               Voice: {voiceEnabled ? 'On' : 'Off'}
@@ -717,7 +717,7 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
             
             {/* Camera Status */}
             {isVideoActive && (
-              <Badge variant="secondary" className="bg-blue-500/20 text-blue-200 border-white/20 backdrop-blur-sm">
+              <Badge variant="secondary" className="bg-blue-500/20 text-blue-200 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
                 Camera: {currentCamera === 'front' ? 'Front' : 'Back'}
               </Badge>
             )}
@@ -726,7 +726,7 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
           {/* Conversation Intensity Debug (for testing) */}
           {conversationIntensity !== 30 && (
             <div className="text-center">
-              <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm">
+              <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm text-xs px-2 py-1">
                 Intensity: {Math.round(conversationIntensity)}/100
               </Badge>
             </div>

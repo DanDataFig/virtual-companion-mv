@@ -191,3 +191,74 @@ body {
 .animate-slide-in-right {
   animation: slideInRight 0.3s ease-out;
 }
+
+/* Enhanced mobile optimizations */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Ensure safe area support for mobile devices with notches */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+/* Improve touch targets and feedback */
+@media (hover: none) and (pointer: coarse) {
+  .hover\\:bg-white\\/10:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+  
+  .hover\\:bg-blue-700:hover {
+    background-color: rgb(29 78 216);
+  }
+  
+  .hover\\:bg-green-700:hover {
+    background-color: rgb(21 128 61);
+  }
+  
+  .hover\\:bg-red-700:hover {
+    background-color: rgb(185 28 28);
+  }
+  
+  .hover\\:bg-purple-700:hover {
+    background-color: rgb(126 34 206);
+  }
+  
+  .hover\\:bg-gray-700:hover {
+    background-color: rgb(55 65 81);
+  }
+}
+
+/* Smooth scrolling for chat messages */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Improve text readability on mobile */
+@media (max-width: 640px) {
+  .text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  
+  .text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  .text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
+/* Prevent zoom on input focus for iOS */
+input[type="text"] {
+  font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  input[type="text"] {
+    font-size: 16px;
+  }
+}
