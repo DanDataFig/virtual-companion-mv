@@ -77,12 +77,12 @@ function App() {
     })
   }
 
-    const voices = window.speechSynthesis.getVoices()
-    const femaleVoice = voices.find(voice => 
-      voice.name.toLowerCase().includes('female') || 
-      voice.name.toLowerCase().includes('woman') ||
-      voice.name.toLowerCase().includes('zira') ||
-      voice.name.toLowerCase().includes('hazel')
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    })
+  }
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return
