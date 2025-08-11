@@ -1,5 +1,6 @@
 // Demo data generator for testing mood trends
-  const now = new Date();
+
+export const generateDemoMoodData = () => {
   const now = new Date();
   const demoData = [];
   
@@ -7,45 +8,39 @@
   for (let i = 0; i < 21; i++) {
     const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
     
+    // Random number of entries per day (1-3)
+    const entriesPerDay = Math.floor(Math.random() * 3) + 1;
+    
     for (let j = 0; j < entriesPerDay; j++) {
-      entryTime.setHours(Math.floor(Math.random() * 16) + 6)
+      const entryTime = new Date(date);
+      entryTime.setHours(Math.floor(Math.random() * 16) + 6); // 6 AM to 10 PM
+      entryTime.setMinutes(Math.floor(Math.random() * 60));
     
       let mood = 3; // Start neutral
+      
       // Weekend boost
+      if (date.getDay() === 0 || date.getDay() === 6) {
         mood += Math.random() > 0.3 ? 1 : 0;
-      
-      
       }
+      
       // Random variation
+      mood += (Math.random() - 0.5) * 2;
       
-      mood = Math.max(
+      // Keep within bounds
+      mood = Math.max(1, Math.min(5, Math.round(mood)));
+      
       demoData.push({
+        id: `demo-mood-${i}-${j}-${Date.now()}`,
         level: mood,
-      }
+        timestamp: entryTime
+      });
+    }
   }
-  return demoData.so
+  
+  return demoData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+};
 
-  const topics = [
-    { t
-    { 
-    { title: "Learning Jo
-    { title: "Evening Gratitude", content: "Ending the day by r
-  
-  
-  const now = new Date();
-  // G
-  
-    const daysAgo = Math.floor(Math.random() * 2
-    entryDate.setHou
-    const topicIndex = Math.
-    
-    c
-   
-  
-        entryTags.push(randomTag);
-  
-
-    if (selectedTopic.title.includes("Gratit
+export const generateDemoDiaryData = () => {
   const topics = [
     { title: "Morning Reflection", content: "Started the day with some quiet time to myself. There's something peaceful about the early morning hours that helps me center my thoughts and set intentions for the day ahead." },
     { title: "Gratitude Practice", content: "Taking time to appreciate the small things today. The way sunlight filters through my window, a kind text from a friend, the taste of my morning coffee. These moments add up to something beautiful." },
@@ -91,21 +86,6 @@
     } else if (selectedTopic.title.includes("Challenging")) {
       mood = Math.floor(Math.random() * 2) + 2; // 2-3
     } else {
-      mood = Math.floor(Math.random() * 3) + 3; // 3-5
-    }
-    
-    demoData.push({
-      id: `demo-diary-${i}-${Date.now()}`,
-      title: selectedTopic.title,
-      content: selectedTopic.content,
-      mood: mood,
-      tags: entryTags,
-      timestamp: entryDate
-    });
-  }
-  
-  return demoData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-};    } else {
       mood = Math.floor(Math.random() * 3) + 3; // 3-5
     }
     
