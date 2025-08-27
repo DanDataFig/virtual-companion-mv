@@ -1727,11 +1727,11 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                 if (isSpeaking) {
                   stopSpeaking()
                 } else {
-                  setUserPreferences(prev => ({ ...prev, voiceEnabled: !prev.voiceEnabled }))
+                  setVoiceEnabled(!voiceEnabled)
                 }
               }}
               className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
-                userPreferences.voiceEnabled && !isSpeaking
+                voiceEnabled && !isSpeaking
                   ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
                   : isSpeaking
                   ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800'
@@ -1755,9 +1755,9 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           {/* Text Input */}
           <div className="flex space-x-2 sm:space-x-3">
             <Input
-              value={inputMessage}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
+              disabled={isLoading}
+            />
+            <Button 
               onFocus={() => setShowChat(true)}
               placeholder="Type your message..."
               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 backdrop-blur-sm rounded-full px-4 sm:px-6 py-3 min-h-[48px] text-base"
@@ -1800,9 +1800,183 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             
             {/* Voice Status */}
             <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm text-xs px-2 py-1 ${
-              userPreferences.voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
+              voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
             }`}>
-              Voice: {userPreferences.voiceEnabled ? 'On' : 'Off'}
+              Voice: {voiceEnabled ? 'On' : 'Off'}
+            </Badge>
+            
+            {/* Camera Status */}
+            {isVideoActive && (
+              <Badge variant="secondary" className="bg-blue-500/20 text-blue-200 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
+                Camera: {currentCamera === 'front' ? 'Front' : 'Back'}
+              </Badge>
+            )}
+          </div>
+
+          {/* Conversation Intensity Debug (for testing) */}
+          {conversationIntensity !== 30 && (
+            <div className="text-center">
+              <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm text-xs px-2 py-1">
+                Intensity: {Math.round(conversationIntensity)}/100
+              </Badge>
+            </div>
+          )}
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+export default App        {/* Mood Selector Overlay */}
+        {showMoodSelector && (
+          <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32">
+            <Card className="p-4 sm:p-4 bg-black/40 border-white/10 backdrop-blur-md">
+              <h3 className="text-white text-sm font-medium mb-3 text-center">How are you feeling?</h3>
+              <div className="flex justify-between gap-2">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <Button
+                    key={level}
+                    variant="ghost"
+                    onClick={() => registerMood(level)}
+                    className="h-16 w-16 min-w-[60px] flex flex-col items-center justify-center hover:bg-white/10 rounded-xl touch-manipulation"
+                  >
+                    <span className="text-2xl sm:text-xl">{getMoodEmoji(level)}</span>
+                    <span className="text-xs text-white/60">{level}</span>
+                  </Button>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Bottom Controls */}
+        <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-safe">
+          
+          {/* Call-style Controls */}
+          <div className="flex justify-center items-center space-x-3 sm:space-x-4">
+            {/* Presence Switch */}
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => setShowPresenceSelector(!showPresenceSelector)}
+              className="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full bg-orange-600/90 hover:bg-orange-700 active:bg-orange-800 text-white backdrop-blur-sm transition-colors touch-manipulation"
+            >
+              <Swap size={20} />
+            </Button>
+            
+            {/* Video/Background */}
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => setShowBackgroundSelector(!showBackgroundSelector)}
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
+                isVideoActive 
+                  ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
+                  : 'bg-blue-600/90 hover:bg-blue-700 active:bg-blue-800'
+              }`}
+            >
+              {isVideoActive ? <VideoCamera size={20} /> : <Image size={20} />}
+            </Button>
+            
+            {/* Voice Chat */}
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => setIsListening(!isListening)}
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
+                isListening 
+                  ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800' 
+                  : 'bg-blue-600/90 hover:bg-blue-700 active:bg-blue-800'
+              }`}
+            >
+              {isListening ? <MicrophoneSlash size={20} /> : <Microphone size={20} />}
+            </Button>
+            
+            {/* Voice Response Toggle */}
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => {
+                if (isSpeaking) {
+                  stopSpeaking()
+                } else {
+                  setVoiceEnabled(!voiceEnabled)
+                }
+              }}
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
+                voiceEnabled && !isSpeaking
+                  ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
+                  : isSpeaking
+                  ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800'
+                  : 'bg-gray-600/90 hover:bg-gray-700 active:bg-gray-800'
+              }`}
+            >
+              {isSpeaking ? <SpeakerX size={20} /> : <SpeakerHigh size={20} />}
+            </Button>
+            
+            {/* Mood Check */}
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => setShowMoodSelector(!showMoodSelector)}
+              className="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full bg-purple-600/90 hover:bg-purple-700 active:bg-purple-800 text-white backdrop-blur-sm touch-manipulation"
+            >
+              <Smiley size={20} />
+            </Button>
+          </div>
+
+          {/* Text Input */}
+          <div className="flex space-x-2 sm:space-x-3">
+            <Input
+              disabled={isLoading}
+            />
+            <Button 
+              onFocus={() => setShowChat(true)}
+              placeholder="Type your message..."
+              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 backdrop-blur-sm rounded-full px-4 sm:px-6 py-3 min-h-[48px] text-base"
+              disabled={isLoading}
+            />
+            <Button 
+              onClick={sendMessage} 
+              disabled={!inputMessage.trim() || isLoading}
+              className={`bg-purple-600/90 hover:bg-purple-700 active:bg-purple-800 rounded-full px-4 sm:px-6 backdrop-blur-sm transition-all duration-300 min-w-[48px] min-h-[48px] touch-manipulation ${
+                conversationIntensity > 60 ? 'animate-pulse shadow-lg shadow-purple-500/30' : ''
+              }`}
+            >
+              <PaperPlaneTilt size={18} />
+            </Button>
+          </div>
+
+          {/* Status Indicators */}
+          <div className="flex justify-center space-x-2 sm:space-x-4 flex-wrap gap-2">
+            {/* Current Presence Indicator */}
+            <Badge variant="secondary" className="bg-orange-500/20 text-orange-200 border-orange-400/30 backdrop-blur-sm text-xs px-2 py-1">
+              {getCurrentPresence().name}
+            </Badge>
+            
+            {/* Chat Navigation Status */}
+            {showChat && messages.length > MESSAGES_PER_PAGE && (
+              <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-200 border-cyan-400/30 backdrop-blur-sm text-xs px-2 py-1">
+                {chatScrollOffset > 0 
+                  ? `Viewing older messages (${Math.floor(chatScrollOffset / MESSAGES_PER_PAGE) + 1}/${Math.ceil(messages.length / MESSAGES_PER_PAGE)})`
+                  : `Latest messages (${messages.length} total)`
+                }
+              </Badge>
+            )}
+            
+            {/* Current Mood Indicator */}
+            {moodEntries.length > 0 && (
+              <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
+                Mood: {getMoodEmoji(moodEntries[0].level)} {moodEntries[0].level}/5
+              </Badge>
+            )}
+            
+            {/* Voice Status */}
+            <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm text-xs px-2 py-1 ${
+              voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
+            }`}>
+              Voice: {voiceEnabled ? 'On' : 'Off'}
             </Badge>
             
             {/* Camera Status */}
