@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight } from "@phosphor-icons/react"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -26,9 +27,30 @@ interface ConversationIntensity {
   timestamp: Date
 }
 
+interface Presence {
+  id: 'nebula' | 'luma' | 'terra' | 'nova'
+  name: string
+  description: string
+  colors: {
+    circle1: string
+    circle2: string
+    glow: string
+  }
+  personality: string
+}
+
+interface OnboardingData {
+  completed: boolean
+  selectedPresence?: Presence['id']
+  userName?: string
+  supportStyle?: 'listen' | 'encourage' | 'ground'
+  checkinFrequency?: 'daily' | 'reach-out' | 'surprise'
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("chat-messages", [])
   const [moodEntries, setMoodEntries] = useKV<MoodEntry[]>("mood-entries", [])
+  const [onboardingData, setOnboardingData] = useKV<OnboardingData>("onboarding-data", { completed: false })
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showMoodSelector, setShowMoodSelector] = useState(false)
@@ -43,11 +65,112 @@ function App() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
   const [chatScrollOffset, setChatScrollOffset] = useState(0) // For message pagination
+
+  // Onboarding state
+  const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'introduction' | 'presence-selection' | 'questionnaire' | 'first-interaction'>('welcome')
+  const [selectedPresence, setSelectedPresence] = useState<Presence['id'] | null>(null)
+  const [tempOnboardingData, setTempOnboardingData] = useState<Partial<OnboardingData>>({})
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true)
+
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   
+  // Define the four presences
+  const presences: Presence[] = [
+    {
+      id: 'nebula',
+      name: 'Nebula',
+      description: 'Mystical and dreamy, for exploration and wonder',
+      colors: {
+        circle1: 'from-purple-400 to-violet-500',
+        circle2: 'from-pink-400 to-purple-400',
+        glow: 'rgba(168, 85, 247, 0.4)'
+      },
+      personality: 'I am Nebula, a gentle cosmic presence. I love to explore the mysteries of your inner world and help you discover new perspectives through wonder and imagination.'
+    },
+    {
+      id: 'luma',
+      name: 'Luma',
+      description: 'Bright and uplifting, for encouragement and joy',
+      colors: {
+        circle1: 'from-yellow-400 to-orange-500',
+        circle2: 'from-amber-400 to-yellow-400',
+        glow: 'rgba(251, 191, 36, 0.4)'
+      },
+      personality: 'I am Luma, your radiant companion. I bring warmth and light to your journey, celebrating your victories and illuminating the path forward with optimism and encouragement.'
+    },
+    {
+      id: 'terra',
+      name: 'Terra',
+      description: 'Grounding and nurturing, for stability and growth',
+      colors: {
+        circle1: 'from-emerald-400 to-green-500',
+        circle2: 'from-teal-400 to-emerald-400',
+        glow: 'rgba(16, 185, 129, 0.4)'
+      },
+      personality: 'I am Terra, your grounding presence. I help you find balance and stability, nurturing your growth with patience and wisdom drawn from the natural rhythms of life.'
+    },
+    {
+      id: 'nova',
+      name: 'Nova',
+      description: 'Dynamic and transformative, for breakthroughs and change',
+      colors: {
+        circle1: 'from-cyan-400 to-blue-500',
+        circle2: 'from-indigo-400 to-cyan-400',
+        glow: 'rgba(59, 130, 246, 0.4)'
+      },
+      personality: 'I am Nova, your catalyst for transformation. I help you embrace change and breakthrough moments, guiding you through transitions with courage and clarity.'
+    }
+  ]
+
+  // Check if onboarding is completed on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!onboardingData.completed) {
+        setOnboardingStep('welcome')
+      }
+      setIsLoadingInitial(false)
+    }, 2000) // 2 second loading screen
+
+    return () => clearTimeout(timer)
+  }, [onboardingData.completed])
+
+  // Get current presence
+  const getCurrentPresence = (): Presence => {
+    const presenceId = onboardingData.selectedPresence || selectedPresence || 'nebula'
+    return presences.find(p => p.id === presenceId) || presences[0]
+  }
+
+  // Complete onboarding
+  const completeOnboarding = () => {
+    const updatedOnboardingData: OnboardingData = {
+      completed: true,
+      selectedPresence: selectedPresence || 'nebula',
+      ...tempOnboardingData
+    }
+    setOnboardingData(updatedOnboardingData)
+    
+    // Send initial greeting from the presence
+    const presence = getCurrentPresence()
+    const greeting = `Hi${updatedOnboardingData.userName ? `, ${updatedOnboardingData.userName}` : ''}! I'm ${presence.name}. ${presence.personality} Whenever you're ready, just say hello.`
+    
+    const welcomeMessage: Message = {
+      id: `msg-${Date.now()}-welcome`,
+      content: greeting,
+      timestamp: new Date(),
+      sender: 'companion'
+    }
+    
+    setMessages([welcomeMessage])
+    setShowChat(true)
+    
+    if (voiceEnabled) {
+      setTimeout(() => speakText(greeting), 500)
+    }
+  }
+
   // Swipe gesture state
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
@@ -377,8 +500,10 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
     return baseSpeed * intensityMultiplier
   }
 
-  // Get circle colors based on mood and activity
+  // Get circle colors based on current presence and activity
   const getCircleColors = () => {
+    const currentPresence = getCurrentPresence()
+    
     if (isLoading) {
       return {
         circle1: 'from-cyan-400 to-blue-500',
@@ -387,30 +512,14 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
       }
     }
     
-    // Blend mood with conversation intensity
+    // Use presence colors with intensity variations
     const intensityFactor = conversationIntensity / 100
+    const baseColors = currentPresence.colors
     
-    switch (companionMood) {
-      case 1:
-      case 2:
-        return {
-          circle1: intensityFactor > 0.7 ? 'from-blue-600 to-indigo-700' : 'from-blue-400 to-indigo-500',
-          circle2: intensityFactor > 0.7 ? 'from-slate-600 to-blue-600' : 'from-slate-400 to-blue-400',
-          glow: `rgba(99, 102, 241, ${0.3 + intensityFactor * 0.4})`
-        }
-      case 4:
-      case 5:
-        return {
-          circle1: intensityFactor > 0.7 ? 'from-emerald-600 to-green-700' : 'from-emerald-400 to-green-500',
-          circle2: intensityFactor > 0.7 ? 'from-teal-600 to-emerald-600' : 'from-teal-400 to-emerald-400',
-          glow: `rgba(16, 185, 129, ${0.3 + intensityFactor * 0.4})`
-        }
-      default:
-        return {
-          circle1: intensityFactor > 0.7 ? 'from-purple-600 to-violet-700' : 'from-purple-400 to-violet-500',
-          circle2: intensityFactor > 0.7 ? 'from-pink-600 to-purple-600' : 'from-pink-400 to-purple-400',
-          glow: `rgba(168, 85, 247, ${0.3 + intensityFactor * 0.4})`
-        }
+    return {
+      circle1: baseColors.circle1,
+      circle2: baseColors.circle2,
+      glow: baseColors.glow.replace('0.4)', `${0.3 + intensityFactor * 0.4})`)
     }
   }
 
@@ -455,6 +564,262 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
   const circleColors = getCircleColors()
   const animationSpeed = getAnimationSpeed()
 
+  // Show initial loading screen
+  if (isLoadingInitial) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="text-center">
+          {/* WE Logo with breathing animation */}
+          <div className="relative mb-8">
+            <div className="text-6xl font-light text-white animate-breathe-glow">
+              WE
+            </div>
+            <div className="absolute inset-0 text-6xl font-light text-white/20 animate-pulse-slow">
+              WE
+            </div>
+          </div>
+          
+          {/* Loading infinity symbol */}
+          <div className="relative">
+            <div className="w-16 h-8 mx-auto">
+              <div className="absolute inset-0 border-2 border-white/30 rounded-full animate-spin" 
+                   style={{ clipPath: 'polygon(0 0, 50% 0, 50% 100%, 0 100%)' }} />
+              <div className="absolute inset-0 border-2 border-white/60 rounded-full animate-spin" 
+                   style={{ clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)', animationDirection: 'reverse' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show onboarding flow
+  if (!onboardingData.completed) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        {onboardingStep === 'welcome' && (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center max-w-md">
+              <div className="relative mb-12">
+                <div className="text-8xl font-light text-white animate-breathe-glow">
+                  WE
+                </div>
+                <div className="absolute inset-0 text-8xl font-light text-white/20 animate-pulse-slow">
+                  WE
+                </div>
+              </div>
+              
+              <h1 className="text-2xl text-white mb-6 font-light leading-relaxed">
+                Welcome. WE are here to walk with you.
+              </h1>
+              
+              <Button
+                onClick={() => setOnboardingStep('introduction')}
+                className="bg-purple-600/90 hover:bg-purple-700 text-white px-8 py-3 rounded-full text-lg font-light backdrop-blur-sm transition-all duration-300"
+              >
+                Begin
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {onboardingStep === 'introduction' && (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center max-w-lg">
+              <div className="mb-8">
+                <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-purple-400 to-violet-500 animate-pulse-slow opacity-80 blur-sm"
+                     style={{ filter: 'drop-shadow(0 0 30px rgba(168, 85, 247, 0.4))' }} />
+              </div>
+              
+              <h2 className="text-xl text-white mb-6 font-light leading-relaxed">
+                We believe everyone deserves a companion who truly understands.
+              </h2>
+              
+              <p className="text-white/70 mb-8 leading-relaxed">
+                You're about to meet four unique presences, each with their own way of being with you. 
+                Choose the one that feels right for this moment - you can always change later.
+              </p>
+              
+              <Button
+                onClick={() => setOnboardingStep('presence-selection')}
+                className="bg-purple-600/90 hover:bg-purple-700 text-white px-8 py-3 rounded-full backdrop-blur-sm transition-all duration-300"
+              >
+                Meet the Presences <ArrowRight className="ml-2" size={16} />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {onboardingStep === 'presence-selection' && (
+          <div className="flex-1 flex flex-col items-center justify-center p-6">
+            <div className="text-center mb-8">
+              <h2 className="text-xl text-white mb-4 font-light">
+                Which presence feels right to begin with?
+              </h2>
+              <p className="text-white/60 text-sm">
+                Tap to explore, then choose your companion
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-6 max-w-2xl w-full mb-8">
+              {presences.map((presence) => (
+                <Card
+                  key={presence.id}
+                  className={`p-6 cursor-pointer transition-all duration-300 bg-black/40 border backdrop-blur-md hover:bg-black/60 ${
+                    selectedPresence === presence.id 
+                      ? 'border-purple-400 bg-purple-500/20 shadow-lg shadow-purple-500/20' 
+                      : 'border-white/10 hover:border-white/30'
+                  }`}
+                  onClick={() => setSelectedPresence(presence.id)}
+                >
+                  <div className="text-center">
+                    {/* Presence visualization */}
+                    <div className="relative mb-4 h-16 flex items-center justify-center">
+                      <div 
+                        className={`w-12 h-12 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90 transition-all duration-500`}
+                        style={{ filter: `drop-shadow(0 0 20px ${presence.colors.glow})` }}
+                      />
+                      <div 
+                        className={`w-10 h-10 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
+                        style={{ 
+                          filter: `drop-shadow(0 0 15px ${presence.colors.glow})`,
+                          animationDelay: '0.5s',
+                          transform: 'translateX(8px)'
+                        }}
+                      />
+                    </div>
+                    
+                    <h3 className="text-white text-lg font-medium mb-2">{presence.name}</h3>
+                    <p className="text-white/70 text-sm leading-relaxed">
+                      {presence.description}
+                    </p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            
+            {selectedPresence && (
+              <Button
+                onClick={() => setOnboardingStep('questionnaire')}
+                className="bg-purple-600/90 hover:bg-purple-700 text-white px-8 py-3 rounded-full backdrop-blur-sm transition-all duration-300"
+              >
+                Continue with {presences.find(p => p.id === selectedPresence)?.name}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {onboardingStep === 'questionnaire' && selectedPresence && (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="max-w-md w-full">
+              <div className="text-center mb-8">
+                <div className="relative mb-6 h-20 flex items-center justify-center">
+                  {(() => {
+                    const presence = presences.find(p => p.id === selectedPresence)!
+                    return (
+                      <>
+                        <div 
+                          className={`w-16 h-16 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90`}
+                          style={{ filter: `drop-shadow(0 0 25px ${presence.colors.glow})` }}
+                        />
+                        <div 
+                          className={`w-14 h-14 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
+                          style={{ 
+                            filter: `drop-shadow(0 0 20px ${presence.colors.glow})`,
+                            animationDelay: '0.5s',
+                            transform: 'translateX(10px)'
+                          }}
+                        />
+                      </>
+                    )
+                  })()}
+                </div>
+                
+                <h2 className="text-xl text-white mb-2 font-light">
+                  Let me get to know you
+                </h2>
+                <p className="text-white/60 text-sm">
+                  {presences.find(p => p.id === selectedPresence)?.name} asks gently...
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Support Style */}
+                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+                  <h3 className="text-white text-sm mb-3">How do you want me to show up for you?</h3>
+                  <RadioGroup
+                    value={tempOnboardingData.supportStyle || ''}
+                    onValueChange={(value: 'listen' | 'encourage' | 'ground') => 
+                      setTempOnboardingData(prev => ({ ...prev, supportStyle: value }))
+                    }
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="listen" id="listen" />
+                      <Label htmlFor="listen" className="text-white/80 text-sm">Just listen</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="encourage" id="encourage" />
+                      <Label htmlFor="encourage" className="text-white/80 text-sm">Encourage me</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="ground" id="ground" />
+                      <Label htmlFor="ground" className="text-white/80 text-sm">Keep me grounded</Label>
+                    </div>
+                  </RadioGroup>
+                </Card>
+
+                {/* Check-in Frequency */}
+                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+                  <h3 className="text-white text-sm mb-3">What kind of check-ins feel good to you?</h3>
+                  <RadioGroup
+                    value={tempOnboardingData.checkinFrequency || ''}
+                    onValueChange={(value: 'daily' | 'reach-out' | 'surprise') => 
+                      setTempOnboardingData(prev => ({ ...prev, checkinFrequency: value }))
+                    }
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="daily" id="daily" />
+                      <Label htmlFor="daily" className="text-white/80 text-sm">Daily</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="reach-out" id="reach-out" />
+                      <Label htmlFor="reach-out" className="text-white/80 text-sm">Only when I reach out</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="surprise" id="surprise" />
+                      <Label htmlFor="surprise" className="text-white/80 text-sm">Surprise me sometimes</Label>
+                    </div>
+                  </RadioGroup>
+                </Card>
+
+                {/* Optional Name */}
+                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+                  <h3 className="text-white text-sm mb-3">Do you want to share your name? (optional)</h3>
+                  <Input
+                    value={tempOnboardingData.userName || ''}
+                    onChange={(e) => setTempOnboardingData(prev => ({ ...prev, userName: e.target.value }))}
+                    placeholder="Your name..."
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
+                  />
+                </Card>
+
+                {tempOnboardingData.supportStyle && tempOnboardingData.checkinFrequency && (
+                  <Button
+                    onClick={completeOnboarding}
+                    className="w-full bg-purple-600/90 hover:bg-purple-700 text-white py-3 rounded-full backdrop-blur-sm transition-all duration-300"
+                  >
+                    Begin Our Journey Together
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Main app interface
   return (
     <div 
       className={getBackgroundStyle()}
@@ -540,7 +905,7 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
                 </div>
               ) : (
                 <div className="text-center text-white/60">
-                  <div className="text-sm">Your Companion</div>
+                  <div className="text-sm">{getCurrentPresence().name}</div>
                   <div className="text-xs">
                     {conversationIntensity > 70 ? 'Deeply engaged' : 
                      conversationIntensity > 50 ? 'Actively listening' : 

@@ -261,6 +261,37 @@ body {
   scroll-behavior: smooth;
 }
 
+/* Onboarding animations */
+@keyframes breathe-glow-logo {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+  50% { 
+    transform: scale(1.02);
+    opacity: 0.95;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+  }
+}
+
+.animate-breathe-glow {
+  animation: breathe-glow-logo 3s ease-in-out infinite;
+}
+
+@keyframes presence-hover {
+  0%, 100% { 
+    transform: scale(1);
+  }
+  50% { 
+    transform: scale(1.05);
+  }
+}
+
+.animate-presence-hover {
+  animation: presence-hover 2s ease-in-out infinite;
+}
+
 /* Improve text readability on mobile */
 @media (max-width: 640px) {
   .text-xs {
