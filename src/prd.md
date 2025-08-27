@@ -26,6 +26,16 @@
 - **Purpose**: Track emotional patterns and inform both AI companion context and visual representation
 - **Success Criteria**: Simple one-tap mood entry with immediate visual feedback in companion appearance
 
+### 4. Comprehensive User Preferences
+- **Functionality**: Advanced settings for voice customization (volume, speed, pitch, voice selection), visual themes (colors, animation speed, motion reduction), and notification preferences (check-ins, reminders, summaries)
+- **Purpose**: Allow users to personalize their companion experience to match their accessibility needs and preferences
+- **Success Criteria**: Settings persist across sessions, voice changes are immediately applied, theme updates reflect throughout the interface
+
+### 5. Presence Selection System
+- **Functionality**: Four distinct companion presences (Nebula, Luma, Terra, Nova) with unique personalities, colors, and interaction styles
+- **Purpose**: Provide variety and allow users to choose companions that best match their current emotional needs
+- **Success Criteria**: Smooth transitions between presences, personality differences are apparent in responses, visual appearance changes immediately
+
 ## Design Direction
 
 ### Visual Tone & Identity
@@ -58,19 +68,36 @@
 ## Implementation Considerations
 - **Real-time Analysis**: Client-side intensity calculation for immediate visual response
 - **Performance**: Smooth animations at 60fps using CSS transforms and transitions
-- **State Management**: useKV for persistent mood tracking and conversation history
+- **State Management**: useKV for persistent mood tracking, conversation history, and user preferences
 - **Responsive Design**: Mobile-first with large touch targets for voice/mood controls
+- **Accessibility**: Voice customization, motion reduction options, high contrast theme support
+- **Personalization**: Persistent preferences for voice, theme, and notification settings across sessions
 
 ## Core User Flow
-1. Open app → See overlapping circle companion in neutral state
-2. Quick mood check-in (optional) → Circles adapt color palette
-3. Start typing → Circles begin responding to intensity in real-time
-4. Send message → Full intensity analysis triggers enhanced visual feedback
-5. AI responds → Companion maintains contextual mood while awaiting next interaction
-6. High-intensity conversations → Additional ripple effects and enhanced glow
+1. **Onboarding**: Welcome → Introduction → Presence Selection → Preference Setup
+2. **Daily Use**: Open app → See companion in remembered state (mood/presence)
+3. **Settings Access**: Tap gear icon → Customize voice, theme, notifications
+4. **Interaction**: Mood check-in → Start conversation → Dynamic visual feedback
+5. **Presence Switching**: Tap switch button → Choose different companion personality
+6. **Voice Interaction**: Toggle voice responses with customized speed/pitch/volume
+7. **High-intensity conversations**: Enhanced visual effects and ripple animations
+
+## Advanced Features
+### Settings Categories
+- **Voice Settings**: Enable/disable, volume (0-100%), speed (50-200%), pitch (50-200%), voice selection
+- **Theme Settings**: Auto/dark/light theme, primary color palette (8 options), animation speed, motion reduction
+- **Notifications**: Enable/disable, daily check-ins, mood reminders, weekly summaries, preferred time
+
+### Presence System
+- **Nebula**: Mystical purple/violet - exploration and wonder
+- **Luma**: Bright amber/yellow - encouragement and joy  
+- **Terra**: Grounding green/emerald - stability and growth
+- **Nova**: Dynamic cyan/blue - transformation and change
 
 ## Success Metrics
 - Visual feedback feels natural and enhances emotional connection
-- Users engage longer due to responsive visual feedback
+- Users engage longer due to responsive visual feedback and personalization
+- Settings reduce barriers for users with accessibility needs
 - Conversation intensity accurately reflects user emotional state
-- Mood tracking integration provides meaningful context for companion behavior
+- Presence switching provides meaningful variety in companion interaction
+- Voice customization improves comfort and engagement

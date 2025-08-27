@@ -6,6 +6,10 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap, House } from "@phosphor-icons/react"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap, House, Gear, Bell, Palette, Volume } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -58,10 +62,53 @@ interface OnboardingData {
   checkinFrequency?: 'daily' | 'reach-out' | 'surprise'
 }
 
+interface UserPreferences {
+  // Voice settings
+  voiceEnabled: boolean
+  voiceVolume: number
+  voiceSpeed: number
+  voicePitch: number
+  preferredVoice?: string
+  
+  // Theme settings
+  theme: 'auto' | 'dark' | 'light'
+  primaryColor: string
+  animationSpeed: 'slow' | 'normal' | 'fast'
+  reduceMotion: boolean
+  
+  // Notification settings
+  notificationsEnabled: boolean
+  dailyCheckIns: boolean
+  moodReminders: boolean
+  conversationSummaries: boolean
+  notificationTime: string
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("chat-messages", [])
   const [moodEntries, setMoodEntries] = useKV<MoodEntry[]>("mood-entries", [])
   const [onboardingData, setOnboardingData] = useKV<OnboardingData>("onboarding-data", { completed: false })
+  const [userPreferences, setUserPreferences] = useKV<UserPreferences>("user-preferences", {
+    // Voice settings defaults
+    voiceEnabled: true,
+    voiceVolume: 80,
+    voiceSpeed: 90,
+    voicePitch: 110,
+    preferredVoice: undefined,
+    
+    // Theme settings defaults
+    theme: 'auto',
+    primaryColor: 'purple',
+    animationSpeed: 'normal',
+    reduceMotion: false,
+    
+    // Notification settings defaults
+    notificationsEnabled: true,
+    dailyCheckIns: true,
+    moodReminders: true,
+    conversationSummaries: false,
+    notificationTime: '09:00'
+  })
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showMoodSelector, setShowMoodSelector] = useState(false)
@@ -74,9 +121,10 @@ function App() {
   const [showBackgroundSelector, setShowBackgroundSelector] = useState(false)
   const [selectedBackground, setSelectedBackground] = useState<string | null>(null)
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const [voiceEnabled, setVoiceEnabled] = useState(true) // Keep for backward compatibility
   const [chatScrollOffset, setChatScrollOffset] = useState(0) // For message pagination
   const [showPresenceSelector, setShowPresenceSelector] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   // Onboarding state
   const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'introduction' | 'presence-selection' | 'questionnaire' | 'first-interaction'>('welcome')
@@ -137,6 +185,11 @@ function App() {
     }
   ]
 
+  // Sync voice enabled state with preferences
+  useEffect(() => {
+    setVoiceEnabled(userPreferences.voiceEnabled)
+  }, [userPreferences.voiceEnabled])
+
   // Check if onboarding is completed on mount
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -178,7 +231,7 @@ function App() {
     setMessages([welcomeMessage])
     setShowChat(true)
     
-    if (voiceEnabled) {
+    if (userPreferences.voiceEnabled) {
       setTimeout(() => speakText(greeting), 500)
     }
   }
@@ -193,6 +246,7 @@ function App() {
     setShowMoodSelector(false)
     setShowPresenceSelector(false)
     setShowBackgroundSelector(false)
+    setShowSettings(false)
     setSelectedPresence(null)
     setTempOnboardingData({})
     setOnboardingStep('welcome')
@@ -232,7 +286,7 @@ function App() {
     setMessages(current => [...current, transitionMessage])
     setShowPresenceSelector(false)
     
-    if (voiceEnabled) {
+    if (userPreferences.voiceEnabled) {
       setTimeout(() => speakText(transitionMessage.content), 500)
     }
   }
@@ -307,31 +361,40 @@ function App() {
     }
   }, [messages.length])
 
-  // Text-to-Speech function
+  // Text-to-Speech function with preferences
   const speakText = (text: string) => {
-    if (!voiceEnabled) return
+    if (!userPreferences.voiceEnabled) return
     
     // Stop any current speech
     window.speechSynthesis.cancel()
     
     const utterance = new SpeechSynthesisUtterance(text)
     
-    // Configure voice settings for a more natural companion voice
-    utterance.rate = 0.9
-    utterance.pitch = 1.1
-    utterance.volume = 0.8
+    // Configure voice settings based on user preferences
+    utterance.rate = userPreferences.voiceSpeed / 100 // Convert percentage to rate (0.1 - 10)
+    utterance.pitch = userPreferences.voicePitch / 100 // Convert percentage to pitch (0 - 2)
+    utterance.volume = userPreferences.voiceVolume / 100 // Convert percentage to volume (0 - 1)
     
-    // Try to find a female voice for the companion
-    const voices = window.speechSynthesis.getVoices()
-    const femaleVoice = voices.find(voice => 
-      voice.name.toLowerCase().includes('female') || 
-      voice.name.toLowerCase().includes('woman') ||
-      voice.name.toLowerCase().includes('zira') ||
-      voice.name.toLowerCase().includes('hazel')
-    )
-    
-    if (femaleVoice) {
-      utterance.voice = femaleVoice
+    // Use preferred voice if set
+    if (userPreferences.preferredVoice) {
+      const voices = window.speechSynthesis.getVoices()
+      const preferredVoice = voices.find(voice => voice.name === userPreferences.preferredVoice)
+      if (preferredVoice) {
+        utterance.voice = preferredVoice
+      }
+    } else {
+      // Try to find a female voice for the companion
+      const voices = window.speechSynthesis.getVoices()
+      const femaleVoice = voices.find(voice => 
+        voice.name.toLowerCase().includes('female') || 
+        voice.name.toLowerCase().includes('woman') ||
+        voice.name.toLowerCase().includes('zira') ||
+        voice.name.toLowerCase().includes('hazel')
+      )
+      
+      if (femaleVoice) {
+        utterance.voice = femaleVoice
+      }
     }
     
     utterance.onstart = () => setIsSpeaking(true)
@@ -542,7 +605,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
       setMessages(current => [...current, companionMessage])
       
       // Speak the companion's response if voice is enabled
-      if (voiceEnabled) {
+      if (userPreferences.voiceEnabled) {
         speakText(response)
       }
     } catch (error) {
@@ -906,7 +969,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
       
       <div className="flex-1 flex flex-col relative z-10">
         {/* Home Button - Top left corner - Always visible */}
-        <div className="absolute top-4 left-4 z-30">
+        <div className="absolute top-4 left-4 z-30 flex space-x-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -939,6 +1002,17 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Settings Button */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowSettings(!showSettings)}
+            className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
+            title="Settings"
+          >
+            <Gear size={18} />
+          </Button>
         </div>
 
       <div className="flex-1 flex flex-col">
@@ -1252,6 +1326,334 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           </div>
         )}
 
+        {/* Settings Overlay */}
+        {showSettings && (
+          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
+            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-white text-base sm:text-lg font-medium">Settings</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSettings(false)}
+                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                
+                {/* Voice Settings */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Volume size={18} className="text-cyan-400" />
+                    <h4 className="text-white text-lg font-medium">Voice Settings</h4>
+                  </div>
+                  
+                  {/* Voice Enabled */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="voice-enabled" className="text-white/80 text-sm">
+                      Enable Voice Responses
+                    </Label>
+                    <Switch
+                      id="voice-enabled"
+                      checked={userPreferences.voiceEnabled}
+                      onCheckedChange={(checked) => 
+                        setUserPreferences(prev => ({ ...prev, voiceEnabled: checked }))
+                      }
+                    />
+                  </div>
+
+                  {/* Voice Volume */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">
+                      Volume: {userPreferences.voiceVolume}%
+                    </Label>
+                    <Slider
+                      value={[userPreferences.voiceVolume]}
+                      onValueChange={([value]) => 
+                        setUserPreferences(prev => ({ ...prev, voiceVolume: value }))
+                      }
+                      max={100}
+                      min={0}
+                      step={5}
+                      className="w-full"
+                      disabled={!userPreferences.voiceEnabled}
+                    />
+                  </div>
+
+                  {/* Voice Speed */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">
+                      Speed: {userPreferences.voiceSpeed}%
+                    </Label>
+                    <Slider
+                      value={[userPreferences.voiceSpeed]}
+                      onValueChange={([value]) => 
+                        setUserPreferences(prev => ({ ...prev, voiceSpeed: value }))
+                      }
+                      max={200}
+                      min={50}
+                      step={5}
+                      className="w-full"
+                      disabled={!userPreferences.voiceEnabled}
+                    />
+                  </div>
+
+                  {/* Voice Pitch */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">
+                      Pitch: {userPreferences.voicePitch}%
+                    </Label>
+                    <Slider
+                      value={[userPreferences.voicePitch]}
+                      onValueChange={([value]) => 
+                        setUserPreferences(prev => ({ ...prev, voicePitch: value }))
+                      }
+                      max={200}
+                      min={50}
+                      step={5}
+                      className="w-full"
+                      disabled={!userPreferences.voiceEnabled}
+                    />
+                  </div>
+
+                  {/* Preferred Voice */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">
+                      Preferred Voice
+                    </Label>
+                    <Select
+                      value={userPreferences.preferredVoice || "default"}
+                      onValueChange={(value) => 
+                        setUserPreferences(prev => ({ 
+                          ...prev, 
+                          preferredVoice: value === "default" ? undefined : value 
+                        }))
+                      }
+                      disabled={!userPreferences.voiceEnabled}
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue placeholder="Choose voice" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                        <SelectItem value="default">Default</SelectItem>
+                        {window.speechSynthesis.getVoices().filter(voice => 
+                          voice.lang.startsWith('en')
+                        ).slice(0, 10).map((voice) => (
+                          <SelectItem key={voice.name} value={voice.name} className="text-white">
+                            {voice.name} ({voice.lang})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Separator className="bg-white/10" />
+
+                {/* Theme Settings */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Palette size={18} className="text-purple-400" />
+                    <h4 className="text-white text-lg font-medium">Appearance</h4>
+                  </div>
+
+                  {/* Theme */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Theme</Label>
+                    <Select
+                      value={userPreferences.theme}
+                      onValueChange={(value: 'auto' | 'dark' | 'light') => 
+                        setUserPreferences(prev => ({ ...prev, theme: value }))
+                      }
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                        <SelectItem value="auto" className="text-white">Auto</SelectItem>
+                        <SelectItem value="dark" className="text-white">Dark</SelectItem>
+                        <SelectItem value="light" className="text-white">Light</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Primary Color */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Primary Color</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { id: 'purple', name: 'Purple', color: 'bg-purple-500' },
+                        { id: 'blue', name: 'Blue', color: 'bg-blue-500' },
+                        { id: 'green', name: 'Green', color: 'bg-green-500' },
+                        { id: 'orange', name: 'Orange', color: 'bg-orange-500' },
+                        { id: 'pink', name: 'Pink', color: 'bg-pink-500' },
+                        { id: 'cyan', name: 'Cyan', color: 'bg-cyan-500' },
+                        { id: 'amber', name: 'Amber', color: 'bg-amber-500' },
+                        { id: 'red', name: 'Red', color: 'bg-red-500' },
+                      ].map((color) => (
+                        <Button
+                          key={color.id}
+                          variant="ghost"
+                          onClick={() => 
+                            setUserPreferences(prev => ({ ...prev, primaryColor: color.id }))
+                          }
+                          className={`h-10 flex items-center justify-center border-2 transition-all ${
+                            userPreferences.primaryColor === color.id 
+                              ? 'border-white/60' 
+                              : 'border-white/10'
+                          }`}
+                        >
+                          <div className={`w-6 h-6 rounded-full ${color.color}`} />
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Animation Speed */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Animation Speed</Label>
+                    <Select
+                      value={userPreferences.animationSpeed}
+                      onValueChange={(value: 'slow' | 'normal' | 'fast') => 
+                        setUserPreferences(prev => ({ ...prev, animationSpeed: value }))
+                      }
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                        <SelectItem value="slow" className="text-white">Slow</SelectItem>
+                        <SelectItem value="normal" className="text-white">Normal</SelectItem>
+                        <SelectItem value="fast" className="text-white">Fast</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Reduce Motion */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="reduce-motion" className="text-white/80 text-sm">
+                      Reduce Motion
+                    </Label>
+                    <Switch
+                      id="reduce-motion"
+                      checked={userPreferences.reduceMotion}
+                      onCheckedChange={(checked) => 
+                        setUserPreferences(prev => ({ ...prev, reduceMotion: checked }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <Separator className="bg-white/10" />
+
+                {/* Notification Settings */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Bell size={18} className="text-amber-400" />
+                    <h4 className="text-white text-lg font-medium">Notifications</h4>
+                  </div>
+
+                  {/* Notifications Enabled */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="notifications-enabled" className="text-white/80 text-sm">
+                      Enable Notifications
+                    </Label>
+                    <Switch
+                      id="notifications-enabled"
+                      checked={userPreferences.notificationsEnabled}
+                      onCheckedChange={(checked) => 
+                        setUserPreferences(prev => ({ ...prev, notificationsEnabled: checked }))
+                      }
+                    />
+                  </div>
+
+                  {/* Daily Check-ins */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="daily-checkins" className="text-white/80 text-sm">
+                      Daily Check-ins
+                    </Label>
+                    <Switch
+                      id="daily-checkins"
+                      checked={userPreferences.dailyCheckIns}
+                      onCheckedChange={(checked) => 
+                        setUserPreferences(prev => ({ ...prev, dailyCheckIns: checked }))
+                      }
+                      disabled={!userPreferences.notificationsEnabled}
+                    />
+                  </div>
+
+                  {/* Mood Reminders */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="mood-reminders" className="text-white/80 text-sm">
+                      Mood Reminders
+                    </Label>
+                    <Switch
+                      id="mood-reminders"
+                      checked={userPreferences.moodReminders}
+                      onCheckedChange={(checked) => 
+                        setUserPreferences(prev => ({ ...prev, moodReminders: checked }))
+                      }
+                      disabled={!userPreferences.notificationsEnabled}
+                    />
+                  </div>
+
+                  {/* Conversation Summaries */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="conversation-summaries" className="text-white/80 text-sm">
+                      Weekly Conversation Summaries
+                    </Label>
+                    <Switch
+                      id="conversation-summaries"
+                      checked={userPreferences.conversationSummaries}
+                      onCheckedChange={(checked) => 
+                        setUserPreferences(prev => ({ ...prev, conversationSummaries: checked }))
+                      }
+                      disabled={!userPreferences.notificationsEnabled}
+                    />
+                  </div>
+
+                  {/* Notification Time */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">
+                      Preferred Check-in Time
+                    </Label>
+                    <Select
+                      value={userPreferences.notificationTime}
+                      onValueChange={(value) => 
+                        setUserPreferences(prev => ({ ...prev, notificationTime: value }))
+                      }
+                      disabled={!userPreferences.notificationsEnabled || !userPreferences.dailyCheckIns}
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                        {Array.from({ length: 24 }, (_, i) => {
+                          const hour = i.toString().padStart(2, '0')
+                          const time = `${hour}:00`
+                          const displayTime = i === 0 ? '12:00 AM' : 
+                                            i < 12 ? `${i}:00 AM` :
+                                            i === 12 ? '12:00 PM' :
+                                            `${i - 12}:00 PM`
+                          return (
+                            <SelectItem key={time} value={time} className="text-white">
+                              {displayTime}
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+              </div>
+            </Card>
+          </div>
+        )}
+
         {/* Mood Selector Overlay */}
         {showMoodSelector && (
           <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32">
@@ -1325,11 +1727,11 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                 if (isSpeaking) {
                   stopSpeaking()
                 } else {
-                  setVoiceEnabled(!voiceEnabled)
+                  setUserPreferences(prev => ({ ...prev, voiceEnabled: !prev.voiceEnabled }))
                 }
               }}
               className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
-                voiceEnabled && !isSpeaking
+                userPreferences.voiceEnabled && !isSpeaking
                   ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
                   : isSpeaking
                   ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800'
@@ -1353,9 +1755,9 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           {/* Text Input */}
           <div className="flex space-x-2 sm:space-x-3">
             <Input
-              disabled={isLoading}
-            />
-            <Button 
+              value={inputMessage}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
               onFocus={() => setShowChat(true)}
               placeholder="Type your message..."
               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 backdrop-blur-sm rounded-full px-4 sm:px-6 py-3 min-h-[48px] text-base"
@@ -1398,9 +1800,9 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             
             {/* Voice Status */}
             <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm text-xs px-2 py-1 ${
-              voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
+              userPreferences.voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
             }`}>
-              Voice: {voiceEnabled ? 'On' : 'Off'}
+              Voice: {userPreferences.voiceEnabled ? 'On' : 'Off'}
             </Badge>
             
             {/* Camera Status */}
