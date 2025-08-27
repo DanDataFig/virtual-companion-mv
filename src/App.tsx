@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight } from "@phosphor-icons/react"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -65,6 +65,7 @@ function App() {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
   const [chatScrollOffset, setChatScrollOffset] = useState(0) // For message pagination
+  const [showPresenceSelector, setShowPresenceSelector] = useState(false)
 
   // Onboarding state
   const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'introduction' | 'presence-selection' | 'questionnaire' | 'first-interaction'>('welcome')
@@ -168,6 +169,33 @@ function App() {
     
     if (voiceEnabled) {
       setTimeout(() => speakText(greeting), 500)
+    }
+  }
+
+  // Switch presence mid-conversation
+  const switchPresence = (newPresenceId: Presence['id']) => {
+    const newPresence = presences.find(p => p.id === newPresenceId)
+    if (!newPresence) return
+
+    // Update onboarding data with new presence
+    setOnboardingData(prev => ({
+      ...prev,
+      selectedPresence: newPresenceId
+    }))
+
+    // Create transition message
+    const transitionMessage: Message = {
+      id: `msg-${Date.now()}-transition`,
+      content: `Hello, I'm ${newPresence.name}. I've been following your conversation and I'm here to continue supporting you. ${newPresence.personality}`,
+      timestamp: new Date(),
+      sender: 'companion'
+    }
+
+    setMessages(current => [...current, transitionMessage])
+    setShowPresenceSelector(false)
+    
+    if (voiceEnabled) {
+      setTimeout(() => speakText(transitionMessage.content), 500)
     }
   }
 
@@ -452,7 +480,7 @@ function App() {
         `${msg.sender}: ${msg.content}`
       ).join('\n')
 
-      const prompt = spark.llmPrompt`You are a compassionate AI emotional companion. Respond empathetically and supportively to the user.
+      const prompt = spark.llmPrompt`You are ${getCurrentPresence().name}, a compassionate AI emotional companion. You are ${getCurrentPresence().personality.toLowerCase()} Respond empathetically and supportively to the user.
 
 Context:
 ${recentMoodContext}
@@ -462,7 +490,7 @@ ${conversationContext}
 
 User: ${userMessage.content}
 
-Respond naturally and warmly, showing you understand their emotional state. Keep responses concise but meaningful.`
+Respond naturally and warmly as ${getCurrentPresence().name}, showing you understand their emotional state. Keep responses concise but meaningful.`
 
       const response = await spark.llm(prompt)
 
@@ -1012,6 +1040,78 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
           </div>
         )}
 
+        {/* Presence Selector Overlay */}
+        {showPresenceSelector && (
+          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
+            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-white text-base sm:text-lg font-medium">Switch Presence</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPresenceSelector(false)}
+                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+              
+              <p className="text-white/60 text-sm mb-6 leading-relaxed">
+                Choose a different companion to continue your conversation. Your new presence will understand your context and pick up where you left off.
+              </p>
+
+              <div className="grid grid-cols-1 gap-4">
+                {presences.map((presence) => {
+                  const isCurrent = getCurrentPresence().id === presence.id
+                  return (
+                    <Card
+                      key={presence.id}
+                      className={`p-4 cursor-pointer transition-all duration-300 bg-black/40 border backdrop-blur-md ${
+                        isCurrent
+                          ? 'border-purple-400 bg-purple-500/20 shadow-lg shadow-purple-500/20 opacity-50 cursor-not-allowed' 
+                          : 'border-white/10 hover:border-white/30 hover:bg-black/60'
+                      }`}
+                      onClick={() => !isCurrent && switchPresence(presence.id)}
+                    >
+                      <div className="flex items-center space-x-4">
+                        {/* Presence visualization */}
+                        <div className="relative flex-shrink-0 h-12 w-16 flex items-center justify-center">
+                          <div 
+                            className={`w-8 h-8 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90`}
+                            style={{ filter: `drop-shadow(0 0 15px ${presence.colors.glow})` }}
+                          />
+                          <div 
+                            className={`w-6 h-6 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
+                            style={{ 
+                              filter: `drop-shadow(0 0 10px ${presence.colors.glow})`,
+                              animationDelay: '0.5s',
+                              transform: 'translateX(6px)'
+                            }}
+                          />
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h4 className="text-white text-lg font-medium">{presence.name}</h4>
+                            {isCurrent && (
+                              <Badge variant="secondary" className="bg-purple-500/20 text-purple-200 text-xs">
+                                Current
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-white/70 text-sm leading-relaxed">
+                            {presence.description}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            </Card>
+          </div>
+        )}
+
         {/* Background Selector Overlay */}
         {showBackgroundSelector && (
           <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
@@ -1104,7 +1204,17 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
         <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-safe">
           
           {/* Call-style Controls */}
-          <div className="flex justify-center items-center space-x-4 sm:space-x-6">
+          <div className="flex justify-center items-center space-x-3 sm:space-x-4">
+            {/* Presence Switch */}
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => setShowPresenceSelector(!showPresenceSelector)}
+              className="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full bg-orange-600/90 hover:bg-orange-700 active:bg-orange-800 text-white backdrop-blur-sm transition-colors touch-manipulation"
+            >
+              <Swap size={20} />
+            </Button>
+            
             {/* Video/Background */}
             <Button
               size="lg"
@@ -1190,6 +1300,11 @@ Respond naturally and warmly, showing you understand their emotional state. Keep
 
           {/* Status Indicators */}
           <div className="flex justify-center space-x-2 sm:space-x-4 flex-wrap gap-2">
+            {/* Current Presence Indicator */}
+            <Badge variant="secondary" className="bg-orange-500/20 text-orange-200 border-orange-400/30 backdrop-blur-sm text-xs px-2 py-1">
+              {getCurrentPresence().name}
+            </Badge>
+            
             {/* Chat Navigation Status */}
             {showChat && messages.length > MESSAGES_PER_PAGE && (
               <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-200 border-cyan-400/30 backdrop-blur-sm text-xs px-2 py-1">

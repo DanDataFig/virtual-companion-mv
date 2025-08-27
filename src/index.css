@@ -320,3 +320,37 @@ input[type="text"] {
     font-size: 16px;
   }
 }
+
+/* Presence transition animations */
+@keyframes presenceTransition {
+  0% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.7;
+  }
+  100% { 
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+.animate-presence-transition {
+  animation: presenceTransition 2s ease-in-out;
+}
+
+/* Enhanced glow for presence switch */
+@keyframes presenceSwitchGlow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 20px rgba(255, 165, 0, 0.4));
+  }
+  50% { 
+    filter: drop-shadow(0 0 40px rgba(255, 165, 0, 0.8));
+  }
+}
+
+.animate-presence-switch-glow {
+  animation: presenceSwitchGlow 1.5s ease-in-out infinite;
+}
