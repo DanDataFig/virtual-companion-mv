@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap, House, Gear, Bell, Palette, Volume } from "@phosphor-icons/react"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap, House, Gear, Bell, Palette, Volume, User } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -62,6 +62,18 @@ interface OnboardingData {
   checkinFrequency?: 'daily' | 'reach-out' | 'surprise'
 }
 
+interface UserAccount {
+  id: string
+  userName: string
+  email?: string
+  avatar?: string
+  createdAt: Date
+  profileCompleted: boolean
+  bio?: string
+  timezone?: string
+  language?: string
+}
+
 interface UserPreferences {
   // Voice settings
   voiceEnabled: boolean
@@ -88,6 +100,7 @@ function App() {
   const [messages, setMessages] = useKV<Message[]>("chat-messages", [])
   const [moodEntries, setMoodEntries] = useKV<MoodEntry[]>("mood-entries", [])
   const [onboardingData, setOnboardingData] = useKV<OnboardingData>("onboarding-data", { completed: false })
+  const [userAccount, setUserAccount] = useKV<UserAccount | null>("user-account", null)
   const [userPreferences, setUserPreferences] = useKV<UserPreferences>("user-preferences", {
     // Voice settings defaults
     voiceEnabled: true,
@@ -125,11 +138,13 @@ function App() {
   const [chatScrollOffset, setChatScrollOffset] = useState(0) // For message pagination
   const [showPresenceSelector, setShowPresenceSelector] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showAccountSettings, setShowAccountSettings] = useState(false)
 
   // Onboarding state
-  const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'introduction' | 'presence-selection' | 'questionnaire' | 'first-interaction'>('welcome')
+  const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'introduction' | 'presence-selection' | 'questionnaire' | 'account-creation' | 'first-interaction'>('welcome')
   const [selectedPresence, setSelectedPresence] = useState<Presence['id'] | null>(null)
   const [tempOnboardingData, setTempOnboardingData] = useState<Partial<OnboardingData>>({})
+  const [tempAccountData, setTempAccountData] = useState<Partial<UserAccount>>({})
   const [isLoadingInitial, setIsLoadingInitial] = useState(true)
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -217,9 +232,25 @@ function App() {
     }
     setOnboardingData(updatedOnboardingData)
     
+    // Create user account if one doesn't exist
+    if (!userAccount && tempAccountData.userName) {
+      const newAccount: UserAccount = {
+        id: `user-${Date.now()}`,
+        userName: tempAccountData.userName,
+        email: tempAccountData.email,
+        createdAt: new Date(),
+        profileCompleted: false,
+        bio: tempAccountData.bio,
+        timezone: tempAccountData.timezone,
+        language: tempAccountData.language || 'en'
+      }
+      setUserAccount(newAccount)
+    }
+    
     // Send initial greeting from the presence
     const presence = getCurrentPresence()
-    const greeting = `Hi${updatedOnboardingData.userName ? `, ${updatedOnboardingData.userName}` : ''}! I'm ${presence.name}. ${presence.personality} Whenever you're ready, just say hello.`
+    const displayName = userAccount?.userName || tempAccountData.userName || updatedOnboardingData.userName
+    const greeting = `Hi${displayName ? `, ${displayName}` : ''}! I'm ${presence.name}. ${presence.personality} Whenever you're ready, just say hello.`
     
     const welcomeMessage: Message = {
       id: `msg-${Date.now()}-welcome`,
@@ -236,10 +267,34 @@ function App() {
     }
   }
 
+  // Create user account
+  const createAccount = () => {
+    if (!tempAccountData.userName) return
+    
+    const newAccount: UserAccount = {
+      id: `user-${Date.now()}`,
+      userName: tempAccountData.userName,
+      email: tempAccountData.email,
+      createdAt: new Date(),
+      profileCompleted: true,
+      bio: tempAccountData.bio,
+      timezone: tempAccountData.timezone,
+      language: tempAccountData.language || 'en'
+    }
+    setUserAccount(newAccount)
+    
+    // Update onboarding data with the account name
+    setTempOnboardingData(prev => ({ ...prev, userName: tempAccountData.userName }))
+    
+    // Continue to first interaction
+    completeOnboarding()
+  }
+
   // Reset to initial loading screen
   const returnToStart = () => {
     // Clear all data and return to initial loading state
     setOnboardingData({ completed: false })
+    setUserAccount(null)
     setMessages([])
     setMoodEntries([])
     setShowChat(false)
@@ -247,8 +302,10 @@ function App() {
     setShowPresenceSelector(false)
     setShowBackgroundSelector(false)
     setShowSettings(false)
+    setShowAccountSettings(false)
     setSelectedPresence(null)
     setTempOnboardingData({})
+    setTempAccountData({})
     setOnboardingStep('welcome')
     setInputMessage('')
     setIsLoadingInitial(true) // Show the breathing WE logo again
@@ -921,25 +978,114 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   </RadioGroup>
                 </Card>
 
-                {/* Optional Name */}
+                {tempOnboardingData.supportStyle && tempOnboardingData.checkinFrequency && (
+                  <Button
+                    onClick={() => setOnboardingStep('account-creation')}
+                    className="w-full bg-purple-600/90 hover:bg-purple-700 text-white py-3 rounded-full backdrop-blur-sm transition-all duration-300"
+                  >
+                    Continue
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {onboardingStep === 'account-creation' && (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="max-w-md w-full">
+              <div className="text-center mb-8">
+                <div className="mb-6">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-400 to-violet-500 animate-pulse-slow opacity-80 blur-sm flex items-center justify-center"
+                       style={{ filter: 'drop-shadow(0 0 30px rgba(168, 85, 247, 0.4))' }}>
+                    <User size={32} className="text-white" />
+                  </div>
+                </div>
+                
+                <h2 className="text-xl text-white mb-2 font-light">
+                  Create Your Account
+                </h2>
+                <p className="text-white/60 text-sm leading-relaxed">
+                  Help us personalize your experience and keep your conversations safe.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Name - Required */}
                 <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
-                  <h3 className="text-white text-sm mb-3">Do you want to share your name? (optional)</h3>
+                  <h3 className="text-white text-sm mb-3">What should we call you? <span className="text-red-400">*</span></h3>
                   <Input
-                    value={tempOnboardingData.userName || ''}
-                    onChange={(e) => setTempOnboardingData(prev => ({ ...prev, userName: e.target.value }))}
+                    value={tempAccountData.userName || ''}
+                    onChange={(e) => setTempAccountData(prev => ({ ...prev, userName: e.target.value }))}
                     placeholder="Your name..."
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
+                    required
+                  />
+                </Card>
+
+                {/* Email - Optional */}
+                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+                  <h3 className="text-white text-sm mb-3">Email (optional)</h3>
+                  <Input
+                    type="email"
+                    value={tempAccountData.email || ''}
+                    onChange={(e) => setTempAccountData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="your@email.com"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
+                  />
+                  <p className="text-white/40 text-xs mt-2">For account recovery and updates</p>
+                </Card>
+
+                {/* Bio - Optional */}
+                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+                  <h3 className="text-white text-sm mb-3">Tell us a bit about yourself (optional)</h3>
+                  <Input
+                    value={tempAccountData.bio || ''}
+                    onChange={(e) => setTempAccountData(prev => ({ ...prev, bio: e.target.value }))}
+                    placeholder="What brings you here..."
                     className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
                   />
                 </Card>
 
-                {tempOnboardingData.supportStyle && tempOnboardingData.checkinFrequency && (
-                  <Button
-                    onClick={completeOnboarding}
-                    className="w-full bg-purple-600/90 hover:bg-purple-700 text-white py-3 rounded-full backdrop-blur-sm transition-all duration-300"
+                {/* Timezone - Optional */}
+                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+                  <h3 className="text-white text-sm mb-3">Timezone (optional)</h3>
+                  <Select
+                    value={tempAccountData.timezone || ""}
+                    onValueChange={(value) => setTempAccountData(prev => ({ ...prev, timezone: value }))}
                   >
-                    Begin Our Journey Together
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                      <SelectValue placeholder="Select your timezone" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                      <SelectItem value="America/New_York" className="text-white">Eastern Time</SelectItem>
+                      <SelectItem value="America/Chicago" className="text-white">Central Time</SelectItem>
+                      <SelectItem value="America/Denver" className="text-white">Mountain Time</SelectItem>
+                      <SelectItem value="America/Los_Angeles" className="text-white">Pacific Time</SelectItem>
+                      <SelectItem value="Europe/London" className="text-white">GMT</SelectItem>
+                      <SelectItem value="Europe/Paris" className="text-white">CET</SelectItem>
+                      <SelectItem value="Asia/Tokyo" className="text-white">JST</SelectItem>
+                      <SelectItem value="Australia/Sydney" className="text-white">AEST</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Card>
+
+                <div className="flex space-x-3">
+                  <Button
+                    onClick={() => completeOnboarding()}
+                    variant="ghost"
+                    className="flex-1 bg-gray-600/90 hover:bg-gray-700 text-white py-3 rounded-full backdrop-blur-sm transition-all duration-300"
+                  >
+                    Skip Account
                   </Button>
-                )}
+                  <Button
+                    onClick={createAccount}
+                    disabled={!tempAccountData.userName}
+                    className="flex-1 bg-purple-600/90 hover:bg-purple-700 text-white py-3 rounded-full backdrop-blur-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Create Account
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -1013,6 +1159,19 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           >
             <Gear size={18} />
           </Button>
+
+          {/* Account Button - Only show when user has account */}
+          {userAccount && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowAccountSettings(!showAccountSettings)}
+              className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
+              title="Account"
+            >
+              <User size={18} />
+            </Button>
+          )}
         </div>
 
       <div className="flex-1 flex flex-col">
@@ -1654,6 +1813,220 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           </div>
         )}
 
+        {/* Account Settings Overlay */}
+        {showAccountSettings && userAccount && (
+          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
+            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-white text-base sm:text-lg font-medium">Account Settings</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAccountSettings(false)}
+                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                
+                {/* Profile Information */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <User size={18} className="text-blue-400" />
+                    <h4 className="text-white text-lg font-medium">Profile</h4>
+                  </div>
+                  
+                  {/* Display Name */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Display Name</Label>
+                    <Input
+                      value={userAccount.userName}
+                      onChange={(e) => 
+                        setUserAccount(prev => prev ? ({ ...prev, userName: e.target.value }) : null)
+                      }
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Email</Label>
+                    <Input
+                      type="email"
+                      value={userAccount.email || ''}
+                      onChange={(e) => 
+                        setUserAccount(prev => prev ? ({ ...prev, email: e.target.value }) : null)
+                      }
+                      placeholder="your@email.com"
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
+                    />
+                  </div>
+
+                  {/* Bio */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Bio</Label>
+                    <Input
+                      value={userAccount.bio || ''}
+                      onChange={(e) => 
+                        setUserAccount(prev => prev ? ({ ...prev, bio: e.target.value }) : null)
+                      }
+                      placeholder="Tell us about yourself..."
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
+                    />
+                  </div>
+
+                  {/* Timezone */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Timezone</Label>
+                    <Select
+                      value={userAccount.timezone || ""}
+                      onValueChange={(value) => 
+                        setUserAccount(prev => prev ? ({ ...prev, timezone: value }) : null)
+                      }
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue placeholder="Select timezone" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                        <SelectItem value="America/New_York" className="text-white">Eastern Time</SelectItem>
+                        <SelectItem value="America/Chicago" className="text-white">Central Time</SelectItem>
+                        <SelectItem value="America/Denver" className="text-white">Mountain Time</SelectItem>
+                        <SelectItem value="America/Los_Angeles" className="text-white">Pacific Time</SelectItem>
+                        <SelectItem value="Europe/London" className="text-white">GMT</SelectItem>
+                        <SelectItem value="Europe/Paris" className="text-white">CET</SelectItem>
+                        <SelectItem value="Asia/Tokyo" className="text-white">JST</SelectItem>
+                        <SelectItem value="Australia/Sydney" className="text-white">AEST</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Language */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Language</Label>
+                    <Select
+                      value={userAccount.language || "en"}
+                      onValueChange={(value) => 
+                        setUserAccount(prev => prev ? ({ ...prev, language: value }) : null)
+                      }
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                        <SelectItem value="en" className="text-white">English</SelectItem>
+                        <SelectItem value="es" className="text-white">Español</SelectItem>
+                        <SelectItem value="fr" className="text-white">Français</SelectItem>
+                        <SelectItem value="de" className="text-white">Deutsch</SelectItem>
+                        <SelectItem value="it" className="text-white">Italiano</SelectItem>
+                        <SelectItem value="pt" className="text-white">Português</SelectItem>
+                        <SelectItem value="ja" className="text-white">日本語</SelectItem>
+                        <SelectItem value="ko" className="text-white">한국어</SelectItem>
+                        <SelectItem value="zh" className="text-white">中文</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Separator className="bg-white/10" />
+
+                {/* Account Information */}
+                <div className="space-y-4">
+                  <h4 className="text-white text-lg font-medium">Account Information</h4>
+                  
+                  <div className="grid grid-cols-1 gap-4 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Account ID:</span>
+                      <span className="text-white font-mono text-xs">{userAccount.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Created:</span>
+                      <span className="text-white">{new Date(userAccount.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Profile Status:</span>
+                      <Badge variant={userAccount.profileCompleted ? "default" : "secondary"} 
+                             className={userAccount.profileCompleted ? "bg-green-500/20 text-green-200" : "bg-yellow-500/20 text-yellow-200"}>
+                        {userAccount.profileCompleted ? "Complete" : "Incomplete"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="bg-white/10" />
+
+                {/* Data Management */}
+                <div className="space-y-4">
+                  <h4 className="text-white text-lg font-medium">Data Management</h4>
+                  
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => {
+                        const userData = {
+                          account: userAccount,
+                          messages: messages,
+                          moodEntries: moodEntries,
+                          preferences: userPreferences,
+                          onboarding: onboardingData
+                        }
+                        const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `we-account-backup-${new Date().toISOString().split('T')[0]}.json`
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                        URL.revokeObjectURL(url)
+                      }}
+                      variant="ghost"
+                      className="w-full justify-start bg-blue-500/20 text-blue-200 hover:bg-blue-500/30"
+                    >
+                      Export Account Data
+                    </Button>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start bg-red-500/20 text-red-200 hover:bg-red-500/30"
+                        >
+                          Delete Account
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-white">Delete Account</AlertDialogTitle>
+                          <AlertDialogDescription className="text-white/70 leading-relaxed">
+                            This will permanently delete your account and all associated data including conversations, mood entries, and preferences. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="bg-gray-600/90 text-white hover:bg-gray-700 border-white/20">
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => {
+                              // Delete all user data and reset
+                              setUserAccount(null)
+                              returnToStart()
+                            }}
+                            className="bg-red-600/90 hover:bg-red-700 text-white"
+                          >
+                            Delete Account
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+
+              </div>
+            </Card>
+          </div>
+        )}
+
         {/* Mood Selector Overlay */}
         {showMoodSelector && (
           <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32">
@@ -1755,183 +2128,9 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           {/* Text Input */}
           <div className="flex space-x-2 sm:space-x-3">
             <Input
-              disabled={isLoading}
-            />
-            <Button 
-              onFocus={() => setShowChat(true)}
-              placeholder="Type your message..."
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 backdrop-blur-sm rounded-full px-4 sm:px-6 py-3 min-h-[48px] text-base"
-              disabled={isLoading}
-            />
-            <Button 
-              onClick={sendMessage} 
-              disabled={!inputMessage.trim() || isLoading}
-              className={`bg-purple-600/90 hover:bg-purple-700 active:bg-purple-800 rounded-full px-4 sm:px-6 backdrop-blur-sm transition-all duration-300 min-w-[48px] min-h-[48px] touch-manipulation ${
-                conversationIntensity > 60 ? 'animate-pulse shadow-lg shadow-purple-500/30' : ''
-              }`}
-            >
-              <PaperPlaneTilt size={18} />
-            </Button>
-          </div>
-
-          {/* Status Indicators */}
-          <div className="flex justify-center space-x-2 sm:space-x-4 flex-wrap gap-2">
-            {/* Current Presence Indicator */}
-            <Badge variant="secondary" className="bg-orange-500/20 text-orange-200 border-orange-400/30 backdrop-blur-sm text-xs px-2 py-1">
-              {getCurrentPresence().name}
-            </Badge>
-            
-            {/* Chat Navigation Status */}
-            {showChat && messages.length > MESSAGES_PER_PAGE && (
-              <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-200 border-cyan-400/30 backdrop-blur-sm text-xs px-2 py-1">
-                {chatScrollOffset > 0 
-                  ? `Viewing older messages (${Math.floor(chatScrollOffset / MESSAGES_PER_PAGE) + 1}/${Math.ceil(messages.length / MESSAGES_PER_PAGE)})`
-                  : `Latest messages (${messages.length} total)`
-                }
-              </Badge>
-            )}
-            
-            {/* Current Mood Indicator */}
-            {moodEntries.length > 0 && (
-              <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
-                Mood: {getMoodEmoji(moodEntries[0].level)} {moodEntries[0].level}/5
-              </Badge>
-            )}
-            
-            {/* Voice Status */}
-            <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm text-xs px-2 py-1 ${
-              voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
-            }`}>
-              Voice: {voiceEnabled ? 'On' : 'Off'}
-            </Badge>
-            
-            {/* Camera Status */}
-            {isVideoActive && (
-              <Badge variant="secondary" className="bg-blue-500/20 text-blue-200 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
-                Camera: {currentCamera === 'front' ? 'Front' : 'Back'}
-              </Badge>
-            )}
-          </div>
-
-          {/* Conversation Intensity Debug (for testing) */}
-          {conversationIntensity !== 30 && (
-            <div className="text-center">
-              <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm text-xs px-2 py-1">
-                Intensity: {Math.round(conversationIntensity)}/100
-              </Badge>
-            </div>
-          )}
-        </div>
-      </div>
-      </div>
-    </div>
-  )
-}
-
-export default App        {/* Mood Selector Overlay */}
-        {showMoodSelector && (
-          <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32">
-            <Card className="p-4 sm:p-4 bg-black/40 border-white/10 backdrop-blur-md">
-              <h3 className="text-white text-sm font-medium mb-3 text-center">How are you feeling?</h3>
-              <div className="flex justify-between gap-2">
-                {[1, 2, 3, 4, 5].map((level) => (
-                  <Button
-                    key={level}
-                    variant="ghost"
-                    onClick={() => registerMood(level)}
-                    className="h-16 w-16 min-w-[60px] flex flex-col items-center justify-center hover:bg-white/10 rounded-xl touch-manipulation"
-                  >
-                    <span className="text-2xl sm:text-xl">{getMoodEmoji(level)}</span>
-                    <span className="text-xs text-white/60">{level}</span>
-                  </Button>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Bottom Controls */}
-        <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 pb-safe">
-          
-          {/* Call-style Controls */}
-          <div className="flex justify-center items-center space-x-3 sm:space-x-4">
-            {/* Presence Switch */}
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => setShowPresenceSelector(!showPresenceSelector)}
-              className="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full bg-orange-600/90 hover:bg-orange-700 active:bg-orange-800 text-white backdrop-blur-sm transition-colors touch-manipulation"
-            >
-              <Swap size={20} />
-            </Button>
-            
-            {/* Video/Background */}
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => setShowBackgroundSelector(!showBackgroundSelector)}
-              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
-                isVideoActive 
-                  ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
-                  : 'bg-blue-600/90 hover:bg-blue-700 active:bg-blue-800'
-              }`}
-            >
-              {isVideoActive ? <VideoCamera size={20} /> : <Image size={20} />}
-            </Button>
-            
-            {/* Voice Chat */}
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => setIsListening(!isListening)}
-              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
-                isListening 
-                  ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800' 
-                  : 'bg-blue-600/90 hover:bg-blue-700 active:bg-blue-800'
-              }`}
-            >
-              {isListening ? <MicrophoneSlash size={20} /> : <Microphone size={20} />}
-            </Button>
-            
-            {/* Voice Response Toggle */}
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => {
-                if (isSpeaking) {
-                  stopSpeaking()
-                } else {
-                  setVoiceEnabled(!voiceEnabled)
-                }
-              }}
-              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
-                voiceEnabled && !isSpeaking
-                  ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
-                  : isSpeaking
-                  ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800'
-                  : 'bg-gray-600/90 hover:bg-gray-700 active:bg-gray-800'
-              }`}
-            >
-              {isSpeaking ? <SpeakerX size={20} /> : <SpeakerHigh size={20} />}
-            </Button>
-            
-            {/* Mood Check */}
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => setShowMoodSelector(!showMoodSelector)}
-              className="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full bg-purple-600/90 hover:bg-purple-700 active:bg-purple-800 text-white backdrop-blur-sm touch-manipulation"
-            >
-              <Smiley size={20} />
-            </Button>
-          </div>
-
-          {/* Text Input */}
-          <div className="flex space-x-2 sm:space-x-3">
-            <Input
-              disabled={isLoading}
-            />
-            <Button 
+              value={inputMessage}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
               onFocus={() => setShowChat(true)}
               placeholder="Type your message..."
               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 backdrop-blur-sm rounded-full px-4 sm:px-6 py-3 min-h-[48px] text-base"
