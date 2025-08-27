@@ -6,7 +6,18 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap } from "@phosphor-icons/react"
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap, House } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -172,8 +183,26 @@ function App() {
     }
   }
 
-  // Switch presence mid-conversation
-  const switchPresence = (newPresenceId: Presence['id']) => {
+  // Reset to onboarding
+  const returnToStart = () => {
+    // Clear all data and return to onboarding
+    setOnboardingData({ completed: false })
+    setMessages([])
+    setMoodEntries([])
+    setShowChat(false)
+    setShowMoodSelector(false)
+    setShowPresenceSelector(false)
+    setShowBackgroundSelector(false)
+    setSelectedPresence(null)
+    setTempOnboardingData({})
+    setOnboardingStep('welcome')
+    setInputMessage('')
+    
+    // Stop any active features
+    stopVideo()
+    stopSpeaking()
+    setIsListening(false)
+  }
     const newPresence = presences.find(p => p.id === newPresenceId)
     if (!newPresence) return
 
@@ -867,6 +896,42 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
       )}
       
       <div className="flex-1 flex flex-col relative z-10">
+        {/* Home Button - Top left corner - Always visible */}
+        <div className="absolute top-4 left-4 z-30">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
+                title="Return to start"
+              >
+                <House size={18} />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-black/90 border-white/20 backdrop-blur-md">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">Return to Start?</AlertDialogTitle>
+                <AlertDialogDescription className="text-white/70 leading-relaxed">
+                  This will reset your session and return you to the welcome screen. 
+                  Your conversation history and mood entries will be cleared.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-gray-600/90 text-white hover:bg-gray-700 border-white/20">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={returnToStart}
+                  className="bg-purple-600/90 hover:bg-purple-700 text-white"
+                >
+                  Start Over
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+
       <div className="flex-1 flex flex-col">
         
         {/* Main Avatar Area - Takes up most of the screen */}
