@@ -1353,9 +1353,9 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           {/* Text Input */}
           <div className="flex space-x-2 sm:space-x-3">
             <Input
-              value={inputMessage}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
+              disabled={isLoading}
+            />
+            <Button 
               onFocus={() => setShowChat(true)}
               placeholder="Type your message..."
               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 backdrop-blur-sm rounded-full px-4 sm:px-6 py-3 min-h-[48px] text-base"
