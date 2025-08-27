@@ -183,9 +183,9 @@ function App() {
     }
   }
 
-  // Reset to onboarding
+  // Reset to initial loading screen
   const returnToStart = () => {
-    // Clear all data and return to onboarding
+    // Clear all data and return to initial loading state
     setOnboardingData({ completed: false })
     setMessages([])
     setMoodEntries([])
@@ -197,12 +197,21 @@ function App() {
     setTempOnboardingData({})
     setOnboardingStep('welcome')
     setInputMessage('')
+    setIsLoadingInitial(true) // Show the breathing WE logo again
     
     // Stop any active features
     stopVideo()
     stopSpeaking()
     setIsListening(false)
+    
+    // After 2 seconds, proceed to onboarding
+    setTimeout(() => {
+      setIsLoadingInitial(false)
+    }, 2000)
   }
+
+  // Switch presence functionality
+  const switchPresence = (newPresenceId: Presence['id']) => {
     const newPresence = presences.find(p => p.id === newPresenceId)
     if (!newPresence) return
 
@@ -911,10 +920,10 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-black/90 border-white/20 backdrop-blur-md">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-white">Return to Start?</AlertDialogTitle>
+                <AlertDialogTitle className="text-white">Return to Home?</AlertDialogTitle>
                 <AlertDialogDescription className="text-white/70 leading-relaxed">
-                  This will reset your session and return you to the welcome screen. 
-                  Your conversation history and mood entries will be cleared.
+                  This will reset your session and return you to the home screen. 
+                  Your conversation history and mood entries will be cleared, and you'll see the welcome experience again.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -925,7 +934,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   onClick={returnToStart}
                   className="bg-purple-600/90 hover:bg-purple-700 text-white"
                 >
-                  Start Over
+                  Return Home
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
