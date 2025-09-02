@@ -2735,7 +2735,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                                     View
                                   </Button>
                                   <Button
-                                    size="sm"
+                              Join Circle
                                     variant="ghost"
                                     className="text-blue-300 hover:bg-blue-500/10 text-xs h-7 px-2"
                                   >
