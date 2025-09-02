@@ -75,7 +75,23 @@ body {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
 }
 
-/* Slow pulse animation for circles */
+/* Ring pulse animation - more subtle than circle pulse */
+@keyframes ring-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% { 
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+.animate-ring-pulse {
+  animation: ring-pulse 3s ease-in-out infinite;
+}
+
+/* Keep original pulse for other elements */
 @keyframes pulse-slow {
   0%, 100% { 
     transform: scale(1);
@@ -89,6 +105,73 @@ body {
 
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* Ring breathing effect for center core */
+@keyframes ring-core-breathe {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% { 
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.animate-ring-core-breathe {
+  animation: ring-core-breathe 2.5s ease-in-out infinite;
+}
+
+/* Enhanced ring glow for high intensity */
+@keyframes ring-intensity-glow {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.2);
+  }
+}
+
+/* Ring border utilities */
+.border-ring-purple {
+  border: 8px solid;
+  border-image: linear-gradient(135deg, transparent 20%, #a855f7 50%, transparent 80%) 1;
+}
+
+.border-ring-yellow {
+  border: 8px solid;
+  border-image: linear-gradient(135deg, transparent 20%, #f59e0b 50%, transparent 80%) 1;
+}
+
+.border-ring-emerald {
+  border: 8px solid;
+  border-image: linear-gradient(135deg, transparent 20%, #10b981 50%, transparent 80%) 1;
+}
+
+.border-ring-blue {
+  border: 8px solid;
+  border-image: linear-gradient(135deg, transparent 20%, #3b82f6 50%, transparent 80%) 1;
+}
+
+.border-ring-inner-pink {
+  border: 4px solid;
+  border-image: linear-gradient(225deg, transparent 20%, #ec4899 50%, transparent 80%) 1;
+}
+
+.border-ring-inner-amber {
+  border: 4px solid;
+  border-image: linear-gradient(225deg, transparent 20%, #f59e0b 50%, transparent 80%) 1;
+}
+
+.border-ring-inner-teal {
+  border: 4px solid;
+  border-image: linear-gradient(225deg, transparent 20%, #14b8a6 50%, transparent 80%) 1;
+}
+
+.border-ring-inner-indigo {
+  border: 4px solid;
+  border-image: linear-gradient(225deg, transparent 20%, #6366f1 50%, transparent 80%) 1;
 }
 
 /* Breathing glow animation */
