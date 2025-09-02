@@ -1069,6 +1069,20 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           : c
       )
     )
+
+    // Show success message
+    const circleMessage: Message = {
+      id: `msg-${Date.now()}-circle-join`,
+      content: `Great choice! You've joined the "${circle.name}" support circle. You'll now be part of a community focused on ${circle.description.toLowerCase()}. Feel free to share your experiences and connect with others on similar journeys.`,
+      timestamp: new Date(),
+      sender: 'companion'
+    }
+
+    setMessages(current => [...current, circleMessage])
+    
+    if (userPreferences.voiceEnabled) {
+      setTimeout(() => speakText(circleMessage.content), 500)
+    }
   }
 
   const shareJourneyMoment = (title: string, content: string, type: JourneyMoment['type'], isAnonymous: boolean = false) => {
@@ -2685,25 +2699,79 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   {supportCircles.length > 0 && (
                     <div className="space-y-3 mb-6">
                       <h5 className="text-white/80 text-sm">Your Circles</h5>
-                      {supportCircles.slice(0, 3).map((circle) => (
-                        <Card key={circle.id} className="p-3 bg-green-500/10 border-green-500/20">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h6 className="text-white font-medium text-sm">{circle.name}</h6>
-                              <p className="text-white/60 text-xs">{circle.memberCount} members</p>
+                      <div className="grid gap-3">
+                        {supportCircles.map((circle) => (
+                          <Card key={circle.id} className="p-4 bg-green-500/10 border-green-500/20">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h6 className="text-white font-medium text-sm">{circle.name}</h6>
+                                  <p className="text-white/70 text-xs leading-relaxed">{circle.description}</p>
+                                </div>
+                                <div className="flex items-center space-x-1 flex-shrink-0">
+                                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                  <span className="text-green-300 text-xs">Active</span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-between pt-2">
+                                <div className="flex items-center space-x-3 text-white/60 text-xs">
+                                  <span className="flex items-center">
+                                    <Users size={12} className="mr-1" />
+                                    {circle.memberCount} members
+                                  </span>
+                                  <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 text-xs">
+                                    {circle.type.replace('-', ' ')}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-green-300 hover:bg-green-500/10 text-xs h-7 px-2"
+                                  >
+                                    <Eye size={10} className="mr-1" />
+                                    View
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-blue-300 hover:bg-blue-500/10 text-xs h-7 px-2"
+                                  >
+                                    <ChatCircle size={10} className="mr-1" />
+                                    Chat
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-1">
-                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                              <span className="text-green-300 text-xs">Active</span>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
+                          </Card>
+                        ))}
+                      </div>
                     </div>
                   )}
 
                   <div className="space-y-3">
-                    <h5 className="text-white/80 text-sm">Discover New Circles</h5>
+                    <div className="flex justify-between items-center">
+                      <h5 className="text-white/80 text-sm">Discover New Circles</h5>
+                      {discoveredCircles.filter(circle => !supportCircles.find(sc => sc.id === circle.id)).length >= 3 && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            // Join all three main circles
+                            const circlesToJoin = discoveredCircles.filter(circle => 
+                              !supportCircles.find(sc => sc.id === circle.id) &&
+                              (circle.type === 'mindfulness' || circle.type === 'life-changes' || circle.type === 'daily-check-ins')
+                            )
+                            circlesToJoin.forEach(circle => joinSupportCircle(circle.id))
+                          }}
+                          className="bg-green-600/90 hover:bg-green-700 text-white text-xs"
+                        >
+                          <Plus size={12} className="mr-1" />
+                          Join All
+                        </Button>
+                      )}
+                    </div>
                     {discoveredCircles.filter(circle => !supportCircles.find(sc => sc.id === circle.id)).map((circle) => (
                       <Card key={circle.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
                         <div className="space-y-3">
@@ -2734,6 +2802,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                               onClick={() => joinSupportCircle(circle.id)}
                               className="bg-purple-600/90 hover:bg-purple-700 text-white text-xs h-8"
                             >
+                              <Plus size={12} className="mr-1" />
                               Join Circle
                             </Button>
                           </div>
