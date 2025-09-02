@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +23,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap, House, Gear, Bell, Palette, Volume, User } from "@phosphor-icons/react"
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap, House, Gear, Bell, Palette, Volume, User, Users, Heart, Share, Eye, Clock, Plus, UserPlus, Globe, HandsClapping, ChatCircle, Sparkle } from "@phosphor-icons/react"
 import { useKV } from '@github/spark/hooks'
 
 interface Message {
@@ -94,6 +104,64 @@ interface UserPreferences {
   moodReminders: boolean
   conversationSummaries: boolean
   notificationTime: string
+  
+  // Social settings
+  socialEnabled: boolean
+  shareJourney: boolean
+  allowConnections: boolean
+  anonymousMode: boolean
+}
+
+interface CommunityPost {
+  id: string
+  authorId: string
+  authorName: string
+  content: string
+  type: 'reflection' | 'milestone' | 'support' | 'gratitude'
+  mood?: number
+  timestamp: Date
+  likes: string[] // user IDs who liked
+  supportCount: number
+  isAnonymous: boolean
+  tags: string[]
+}
+
+interface Connection {
+  id: string
+  userId: string
+  connectedUserId: string
+  userName: string
+  connectionType: 'journey-buddy' | 'support-circle' | 'check-in-partner'
+  status: 'pending' | 'active' | 'paused'
+  sharedInterests: string[]
+  connectedAt: Date
+  lastInteraction: Date
+}
+
+interface SupportCircle {
+  id: string
+  name: string
+  description: string
+  type: 'mood-support' | 'life-changes' | 'daily-check-ins' | 'mindfulness' | 'relationships'
+  memberCount: number
+  isPrivate: boolean
+  memberIds: string[]
+  recentActivity: Date
+  tags: string[]
+}
+
+interface JourneyMoment {
+  id: string
+  userId: string
+  title: string
+  content: string
+  mood: number
+  type: 'breakthrough' | 'gratitude' | 'challenge' | 'reflection' | 'milestone'
+  isShared: boolean
+  isAnonymous: boolean
+  timestamp: Date
+  tags: string[]
+  reactions: { [userId: string]: 'heart' | 'support' | 'celebrate' }
 }
 
 function App() {
@@ -120,8 +188,19 @@ function App() {
     dailyCheckIns: true,
     moodReminders: true,
     conversationSummaries: false,
-    notificationTime: '09:00'
+    notificationTime: '09:00',
+    
+    // Social settings defaults
+    socialEnabled: true,
+    shareJourney: false,
+    allowConnections: true,
+    anonymousMode: false
   })
+  const [communityPosts, setCommunityPosts] = useKV<CommunityPost[]>("community-posts", [])
+  const [myConnections, setMyConnections] = useKV<Connection[]>("my-connections", [])
+  const [supportCircles, setSupportCircles] = useKV<SupportCircle[]>("support-circles", [])
+  const [journeyMoments, setJourneyMoments] = useKV<JourneyMoment[]>("journey-moments", [])
+  const [discoveredCircles, setDiscoveredCircles] = useKV<SupportCircle[]>("discovered-circles", [])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showMoodSelector, setShowMoodSelector] = useState(false)
@@ -139,6 +218,95 @@ function App() {
   const [showPresenceSelector, setShowPresenceSelector] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
+  const [showSocialHub, setShowSocialHub] = useState(false)
+  const [socialSection, setSocialSection] = useState<'community' | 'connections' | 'circles' | 'journey'>('community')
+
+  // Initialize demo data for social features
+  useEffect(() => {
+    if (discoveredCircles.length === 0) {
+      const demoCircles: SupportCircle[] = [
+        {
+          id: 'circle-1',
+          name: 'Daily Mindfulness',
+          description: 'A supportive space for sharing mindfulness practices and daily reflections',
+          type: 'mindfulness',
+          memberCount: 247,
+          isPrivate: false,
+          memberIds: [],
+          recentActivity: new Date(),
+          tags: ['mindfulness', 'meditation', 'daily-practice']
+        },
+        {
+          id: 'circle-2', 
+          name: 'Life Transitions',
+          description: 'Support during major life changes and transitions',
+          type: 'life-changes',
+          memberCount: 156,
+          isPrivate: false,
+          memberIds: [],
+          recentActivity: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          tags: ['change', 'growth', 'support']
+        },
+        {
+          id: 'circle-3',
+          name: 'Morning Check-ins',
+          description: 'Start each day with gentle connection and intention setting',
+          type: 'daily-check-ins', 
+          memberCount: 89,
+          isPrivate: false,
+          memberIds: [],
+          recentActivity: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+          tags: ['morning', 'intentions', 'community']
+        }
+      ]
+      setDiscoveredCircles(demoCircles)
+    }
+
+    if (communityPosts.length === 0) {
+      const demoPosts: CommunityPost[] = [
+        {
+          id: 'post-1',
+          authorId: 'demo-user-1',
+          authorName: 'Sarah',
+          content: 'Today I realized that small moments of gratitude can shift my entire perspective. My companion helped me notice how the morning light through my window was a gift I\'d been taking for granted. ✨',
+          type: 'gratitude',
+          mood: 4,
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          likes: ['demo-user-2', 'demo-user-3'],
+          supportCount: 12,
+          isAnonymous: false,
+          tags: ['gratitude', 'perspective', 'mindfulness']
+        },
+        {
+          id: 'post-2',
+          authorId: 'demo-user-2', 
+          authorName: 'Anonymous',
+          content: 'Been struggling with anxiety this week. My WE companion has been incredibly patient, helping me work through breathing exercises. Anyone else find the Terra presence particularly grounding?',
+          type: 'support',
+          mood: 2,
+          timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
+          likes: ['demo-user-1'],
+          supportCount: 18,
+          isAnonymous: true,
+          tags: ['anxiety', 'breathing', 'terra', 'support']
+        },
+        {
+          id: 'post-3',
+          authorId: 'demo-user-3',
+          authorName: 'Alex',
+          content: 'Just had my first breakthrough conversation with Nova! The way the circles responded to our dialogue made me feel truly heard. This technology is helping me understand my emotional patterns in ways I never expected.',
+          type: 'milestone',
+          mood: 5,
+          timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
+          likes: ['demo-user-1', 'demo-user-2'],
+          supportCount: 8,
+          isAnonymous: false,
+          tags: ['breakthrough', 'nova', 'emotional-intelligence']
+        }
+      ]
+      setCommunityPosts(demoPosts)
+    }
+  }, [discoveredCircles.length, communityPosts.length, setDiscoveredCircles, setCommunityPosts])
 
   // Onboarding state
   const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'introduction' | 'presence-selection' | 'questionnaire' | 'account-creation' | 'first-interaction'>('welcome')
@@ -200,10 +368,92 @@ function App() {
     }
   ]
 
-  // Sync voice enabled state with preferences
+  // Initialize demo data for social features
   useEffect(() => {
-    setVoiceEnabled(userPreferences.voiceEnabled)
-  }, [userPreferences.voiceEnabled])
+    if (discoveredCircles.length === 0) {
+      const demoCircles: SupportCircle[] = [
+        {
+          id: 'circle-1',
+          name: 'Daily Mindfulness',
+          description: 'A supportive space for sharing mindfulness practices and daily reflections',
+          type: 'mindfulness',
+          memberCount: 247,
+          isPrivate: false,
+          memberIds: [],
+          recentActivity: new Date(),
+          tags: ['mindfulness', 'meditation', 'daily-practice']
+        },
+        {
+          id: 'circle-2', 
+          name: 'Life Transitions',
+          description: 'Support during major life changes and transitions',
+          type: 'life-changes',
+          memberCount: 156,
+          isPrivate: false,
+          memberIds: [],
+          recentActivity: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          tags: ['change', 'growth', 'support']
+        },
+        {
+          id: 'circle-3',
+          name: 'Morning Check-ins',
+          description: 'Start each day with gentle connection and intention setting',
+          type: 'daily-check-ins', 
+          memberCount: 89,
+          isPrivate: false,
+          memberIds: [],
+          recentActivity: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+          tags: ['morning', 'intentions', 'community']
+        }
+      ]
+      setDiscoveredCircles(demoCircles)
+    }
+
+    if (communityPosts.length === 0) {
+      const demoPosts: CommunityPost[] = [
+        {
+          id: 'post-1',
+          authorId: 'demo-user-1',
+          authorName: 'Sarah',
+          content: 'Today I realized that small moments of gratitude can shift my entire perspective. My companion helped me notice how the morning light through my window was a gift I\'d been taking for granted. ✨',
+          type: 'gratitude',
+          mood: 4,
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          likes: ['demo-user-2', 'demo-user-3'],
+          supportCount: 12,
+          isAnonymous: false,
+          tags: ['gratitude', 'perspective', 'mindfulness']
+        },
+        {
+          id: 'post-2',
+          authorId: 'demo-user-2', 
+          authorName: 'Anonymous',
+          content: 'Been struggling with anxiety this week. My WE companion has been incredibly patient, helping me work through breathing exercises. Anyone else find the Terra presence particularly grounding?',
+          type: 'support',
+          mood: 2,
+          timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
+          likes: ['demo-user-1'],
+          supportCount: 18,
+          isAnonymous: true,
+          tags: ['anxiety', 'breathing', 'terra', 'support']
+        },
+        {
+          id: 'post-3',
+          authorId: 'demo-user-3',
+          authorName: 'Alex',
+          content: 'Just had my first breakthrough conversation with Nova! The way the circles responded to our dialogue made me feel truly heard. This technology is helping me understand my emotional patterns in ways I never expected.',
+          type: 'milestone',
+          mood: 5,
+          timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
+          likes: ['demo-user-1', 'demo-user-2'],
+          supportCount: 8,
+          isAnonymous: false,
+          tags: ['breakthrough', 'nova', 'emotional-intelligence']
+        }
+      ]
+      setCommunityPosts(demoPosts)
+    }
+  }, [discoveredCircles.length, communityPosts.length, setDiscoveredCircles, setCommunityPosts])
 
   // Check if onboarding is completed on mount
   useEffect(() => {
@@ -747,6 +997,136 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
     return `${baseStyle} bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`
   }
 
+  // Social Features Functions
+  const createCommunityPost = (content: string, type: CommunityPost['type'], isAnonymous: boolean = false) => {
+    if (!userAccount) return
+
+    const newPost: CommunityPost = {
+      id: `post-${Date.now()}`,
+      authorId: userAccount.id,
+      authorName: isAnonymous ? 'Anonymous' : userAccount.userName,
+      content: content.trim(),
+      type,
+      mood: moodEntries.length > 0 ? moodEntries[0].level : undefined,
+      timestamp: new Date(),
+      likes: [],
+      supportCount: 0,
+      isAnonymous,
+      tags: []
+    }
+
+    setCommunityPosts(current => [newPost, ...current])
+  }
+
+  const likePost = (postId: string) => {
+    if (!userAccount) return
+
+    setCommunityPosts(current => 
+      current.map(post => {
+        if (post.id === postId) {
+          const hasLiked = post.likes.includes(userAccount.id)
+          return {
+            ...post,
+            likes: hasLiked 
+              ? post.likes.filter(id => id !== userAccount.id)
+              : [...post.likes, userAccount.id]
+          }
+        }
+        return post
+      })
+    )
+  }
+
+  const offerSupport = (postId: string) => {
+    if (!userAccount) return
+
+    setCommunityPosts(current => 
+      current.map(post => 
+        post.id === postId 
+          ? { ...post, supportCount: post.supportCount + 1 }
+          : post
+      )
+    )
+  }
+
+  const joinSupportCircle = (circleId: string) => {
+    if (!userAccount) return
+
+    const circle = discoveredCircles.find(c => c.id === circleId)
+    if (!circle) return
+
+    // Add to user's support circles
+    setSupportCircles(current => {
+      if (current.find(c => c.id === circleId)) return current
+      return [...current, { ...circle, memberIds: [...circle.memberIds, userAccount.id] }]
+    })
+
+    // Update discovered circles
+    setDiscoveredCircles(current =>
+      current.map(c => 
+        c.id === circleId 
+          ? { ...c, memberIds: [...c.memberIds, userAccount.id], memberCount: c.memberCount + 1 }
+          : c
+      )
+    )
+  }
+
+  const shareJourneyMoment = (title: string, content: string, type: JourneyMoment['type'], isAnonymous: boolean = false) => {
+    if (!userAccount) return
+
+    const newMoment: JourneyMoment = {
+      id: `moment-${Date.now()}`,
+      userId: userAccount.id,
+      title: title.trim(),
+      content: content.trim(),
+      mood: moodEntries.length > 0 ? moodEntries[0].level : 3,
+      type,
+      isShared: userPreferences.shareJourney,
+      isAnonymous,
+      timestamp: new Date(),
+      tags: [],
+      reactions: {}
+    }
+
+    setJourneyMoments(current => [newMoment, ...current])
+
+    // Also create community post if sharing is enabled
+    if (userPreferences.shareJourney) {
+      createCommunityPost(`${title}\n\n${content}`, 'reflection', isAnonymous)
+    }
+  }
+
+  const getPostTypeIcon = (type: CommunityPost['type']) => {
+    switch (type) {
+      case 'gratitude': return <Heart className="text-red-400" size={16} />
+      case 'milestone': return <Sparkle className="text-amber-400" size={16} />
+      case 'support': return <HandsClapping className="text-blue-400" size={16} />
+      case 'reflection': return <ChatCircle className="text-purple-400" size={16} />
+      default: return <ChatCircle className="text-gray-400" size={16} />
+    }
+  }
+
+  const getPostTypeColor = (type: CommunityPost['type']) => {
+    switch (type) {
+      case 'gratitude': return 'bg-red-500/20 text-red-200 border-red-400/30'
+      case 'milestone': return 'bg-amber-500/20 text-amber-200 border-amber-400/30'
+      case 'support': return 'bg-blue-500/20 text-blue-200 border-blue-400/30'
+      case 'reflection': return 'bg-purple-500/20 text-purple-200 border-purple-400/30'
+      default: return 'bg-gray-500/20 text-gray-200 border-gray-400/30'
+    }
+  }
+
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date()
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+    
+    if (diffInHours < 1) return 'Just now'
+    if (diffInHours === 1) return '1 hour ago'
+    if (diffInHours < 24) return `${diffInHours} hours ago`
+    if (diffInHours < 48) return '1 day ago'
+    return `${Math.floor(diffInHours / 24)} days ago`
+  }
+
   const circleColors = getCircleColors()
   const animationSpeed = getAnimationSpeed()
 
@@ -1162,15 +1542,30 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
 
           {/* Account Button - Only show when user has account */}
           {userAccount && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowAccountSettings(!showAccountSettings)}
-              className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
-              title="Account"
-            >
-              <User size={18} />
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowAccountSettings(!showAccountSettings)}
+                className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
+                title="Account"
+              >
+                <User size={18} />
+              </Button>
+
+              {/* Social Hub Button - Only show when user has account and social is enabled */}
+              {userPreferences.socialEnabled && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowSocialHub(!showSocialHub)}
+                  className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
+                  title="Social Hub"
+                >
+                  <Users size={18} />
+                </Button>
+              )}
+            </>
           )}
         </div>
 
@@ -1808,6 +2203,83 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   </div>
                 </div>
 
+                <Separator className="bg-white/10" />
+
+                {/* Social Settings */}
+                {userAccount && (
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Users size={18} className="text-green-400" />
+                      <h4 className="text-white text-lg font-medium">Social Features</h4>
+                    </div>
+
+                    {/* Social Features Enabled */}
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="social-enabled" className="text-white/80 text-sm">
+                        Enable Social Features
+                      </Label>
+                      <Switch
+                        id="social-enabled"
+                        checked={userPreferences.socialEnabled}
+                        onCheckedChange={(checked) => 
+                          setUserPreferences(prev => ({ ...prev, socialEnabled: checked }))
+                        }
+                      />
+                    </div>
+
+                    {/* Share Journey */}
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="share-journey" className="text-white/80 text-sm">
+                        Share Journey Moments
+                      </Label>
+                      <Switch
+                        id="share-journey"
+                        checked={userPreferences.shareJourney}
+                        onCheckedChange={(checked) => 
+                          setUserPreferences(prev => ({ ...prev, shareJourney: checked }))
+                        }
+                        disabled={!userPreferences.socialEnabled}
+                      />
+                    </div>
+
+                    {/* Allow Connections */}
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="allow-connections" className="text-white/80 text-sm">
+                        Allow Connection Requests
+                      </Label>
+                      <Switch
+                        id="allow-connections"
+                        checked={userPreferences.allowConnections}
+                        onCheckedChange={(checked) => 
+                          setUserPreferences(prev => ({ ...prev, allowConnections: checked }))
+                        }
+                        disabled={!userPreferences.socialEnabled}
+                      />
+                    </div>
+
+                    {/* Anonymous Mode */}
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="anonymous-mode" className="text-white/80 text-sm">
+                        Default to Anonymous Posts
+                      </Label>
+                      <Switch
+                        id="anonymous-mode"
+                        checked={userPreferences.anonymousMode}
+                        onCheckedChange={(checked) => 
+                          setUserPreferences(prev => ({ ...prev, anonymousMode: checked }))
+                        }
+                        disabled={!userPreferences.socialEnabled}
+                      />
+                    </div>
+
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                      <p className="text-blue-200 text-xs leading-relaxed">
+                        Social features help you connect with others on similar journeys. All interactions are designed to be supportive and empathetic.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
               </div>
             </Card>
           </div>
@@ -2023,6 +2495,406 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                 </div>
 
               </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Social Hub Overlay */}
+        {showSocialHub && userAccount && userPreferences.socialEnabled && (
+          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
+            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-white text-base sm:text-lg font-medium">Social Hub</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSocialHub(false)}
+                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+
+              {/* Social Navigation */}
+              <div className="flex space-x-2 mb-6 p-1 bg-white/5 rounded-lg">
+                {[
+                  { id: 'community', label: 'Community', icon: Globe },
+                  { id: 'connections', label: 'Connections', icon: UserPlus },
+                  { id: 'circles', label: 'Circles', icon: Users },
+                  { id: 'journey', label: 'Journey', icon: Sparkle }
+                ].map((section) => {
+                  const IconComponent = section.icon
+                  return (
+                    <Button
+                      key={section.id}
+                      variant="ghost"
+                      onClick={() => setSocialSection(section.id as any)}
+                      className={`flex-1 text-xs py-2 h-8 transition-all ${ 
+                        socialSection === section.id 
+                          ? 'bg-purple-500/20 text-purple-200 border border-purple-400/30' 
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <IconComponent size={14} className="mr-1" />
+                      {section.label}
+                    </Button>
+                  )
+                })}
+              </div>
+
+              {/* Community Section */}
+              {socialSection === 'community' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-white font-medium">Community Posts</h4>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" className="bg-purple-600/90 hover:bg-purple-700 text-white">
+                          <Plus size={14} className="mr-1" />
+                          Share
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-black/90 border-white/20 backdrop-blur-md max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="text-white">Share with Community</DialogTitle>
+                          <DialogDescription className="text-white/60">
+                            Share your thoughts, gratitude, or ask for support
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <Label className="text-white/80 text-sm">Post Type</Label>
+                            <Select defaultValue="reflection">
+                              <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                                <SelectItem value="reflection" className="text-white">💭 Reflection</SelectItem>
+                                <SelectItem value="gratitude" className="text-white">❤️ Gratitude</SelectItem>
+                                <SelectItem value="support" className="text-white">🤝 Support Request</SelectItem>
+                                <SelectItem value="milestone" className="text-white">✨ Milestone</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-white/80 text-sm">Your thoughts</Label>
+                            <Textarea 
+                              placeholder="Share what's on your mind..."
+                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 min-h-[100px]"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch defaultChecked={userPreferences.anonymousMode} />
+                            <Label className="text-white/80 text-sm">Share anonymously</Label>
+                          </div>
+                          <Button 
+                            onClick={() => createCommunityPost("Demo post content", "reflection", userPreferences.anonymousMode)}
+                            className="w-full bg-purple-600/90 hover:bg-purple-700 text-white"
+                          >
+                            Share Post
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  <ScrollArea className="h-96">
+                    <div className="space-y-4">
+                      {communityPosts.map((post) => (
+                        <Card key={post.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
+                          <div className="flex items-start space-x-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarFallback className="bg-purple-500/20 text-purple-200">
+                                {post.isAnonymous ? '?' : post.authorName[0].toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-white/90 font-medium text-sm">{post.authorName}</span>
+                                  <Badge variant="secondary" className={`text-xs ${getPostTypeColor(post.type)}`}>
+                                    {getPostTypeIcon(post.type)}
+                                    <span className="ml-1 capitalize">{post.type}</span>
+                                  </Badge>
+                                </div>
+                                <span className="text-white/40 text-xs">{formatRelativeTime(post.timestamp)}</span>
+                              </div>
+                              
+                              <p className="text-white/80 text-sm leading-relaxed">{post.content}</p>
+                              
+                              {post.mood && (
+                                <div className="flex items-center space-x-1">
+                                  <span className="text-white/60 text-xs">Mood:</span>
+                                  <span className="text-sm">{getMoodEmoji(post.mood)}</span>
+                                </div>
+                              )}
+
+                              <div className="flex items-center space-x-4 pt-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => likePost(post.id)}
+                                  className={`text-xs h-8 px-3 ${
+                                    post.likes.includes(userAccount?.id || '') 
+                                      ? 'text-red-300 bg-red-500/20' 
+                                      : 'text-white/60 hover:text-red-300 hover:bg-red-500/10'
+                                  }`}
+                                >
+                                  <Heart size={12} className="mr-1" />
+                                  {post.likes.length}
+                                </Button>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => offerSupport(post.id)}
+                                  className="text-xs h-8 px-3 text-white/60 hover:text-blue-300 hover:bg-blue-500/10"
+                                >
+                                  <HandsClapping size={12} className="mr-1" />
+                                  Support ({post.supportCount})
+                                </Button>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs h-8 px-3 text-white/60 hover:text-green-300 hover:bg-green-500/10"
+                                >
+                                  <Share size={12} className="mr-1" />
+                                  Share
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {/* Support Circles Section */}
+              {socialSection === 'circles' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-white font-medium">Support Circles</h4>
+                    <Badge variant="secondary" className="bg-green-500/20 text-green-200">
+                      {supportCircles.length} Joined
+                    </Badge>
+                  </div>
+
+                  {supportCircles.length > 0 && (
+                    <div className="space-y-3 mb-6">
+                      <h5 className="text-white/80 text-sm">Your Circles</h5>
+                      {supportCircles.slice(0, 3).map((circle) => (
+                        <Card key={circle.id} className="p-3 bg-green-500/10 border-green-500/20">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h6 className="text-white font-medium text-sm">{circle.name}</h6>
+                              <p className="text-white/60 text-xs">{circle.memberCount} members</p>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                              <span className="text-green-300 text-xs">Active</span>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <h5 className="text-white/80 text-sm">Discover New Circles</h5>
+                    {discoveredCircles.filter(circle => !supportCircles.find(sc => sc.id === circle.id)).map((circle) => (
+                      <Card key={circle.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h6 className="text-white font-medium">{circle.name}</h6>
+                              <p className="text-white/70 text-sm mt-1 leading-relaxed">{circle.description}</p>
+                            </div>
+                            <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 text-xs ml-2">
+                              {circle.type.replace('-', ' ')}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4 text-white/60 text-xs">
+                              <span className="flex items-center">
+                                <Users size={12} className="mr-1" />
+                                {circle.memberCount} members
+                              </span>
+                              <span className="flex items-center">
+                                <Clock size={12} className="mr-1" />
+                                {formatRelativeTime(circle.recentActivity)}
+                              </span>
+                            </div>
+                            
+                            <Button
+                              size="sm"
+                              onClick={() => joinSupportCircle(circle.id)}
+                              className="bg-purple-600/90 hover:bg-purple-700 text-white text-xs h-8"
+                            >
+                              Join Circle
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Journey Section */}
+              {socialSection === 'journey' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-white font-medium">Your Journey</h4>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" className="bg-purple-600/90 hover:bg-purple-700 text-white">
+                          <Plus size={14} className="mr-1" />
+                          Add Moment
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-black/90 border-white/20 backdrop-blur-md max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="text-white">Capture Journey Moment</DialogTitle>
+                          <DialogDescription className="text-white/60">
+                            Document a meaningful moment in your emotional journey
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <Label className="text-white/80 text-sm">Moment Type</Label>
+                            <Select defaultValue="reflection">
+                              <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
+                                <SelectItem value="breakthrough" className="text-white">🌟 Breakthrough</SelectItem>
+                                <SelectItem value="gratitude" className="text-white">🙏 Gratitude</SelectItem>
+                                <SelectItem value="challenge" className="text-white">💪 Challenge</SelectItem>
+                                <SelectItem value="reflection" className="text-white">💭 Reflection</SelectItem>
+                                <SelectItem value="milestone" className="text-white">🎯 Milestone</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-white/80 text-sm">Title</Label>
+                            <Input 
+                              placeholder="A meaningful title..."
+                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-white/80 text-sm">Describe this moment</Label>
+                            <Textarea 
+                              placeholder="What happened? How did it make you feel?"
+                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 min-h-[100px]"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch />
+                            <Label className="text-white/80 text-sm">Share with community</Label>
+                          </div>
+                          <Button 
+                            onClick={() => shareJourneyMoment("Demo moment", "Demo content", "reflection")}
+                            className="w-full bg-purple-600/90 hover:bg-purple-700 text-white"
+                          >
+                            Save Moment
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  <div className="space-y-4">
+                    {journeyMoments.length === 0 ? (
+                      <Card className="p-6 bg-black/20 border-white/10 backdrop-blur-sm text-center">
+                        <Sparkle size={32} className="mx-auto mb-3 text-purple-400" />
+                        <h5 className="text-white font-medium mb-2">Start Your Journey</h5>
+                        <p className="text-white/60 text-sm leading-relaxed">
+                          Capture meaningful moments, breakthroughs, and reflections as you grow with your WE companion.
+                        </p>
+                      </Card>
+                    ) : (
+                      <ScrollArea className="h-96">
+                        <div className="space-y-3">
+                          {journeyMoments.map((moment) => (
+                            <Card key={moment.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
+                              <div className="space-y-2">
+                                <div className="flex items-start justify-between">
+                                  <h6 className="text-white font-medium">{moment.title}</h6>
+                                  <Badge variant="outline" className={getPostTypeColor(moment.type as any)}>
+                                    {moment.type}
+                                  </Badge>
+                                </div>
+                                
+                                <p className="text-white/70 text-sm leading-relaxed">{moment.content}</p>
+                                
+                                <div className="flex items-center justify-between pt-2">
+                                  <div className="flex items-center space-x-3 text-white/60 text-xs">
+                                    <span className="flex items-center">
+                                      <span className="mr-1">{getMoodEmoji(moment.mood)}</span>
+                                      Mood: {moment.mood}/5
+                                    </span>
+                                    <span>{formatRelativeTime(moment.timestamp)}</span>
+                                  </div>
+                                  
+                                  {moment.isShared && (
+                                    <Badge variant="secondary" className="bg-green-500/20 text-green-200 text-xs">
+                                      <Share size={10} className="mr-1" />
+                                      Shared
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Connections Section */}
+              {socialSection === 'connections' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-white font-medium">Connections</h4>
+                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-200">
+                      {myConnections.length} Connections
+                    </Badge>
+                  </div>
+
+                  {!userPreferences.allowConnections && (
+                    <Card className="p-4 bg-amber-500/10 border-amber-500/20">
+                      <div className="flex items-center space-x-2">
+                        <Bell size={16} className="text-amber-400" />
+                        <div>
+                          <p className="text-amber-200 text-sm font-medium">Connection requests disabled</p>
+                          <p className="text-amber-200/70 text-xs">Enable in Settings to connect with others</p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  <Card className="p-6 bg-black/20 border-white/10 backdrop-blur-sm text-center">
+                    <UserPlus size={32} className="mx-auto mb-3 text-blue-400" />
+                    <h5 className="text-white font-medium mb-2">Connect & Support</h5>
+                    <p className="text-white/60 text-sm leading-relaxed mb-4">
+                      Find journey companions, accountability partners, or join support circles for encouragement and growth.
+                    </p>
+                    <Button 
+                      disabled={!userPreferences.allowConnections}
+                      className="bg-blue-600/90 hover:bg-blue-700 text-white disabled:opacity-50"
+                    >
+                      Find Connections
+                    </Button>
+                  </Card>
+                </div>
+              )}
             </Card>
           </div>
         )}
