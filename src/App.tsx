@@ -1592,12 +1592,14 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-transparent to-slate-900/50" />
           
           {/* Infinity Ring Avatar - Responsive sizing */}
-          <div className="relative flex items-center justify-center" style={{ width: '280px', height: '160px' }}>
+          <div className="relative flex items-center justify-center" style={{ width: '320px', height: '180px' }}>
             {/* Left Ring */}
             <div 
-              className={`absolute w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-full border-6 sm:border-8 md:border-10 animate-infinity-flow transition-all duration-500`}
+              className={`absolute rounded-full border-6 sm:border-8 md:border-10 animate-infinity-flow transition-all duration-500`}
               style={{
-                left: '0px',
+                width: '160px',
+                height: '160px',
+                left: '20px',
                 top: '50%',
                 transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1000)})`,
                 animationDuration: `${animationSpeed}ms`,
@@ -1610,9 +1612,11 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             
             {/* Right Ring - overlapping */}
             <div 
-              className={`absolute w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-full border-6 sm:border-8 md:border-10 animate-infinity-counter-flow transition-all duration-500`}
+              className={`absolute rounded-full border-6 sm:border-8 md:border-10 animate-infinity-counter-flow transition-all duration-500`}
               style={{
-                right: '-20px',
+                width: '160px',
+                height: '160px',
+                right: '20px',
                 top: '50%',
                 transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1200)})`,
                 animationDuration: `${animationSpeed * 1.1}ms`,
@@ -1627,7 +1631,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             {/* Center intersection core - where the rings meet */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <div 
-                className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-ring-core-breathe transition-all duration-300`}
+                className={`w-12 h-12 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-ring-core-breathe transition-all duration-300`}
                 style={{
                   filter: `drop-shadow(0 0 20px ${circleColors.glow})`,
                   transform: `scale(${0.8 + (conversationIntensity / 150)})`,
@@ -1636,7 +1640,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
               />
               {/* Inner core glow */}
               <div 
-                className="absolute inset-0 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-white/20 to-transparent animate-pulse-slow"
+                className="absolute inset-0 w-10 h-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-white/20 to-transparent animate-pulse-slow"
                 style={{
                   filter: `blur(1px) drop-shadow(0 0 10px ${circleColors.glow})`
                 }}
@@ -1647,13 +1651,13 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             {conversationIntensity > 60 && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <div 
-                  className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full border border-white/20 animate-ping"
+                  className="w-80 h-80 rounded-full border border-white/20 animate-ping"
                   style={{
                     animationDuration: `${Math.max(800, 2000 - conversationIntensity * 10)}ms`
                   }}
                 />
                 <div 
-                  className="w-80 h-80 sm:w-88 sm:h-88 md:w-104 md:h-104 rounded-full border border-white/10 animate-ping absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                  className="w-96 h-96 rounded-full border border-white/10 animate-ping absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
                   style={{
                     animationDuration: `${Math.max(1000, 2400 - conversationIntensity * 12)}ms`,
                     animationDelay: '0.3s'
