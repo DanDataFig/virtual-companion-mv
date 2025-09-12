@@ -1612,7 +1612,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             <div 
               className={`absolute w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-full border-6 sm:border-8 md:border-10 animate-infinity-counter-flow transition-all duration-500`}
               style={{
-                right: '0px',
+                right: '-20px',
                 top: '50%',
                 transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1200)})`,
                 animationDuration: `${animationSpeed * 1.1}ms`,
@@ -1629,17 +1629,17 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
               <div 
                 className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-ring-core-breathe transition-all duration-300`}
                 style={{
-                  filter: `drop-shadow(0 0 15px ${circleColors.glow})`,
+                  filter: `drop-shadow(0 0 20px ${circleColors.glow})`,
                   transform: `scale(${0.8 + (conversationIntensity / 150)})`,
                   opacity: 0.8 + (conversationIntensity / 200)
-                }}
               />
               {/* Inner core glow */}
+              {/* Inner core glow */}
               <div 
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 rounded-full bg-white/50 animate-ring-core-breathe"
                 style={{
-                  animationDelay: '0.5s',
+                style={{
                   filter: `blur(1px) drop-shadow(0 0 10px ${circleColors.glow})`
+                }}
                 }}
               />
             </div>
@@ -1647,7 +1647,6 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             {/* Intensity ripples for high-energy conversations */}
             {conversationIntensity > 60 && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <div 
                   className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full border border-white/20 animate-ping"
                   style={{
                     animationDuration: `${Math.max(800, 2000 - conversationIntensity * 10)}ms`
