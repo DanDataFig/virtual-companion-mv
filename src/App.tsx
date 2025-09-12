@@ -1632,14 +1632,13 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   filter: `drop-shadow(0 0 20px ${circleColors.glow})`,
                   transform: `scale(${0.8 + (conversationIntensity / 150)})`,
                   opacity: 0.8 + (conversationIntensity / 200)
+                }}
               />
               {/* Inner core glow */}
-              {/* Inner core glow */}
               <div 
-                style={{
+                className="absolute inset-0 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-white/20 to-transparent animate-pulse-slow"
                 style={{
                   filter: `blur(1px) drop-shadow(0 0 10px ${circleColors.glow})`
-                }}
                 }}
               />
             </div>
@@ -1647,6 +1646,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             {/* Intensity ripples for high-energy conversations */}
             {conversationIntensity > 60 && (
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <div 
                   className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full border border-white/20 animate-ping"
                   style={{
                     animationDuration: `${Math.max(800, 2000 - conversationIntensity * 10)}ms`
@@ -2759,7 +2759,6 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                                     View
                                   </Button>
                                   <Button
-                              Join Circle
                                     variant="ghost"
                                     className="text-blue-300 hover:bg-blue-500/10 text-xs h-7 px-2"
                                   >
