@@ -1253,28 +1253,20 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   onClick={() => setSelectedPresence(presence.id)}
                 >
                   <div className="text-center">
-                    {/* Presence visualization - Simple ring design */}
+                    {/* Presence visualization */}
                     <div className="relative mb-4 h-16 flex items-center justify-center">
                       <div 
-                        className="w-12 h-12 rounded-full animate-pulse-slow opacity-90 transition-all duration-500 relative"
-                        style={{ 
-                          background: `conic-gradient(from 0deg, transparent 10%, ${presence.colors.circle1.includes('purple') ? '#a855f7' : presence.colors.circle1.includes('yellow') ? '#f59e0b' : presence.colors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 40%, transparent 70%, ${presence.colors.circle1.includes('purple') ? '#a855f7' : presence.colors.circle1.includes('yellow') ? '#f59e0b' : presence.colors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 100%)`,
-                          filter: `drop-shadow(0 0 20px ${presence.colors.glow})` 
-                        }}
-                      >
-                        <div className="absolute inset-2 rounded-full bg-gray-900" />
-                      </div>
+                        className={`w-12 h-12 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90 transition-all duration-500`}
+                        style={{ filter: `drop-shadow(0 0 20px ${presence.colors.glow})` }}
+                      />
                       <div 
-                        className="w-8 h-8 rounded-full absolute opacity-80 animate-pulse-slow"
+                        className={`w-10 h-10 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
                         style={{ 
-                          background: `conic-gradient(from 180deg, transparent 20%, ${presence.colors.circle2.includes('pink') ? '#ec4899' : presence.colors.circle2.includes('amber') ? '#f59e0b' : presence.colors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 60%, transparent 100%)`,
                           filter: `drop-shadow(0 0 15px ${presence.colors.glow})`,
                           animationDelay: '0.5s',
                           transform: 'translateX(8px)'
                         }}
-                      >
-                        <div className="absolute inset-1.5 rounded-full bg-gray-900" />
-                      </div>
+                      />
                     </div>
                     
                     <h3 className="text-white text-lg font-medium mb-2">{presence.name}</h3>
@@ -1306,27 +1298,18 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                     const presence = presences.find(p => p.id === selectedPresence)!
                     return (
                       <>
-                        {/* Presence visualization - Ring design */}
                         <div 
-                          className="w-16 h-16 rounded-full animate-pulse-slow opacity-90 relative"
-                          style={{ 
-                            background: `conic-gradient(from 0deg, transparent 10%, ${presence.colors.circle1.includes('purple') ? '#a855f7' : presence.colors.circle1.includes('yellow') ? '#f59e0b' : presence.colors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 40%, transparent 70%, ${presence.colors.circle1.includes('purple') ? '#a855f7' : presence.colors.circle1.includes('yellow') ? '#f59e0b' : presence.colors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 100%)`,
-                            filter: `drop-shadow(0 0 25px ${presence.colors.glow})` 
-                          }}
-                        >
-                          <div className="absolute inset-2.5 rounded-full bg-gray-900" />
-                        </div>
+                          className={`w-16 h-16 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90`}
+                          style={{ filter: `drop-shadow(0 0 25px ${presence.colors.glow})` }}
+                        />
                         <div 
-                          className="w-14 h-14 rounded-full absolute opacity-80 animate-pulse-slow"
+                          className={`w-14 h-14 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
                           style={{ 
-                            background: `conic-gradient(from 180deg, transparent 15%, ${presence.colors.circle2.includes('pink') ? '#ec4899' : presence.colors.circle2.includes('amber') ? '#f59e0b' : presence.colors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 50%, transparent 85%)`,
                             filter: `drop-shadow(0 0 20px ${presence.colors.glow})`,
                             animationDelay: '0.5s',
                             transform: 'translateX(10px)'
                           }}
-                        >
-                          <div className="absolute inset-2 rounded-full bg-gray-900" />
-                        </div>
+                        />
                       </>
                     )
                   })()}
@@ -1612,62 +1595,44 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           <div className="relative">
             {/* Main Ring */}
             <div 
-              className="w-60 h-60 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-full animate-ring-pulse transition-all duration-500 relative"
+              className={`w-60 h-60 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-full border-8 sm:border-10 md:border-12 bg-gradient-to-br ${circleColors.circle1} animate-pulse-slow transition-all duration-500`}
               style={{
                 animationDuration: `${animationSpeed}ms`,
                 filter: `drop-shadow(0 0 30px ${circleColors.glow})`,
                 transform: `scale(${1 + (conversationIntensity / 1000)})`,
-                background: `conic-gradient(from 0deg, transparent 0%, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 30%, transparent 60%, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 90%, transparent 100%)`,
-                borderRadius: '50%'
+                borderImageSource: `linear-gradient(135deg, ${circleColors.circle1.replace('from-', '').replace('to-', '').split(' ').map(c => `var(--tw-gradient-stops)`).join(', ')})`,
+                borderImageSlice: 1,
+                background: 'transparent'
               }}
             >
-              {/* Create ring effect with inner transparent circle */}
+              {/* Inner ring gradient border effect */}
               <div 
-                className="absolute inset-8 rounded-full bg-gray-900"
-                style={{ 
-                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
-                }}
-              />
-              
-              {/* Inner accent ring */}
-              <div 
-                className="absolute inset-10 rounded-full opacity-60 animate-ring-pulse"
+                className={`absolute inset-4 rounded-full bg-gradient-to-br ${circleColors.circle2} opacity-60 animate-pulse-slow`}
                 style={{
                   animationDuration: `${animationSpeed * 1.2}ms`,
                   animationDelay: '0.5s',
-                  filter: `blur(1px) drop-shadow(0 0 15px ${circleColors.glow})`,
-                  transform: `scale(${0.9 + (conversationIntensity / 1500)})`,
-                  background: `conic-gradient(from 180deg, transparent 0%, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 40%, transparent 80%, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 100%)`
+                  filter: `blur(2px) drop-shadow(0 0 20px ${circleColors.glow})`,
+                  transform: `scale(${0.9 + (conversationIntensity / 1500)})`
                 }}
-              >
-                {/* Inner transparent area */}
-                <div 
-                  className="absolute inset-4 rounded-full"
-                  style={{ 
-                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)'
-                  }}
-                />
-              </div>
+              />
             </div>
             
             {/* Center core - responds to intensity */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <div 
-                className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full animate-ring-core-breathe transition-all duration-300`}
+                className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-breathe-glow transition-all duration-300 opacity-80`}
                 style={{
-                  background: `radial-gradient(circle, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}40, transparent 70%)`,
                   filter: `drop-shadow(0 0 25px ${circleColors.glow})`,
                   transform: `scale(${0.8 + (conversationIntensity / 200)})`,
                   opacity: 0.6 + (conversationIntensity / 250)
                 }}
               />
-              {/* Inner core bright spot */}
+              {/* Inner core glow */}
               <div 
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 rounded-full bg-white animate-breathe-glow"
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-white/30 animate-breathe-glow"
                 style={{
                   animationDelay: '1s',
-                  filter: `blur(2px) drop-shadow(0 0 15px ${circleColors.glow})`,
-                  opacity: 0.8 + (conversationIntensity / 400)
+                  filter: `blur(1px) drop-shadow(0 0 15px ${circleColors.glow})`
                 }}
               />
             </div>
@@ -1843,28 +1808,20 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                       onClick={() => !isCurrent && switchPresence(presence.id)}
                     >
                       <div className="flex items-center space-x-4">
-                        {/* Presence visualization - Small ring design for selector */}
+                        {/* Presence visualization */}
                         <div className="relative flex-shrink-0 h-12 w-16 flex items-center justify-center">
                           <div 
-                            className="w-8 h-8 rounded-full animate-pulse-slow opacity-90 relative"
-                            style={{ 
-                              background: `conic-gradient(from 0deg, transparent 15%, ${presence.colors.circle1.includes('purple') ? '#a855f7' : presence.colors.circle1.includes('yellow') ? '#f59e0b' : presence.colors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 50%, transparent 85%)`,
-                              filter: `drop-shadow(0 0 15px ${presence.colors.glow})` 
-                            }}
-                          >
-                            <div className="absolute inset-1.5 rounded-full bg-gray-900" />
-                          </div>
+                            className={`w-8 h-8 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90`}
+                            style={{ filter: `drop-shadow(0 0 15px ${presence.colors.glow})` }}
+                          />
                           <div 
-                            className="w-6 h-6 rounded-full absolute opacity-80 animate-pulse-slow"
+                            className={`w-6 h-6 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
                             style={{ 
-                              background: `conic-gradient(from 180deg, transparent 20%, ${presence.colors.circle2.includes('pink') ? '#ec4899' : presence.colors.circle2.includes('amber') ? '#f59e0b' : presence.colors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 60%, transparent 100%)`,
                               filter: `drop-shadow(0 0 10px ${presence.colors.glow})`,
                               animationDelay: '0.5s',
                               transform: 'translateX(6px)'
                             }}
-                          >
-                            <div className="absolute inset-1 rounded-full bg-gray-900" />
-                          </div>
+                          />
                         </div>
                         
                         <div className="flex-1">
