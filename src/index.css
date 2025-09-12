@@ -91,6 +91,54 @@ body {
   animation: ring-pulse 3s ease-in-out infinite;
 }
 
+/* Infinity ring breathing - creates a flowing effect between the two rings */
+@keyframes infinity-flow {
+  0%, 100% { 
+    transform: translateY(-50%) scale(1);
+    opacity: 0.9;
+  }
+  25% { 
+    transform: translateY(-50%) scale(1.05);
+    opacity: 1;
+  }
+  50% { 
+    transform: translateY(-50%) scale(1.02);
+    opacity: 0.95;
+  }
+  75% { 
+    transform: translateY(-50%) scale(1.08);
+    opacity: 1;
+  }
+}
+
+.animate-infinity-flow {
+  animation: infinity-flow 4s ease-in-out infinite;
+}
+
+/* Infinity ring counter-flow for the right ring */
+@keyframes infinity-counter-flow {
+  0%, 100% { 
+    transform: translateY(-50%) scale(1.02);
+    opacity: 0.95;
+  }
+  25% { 
+    transform: translateY(-50%) scale(1);
+    opacity: 0.9;
+  }
+  50% { 
+    transform: translateY(-50%) scale(1.05);
+    opacity: 1;
+  }
+  75% { 
+    transform: translateY(-50%) scale(0.98);
+    opacity: 0.85;
+  }
+}
+
+.animate-infinity-counter-flow {
+  animation: infinity-counter-flow 4s ease-in-out infinite;
+}
+
 /* Keep original pulse for other elements */
 @keyframes pulse-slow {
   0%, 100% { 
