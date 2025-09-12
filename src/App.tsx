@@ -1614,17 +1614,17 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             <div 
               className={`absolute rounded-full border-6 sm:border-8 md:border-10 animate-infinity-counter-flow transition-all duration-500`}
               style={{
+                width: '160px',
+                height: '160px',
                 right: '20px',
                 top: '50%',
                 transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1200)})`,
-                top: '50%',
-                transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1200)})`,
-                borderColor: 'transparent',
-                borderImage: `linear-gradient(225deg, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 30%, transparent 70%) 1`,
                 borderColor: 'transparent',
                 borderImage: `linear-gradient(225deg, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 30%, transparent 70%) 1`,
                 filter: `drop-shadow(0 0 20px ${circleColors.glow})`,
                 background: 'transparent'
+              }}
+            />
             
             {/* Center intersection core - where the rings meet */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
