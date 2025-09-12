@@ -164,6 +164,34 @@ interface JourneyMoment {
   reactions: { [userId: string]: 'heart' | 'support' | 'celebrate' }
 }
 
+interface ChatMessage {
+  id: string
+  senderId: string
+  senderName: string
+  receiverId: string
+  content: string
+  timestamp: Date
+  isRead: boolean
+  messageType: 'text' | 'mood-share' | 'journey-moment' | 'system'
+  metadata?: {
+    mood?: number
+    journeyMomentId?: string
+    systemType?: 'connection-request' | 'connection-accepted' | 'circle-invite'
+  }
+}
+
+interface ChatConversation {
+  id: string
+  participantIds: string[]
+  participantNames: string[]
+  lastMessage?: ChatMessage
+  lastActivity: Date
+  unreadCount: number
+  isArchived: boolean
+  conversationType: 'direct' | 'group'
+  conversationName?: string // For group chats
+}
+
 function App() {
   const [messages, setMessages] = useKV<Message[]>("chat-messages", [])
   const [moodEntries, setMoodEntries] = useKV<MoodEntry[]>("mood-entries", [])
@@ -201,6 +229,13 @@ function App() {
   const [supportCircles, setSupportCircles] = useKV<SupportCircle[]>("support-circles", [])
   const [journeyMoments, setJourneyMoments] = useKV<JourneyMoment[]>("journey-moments", [])
   const [discoveredCircles, setDiscoveredCircles] = useKV<SupportCircle[]>("discovered-circles", [])
+  
+  // Chat state
+  const [chatConversations, setChatConversations] = useKV<ChatConversation[]>("chat-conversations", [])
+  const [chatMessages, setChatMessages] = useKV<{ [conversationId: string]: ChatMessage[] }>("chat-messages-direct", {})
+  const [currentChatConversation, setCurrentChatConversation] = useState<string | null>(null)
+  const [showDirectChat, setShowDirectChat] = useState(false)
+  const [chatInputMessage, setChatInputMessage] = useState('')
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showMoodSelector, setShowMoodSelector] = useState(false)
@@ -219,7 +254,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
   const [showSocialHub, setShowSocialHub] = useState(false)
-  const [socialSection, setSocialSection] = useState<'community' | 'connections' | 'circles' | 'journey'>('community')
+  const [socialSection, setSocialSection] = useState<'community' | 'connections' | 'circles' | 'journey' | 'chat'>('community')
 
   // Initialize demo data for social features
   useEffect(() => {
@@ -466,6 +501,119 @@ function App() {
 
     return () => clearTimeout(timer)
   }, [onboardingData.completed])
+
+  // Initialize demo connections and chat data if social features are enabled
+  useEffect(() => {
+    if (userAccount && userPreferences.socialEnabled && myConnections.length === 0) {
+      const demoConnections: Connection[] = [
+        {
+          id: 'conn-1',
+          userId: userAccount.id,
+          connectedUserId: 'demo-user-1',
+          userName: 'Sarah',
+          connectionType: 'journey-buddy',
+          status: 'active',
+          sharedInterests: ['mindfulness', 'gratitude'],
+          connectedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+          lastInteraction: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
+        },
+        {
+          id: 'conn-2',
+          userId: userAccount.id,
+          connectedUserId: 'demo-user-3',
+          userName: 'Alex',
+          connectionType: 'support-circle',
+          status: 'active',
+          sharedInterests: ['breakthrough', 'emotional-intelligence'],
+          connectedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+          lastInteraction: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
+        }
+      ]
+      setMyConnections(demoConnections)
+
+      // Create demo conversations
+      const demoConversations: ChatConversation[] = [
+        {
+          id: 'conv-demo-1',
+          participantIds: [userAccount.id, 'demo-user-1'],
+          participantNames: [userAccount.userName, 'Sarah'],
+          lastActivity: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          unreadCount: 1,
+          isArchived: false,
+          conversationType: 'direct'
+        },
+        {
+          id: 'conv-demo-2',
+          participantIds: [userAccount.id, 'demo-user-3'],
+          participantNames: [userAccount.userName, 'Alex'],
+          lastActivity: new Date(Date.now() - 30 * 60 * 1000),
+          unreadCount: 0,
+          isArchived: false,
+          conversationType: 'direct'
+        }
+      ]
+      setChatConversations(demoConversations)
+
+      // Create demo chat messages
+      const demoChatMessages: { [conversationId: string]: ChatMessage[] } = {
+        'conv-demo-1': [
+          {
+            id: 'chat-msg-1',
+            senderId: 'demo-user-1',
+            senderName: 'Sarah',
+            receiverId: userAccount.id,
+            content: 'Hi! I saw your post about gratitude and it really resonated with me. How has your journey with mindfulness been going?',
+            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
+            isRead: true,
+            messageType: 'text'
+          },
+          {
+            id: 'chat-msg-2',
+            senderId: userAccount.id,
+            senderName: userAccount.userName,
+            receiverId: 'demo-user-1',
+            content: 'Thank you for reaching out! It\'s been such a transformative experience. My WE companion has helped me notice so many small moments of beauty.',
+            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
+            isRead: true,
+            messageType: 'text'
+          },
+          {
+            id: 'chat-msg-3',
+            senderId: 'demo-user-1',
+            senderName: 'Sarah',
+            receiverId: userAccount.id,
+            content: 'That\'s wonderful! I\'d love to hear more about your experiences. Maybe we could be journey buddies and check in with each other regularly? 🌟',
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+            isRead: false,
+            messageType: 'text'
+          }
+        ],
+        'conv-demo-2': [
+          {
+            id: 'chat-msg-4',
+            senderId: 'demo-user-3',
+            senderName: 'Alex',
+            receiverId: userAccount.id,
+            content: 'Hey! I noticed we\'re both in the same support circles. How are you finding the community so far?',
+            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+            isRead: true,
+            messageType: 'text'
+          },
+          {
+            id: 'chat-msg-5',
+            senderId: userAccount.id,
+            senderName: userAccount.userName,
+            receiverId: 'demo-user-3',
+            content: 'It\'s been amazing! The support and understanding here is unlike anything I\'ve experienced. How about you?',
+            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+            isRead: true,
+            messageType: 'text'
+          }
+        ]
+      }
+      setChatMessages(demoChatMessages)
+    }
+  }, [myConnections.length, userAccount, userPreferences.socialEnabled, setMyConnections, setChatConversations, setChatMessages])
 
   // Get current presence
   const getCurrentPresence = (): Presence => {
@@ -1139,6 +1287,127 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
     if (diffInHours < 24) return `${diffInHours} hours ago`
     if (diffInHours < 48) return '1 day ago'
     return `${Math.floor(diffInHours / 24)} days ago`
+  }
+
+  // Chat Functions
+  const createOrGetConversation = (participantUserId: string, participantName: string): string => {
+    if (!userAccount) return ''
+
+    // Check if conversation already exists
+    const existingConversation = chatConversations.find(conv => 
+      conv.conversationType === 'direct' && 
+      conv.participantIds.includes(userAccount.id) && 
+      conv.participantIds.includes(participantUserId)
+    )
+
+    if (existingConversation) {
+      return existingConversation.id
+    }
+
+    // Create new conversation
+    const newConversation: ChatConversation = {
+      id: `conv-${Date.now()}`,
+      participantIds: [userAccount.id, participantUserId],
+      participantNames: [userAccount.userName, participantName],
+      lastActivity: new Date(),
+      unreadCount: 0,
+      isArchived: false,
+      conversationType: 'direct'
+    }
+
+    setChatConversations(current => [newConversation, ...current])
+    return newConversation.id
+  }
+
+  const sendDirectMessage = (conversationId: string, content: string, messageType: ChatMessage['messageType'] = 'text') => {
+    if (!userAccount || !content.trim()) return
+
+    const conversation = chatConversations.find(c => c.id === conversationId)
+    if (!conversation) return
+
+    const newMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      senderId: userAccount.id,
+      senderName: userAccount.userName,
+      receiverId: conversation.participantIds.find(id => id !== userAccount.id) || '',
+      content: content.trim(),
+      timestamp: new Date(),
+      isRead: false,
+      messageType
+    }
+
+    // Add message to conversation
+    setChatMessages(current => ({
+      ...current,
+      [conversationId]: [...(current[conversationId] || []), newMessage]
+    }))
+
+    // Update conversation
+    setChatConversations(current => 
+      current.map(conv => 
+        conv.id === conversationId 
+          ? { 
+              ...conv, 
+              lastMessage: newMessage, 
+              lastActivity: new Date(),
+              unreadCount: conv.participantIds.includes(userAccount.id) ? conv.unreadCount : conv.unreadCount + 1
+            }
+          : conv
+      )
+    )
+
+    setChatInputMessage('')
+  }
+
+  const markConversationAsRead = (conversationId: string) => {
+    if (!userAccount) return
+
+    setChatConversations(current => 
+      current.map(conv => 
+        conv.id === conversationId 
+          ? { ...conv, unreadCount: 0 }
+          : conv
+      )
+    )
+
+    // Mark messages as read
+    setChatMessages(current => ({
+      ...current,
+      [conversationId]: (current[conversationId] || []).map(msg => 
+        msg.receiverId === userAccount.id ? { ...msg, isRead: true } : msg
+      )
+    }))
+  }
+
+  const startDirectChat = (userId: string, userName: string) => {
+    const conversationId = createOrGetConversation(userId, userName)
+    setCurrentChatConversation(conversationId)
+    setShowDirectChat(true)
+    markConversationAsRead(conversationId)
+  }
+
+  const shareCurrentMoodToChat = (conversationId: string) => {
+    if (moodEntries.length === 0) return
+    
+    const currentMood = moodEntries[0]
+    const moodMessage = `I'm feeling ${getMoodEmoji(currentMood.level)} (${currentMood.level}/5) right now`
+    
+    sendDirectMessage(conversationId, moodMessage, 'mood-share')
+  }
+
+  const getTotalUnreadMessages = () => {
+    return chatConversations.reduce((total, conv) => total + conv.unreadCount, 0)
+  }
+
+  const getConversationPartnerName = (conversation: ChatConversation) => {
+    if (!userAccount) return 'Unknown'
+    
+    if (conversation.conversationType === 'group') {
+      return conversation.conversationName || 'Group Chat'
+    }
+    
+    const partnerIndex = conversation.participantIds.findIndex(id => id !== userAccount.id)
+    return conversation.participantNames[partnerIndex] || 'Unknown'
   }
 
   const circleColors = getCircleColors()
@@ -2559,17 +2828,19 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
               <div className="flex space-x-2 mb-6 p-1 bg-white/5 rounded-lg">
                 {[
                   { id: 'community', label: 'Community', icon: Globe },
+                  { id: 'chat', label: 'Chat', icon: ChatCircle },
                   { id: 'connections', label: 'Connections', icon: UserPlus },
                   { id: 'circles', label: 'Circles', icon: Users },
                   { id: 'journey', label: 'Journey', icon: Sparkle }
                 ].map((section) => {
                   const IconComponent = section.icon
+                  const unreadCount = section.id === 'chat' ? getTotalUnreadMessages() : 0
                   return (
                     <Button
                       key={section.id}
                       variant="ghost"
                       onClick={() => setSocialSection(section.id as any)}
-                      className={`flex-1 text-xs py-2 h-8 transition-all ${ 
+                      className={`flex-1 text-xs py-2 h-8 transition-all relative ${ 
                         socialSection === section.id 
                           ? 'bg-purple-500/20 text-purple-200 border border-purple-400/30' 
                           : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -2577,6 +2848,11 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                     >
                       <IconComponent size={14} className="mr-1" />
                       {section.label}
+                      {unreadCount > 0 && (
+                        <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs bg-red-500 text-white flex items-center justify-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </Badge>
+                      )}
                     </Button>
                   )
                 })}
@@ -2694,6 +2970,21 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                                   Support ({post.supportCount})
                                 </Button>
 
+                                {!post.isAnonymous && post.authorId !== userAccount?.id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      startDirectChat(post.authorId, post.authorName)
+                                      setSocialSection('chat')
+                                    }}
+                                    className="text-xs h-8 px-3 text-white/60 hover:text-purple-300 hover:bg-purple-500/10"
+                                  >
+                                    <ChatCircle size={12} className="mr-1" />
+                                    Message
+                                  </Button>
+                                )}
+
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2709,6 +3000,175 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                       ))}
                     </div>
                   </ScrollArea>
+                </div>
+              )}
+
+              {/* Chat Section */}
+              {socialSection === 'chat' && (
+                <div className="space-y-4">
+                  {!showDirectChat && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-white font-medium">Direct Messages</h4>
+                        <Badge variant="secondary" className="bg-blue-500/20 text-blue-200">
+                          {chatConversations.length} Conversations
+                        </Badge>
+                      </div>
+
+                      {/* Conversations List */}
+                      <ScrollArea className="h-96">
+                        <div className="space-y-3">
+                          {chatConversations.length === 0 ? (
+                            <Card className="p-6 bg-black/20 border-white/10 backdrop-blur-sm text-center">
+                              <ChatCircle size={32} className="mx-auto mb-3 text-blue-400" />
+                              <h5 className="text-white font-medium mb-2">No Conversations Yet</h5>
+                              <p className="text-white/60 text-sm leading-relaxed">
+                                Start chatting with your connections from the Connections section, or reach out to community members.
+                              </p>
+                            </Card>
+                          ) : (
+                            chatConversations.map((conversation) => (
+                              <Card 
+                                key={conversation.id} 
+                                className="p-4 bg-black/20 border-white/10 backdrop-blur-sm cursor-pointer hover:bg-black/30 transition-colors"
+                                onClick={() => {
+                                  setCurrentChatConversation(conversation.id)
+                                  setShowDirectChat(true)
+                                  markConversationAsRead(conversation.id)
+                                }}
+                              >
+                                <div className="flex items-start space-x-3">
+                                  <Avatar className="w-10 h-10">
+                                    <AvatarFallback className="bg-blue-500/20 text-blue-200">
+                                      {getConversationPartnerName(conversation)[0].toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <h6 className="text-white font-medium text-sm">
+                                        {getConversationPartnerName(conversation)}
+                                      </h6>
+                                      <div className="flex items-center space-x-2">
+                                        {conversation.unreadCount > 0 && (
+                                          <Badge className="h-5 w-5 p-0 text-xs bg-red-500 text-white flex items-center justify-center rounded-full">
+                                            {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                                          </Badge>
+                                        )}
+                                        <span className="text-white/40 text-xs">
+                                          {formatRelativeTime(conversation.lastActivity)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {conversation.lastMessage && (
+                                      <p className="text-white/70 text-sm truncate">
+                                        {conversation.lastMessage.senderId === userAccount?.id ? 'You: ' : ''}
+                                        {conversation.lastMessage.content}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </Card>
+                            ))
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </>
+                  )}
+
+                  {/* Direct Chat View */}
+                  {showDirectChat && currentChatConversation && (
+                    <div className="space-y-4">
+                      {/* Chat Header */}
+                      <div className="flex items-center justify-between">
+                        <Button
+                          variant="ghost"
+                          onClick={() => setShowDirectChat(false)}
+                          className="text-white/70 hover:text-white hover:bg-white/10"
+                        >
+                          <CaretLeft size={16} className="mr-1" />
+                          Back to Chats
+                        </Button>
+                        <h4 className="text-white font-medium">
+                          {getConversationPartnerName(
+                            chatConversations.find(c => c.id === currentChatConversation)!
+                          )}
+                        </h4>
+                        <div className="w-20" /> {/* Spacer for alignment */}
+                      </div>
+
+                      {/* Chat Messages */}
+                      <Card className="bg-black/20 border-white/10 backdrop-blur-sm">
+                        <ScrollArea className="h-64 p-4">
+                          <div className="space-y-3">
+                            {(chatMessages[currentChatConversation] || []).map((message) => (
+                              <div 
+                                key={message.id}
+                                className={`flex ${message.senderId === userAccount?.id ? 'justify-end' : 'justify-start'}`}
+                              >
+                                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                                  message.senderId === userAccount?.id
+                                    ? 'bg-purple-500/30 text-white' 
+                                    : 'bg-white/20 text-white'
+                                }`}>
+                                  <div className="space-y-1">
+                                    {message.messageType === 'mood-share' && (
+                                      <div className="flex items-center space-x-1 text-xs text-white/60 mb-1">
+                                        <Smiley size={12} />
+                                        <span>Mood shared</span>
+                                      </div>
+                                    )}
+                                    <div>{message.content}</div>
+                                    <div className="text-xs text-white/50 text-right">
+                                      {formatRelativeTime(message.timestamp)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </Card>
+
+                      {/* Chat Input */}
+                      <div className="space-y-3">
+                        <div className="flex space-x-2">
+                          <Input
+                            value={chatInputMessage}
+                            onChange={(e) => setChatInputMessage(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault()
+                                sendDirectMessage(currentChatConversation, chatInputMessage)
+                              }
+                            }}
+                            placeholder="Type your message..."
+                            className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
+                          />
+                          <Button 
+                            onClick={() => sendDirectMessage(currentChatConversation, chatInputMessage)}
+                            disabled={!chatInputMessage.trim()}
+                            className="bg-purple-600/90 hover:bg-purple-700 text-white"
+                          >
+                            <PaperPlaneTilt size={16} />
+                          </Button>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => shareCurrentMoodToChat(currentChatConversation)}
+                            disabled={moodEntries.length === 0}
+                            className="text-purple-300 hover:bg-purple-500/10 text-xs"
+                          >
+                            <Smiley size={14} className="mr-1" />
+                            Share Mood
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2974,6 +3434,69 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                     </Card>
                   )}
 
+                  {/* Active Connections */}
+                  {myConnections.length > 0 && (
+                    <div className="space-y-3">
+                      <h5 className="text-white/80 text-sm">Your Connections</h5>
+                      <div className="space-y-3">
+                        {myConnections.map((connection) => (
+                          <Card key={connection.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Avatar className="w-10 h-10">
+                                  <AvatarFallback className="bg-blue-500/20 text-blue-200">
+                                    {connection.userName[0].toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h6 className="text-white font-medium text-sm">{connection.userName}</h6>
+                                  <div className="flex items-center space-x-2 text-xs text-white/60">
+                                    <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 text-xs">
+                                      {connection.connectionType.replace('-', ' ')}
+                                    </Badge>
+                                    <span>Connected {formatRelativeTime(connection.connectedAt)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => startDirectChat(connection.connectedUserId, connection.userName)}
+                                  className="bg-blue-600/90 hover:bg-blue-700 text-white"
+                                >
+                                  <ChatCircle size={14} className="mr-1" />
+                                  Chat
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {connection.sharedInterests.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-white/10">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-white/60 text-xs">Shared interests:</span>
+                                  <div className="flex space-x-1">
+                                    {connection.sharedInterests.slice(0, 3).map((interest) => (
+                                      <Badge key={interest} variant="secondary" className="bg-green-500/20 text-green-200 text-xs">
+                                        {interest}
+                                      </Badge>
+                                    ))}
+                                    {connection.sharedInterests.length > 3 && (
+                                      <Badge variant="secondary" className="bg-gray-500/20 text-gray-200 text-xs">
+                                        +{connection.sharedInterests.length - 3}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Find New Connections */}
                   <Card className="p-6 bg-black/20 border-white/10 backdrop-blur-sm text-center">
                     <UserPlus size={32} className="mx-auto mb-3 text-blue-400" />
                     <h5 className="text-white font-medium mb-2">Connect & Support</h5>
