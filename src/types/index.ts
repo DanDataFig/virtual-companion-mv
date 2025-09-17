@@ -3,81 +3,81 @@
  * Centralizes all TypeScript interfaces and types for better maintainability
  */
 
-// ============================================================================
-// CORE TYPES
-// ============================================================================
+  id: string
+  timestamp: 
+}
 
-export interface Message {
+  level: number // 1-5 sca
   id: string
   content: string
   timestamp: Date
   sender: 'user' | 'companion'
-}
+/
 
-export interface MoodEntry {
+  id: 'nebula' | 'luma' | 't
+  descriptio
+    circle1: string
+    glow: string
+ 
+
+// USER SYSTEM
+
+  completed: bool
+ 
+
+
   id: string
-  level: number // 1-5 scale (1=sad, 5=happy)
-  timestamp: Date
-}
+  email?: string
 
-export interface ConversationIntensity {
-  level: number // 0-100 scale
-  timestamp: Date
-}
+  bio?: string
+  language?: string
 
-// ============================================================================
-// PRESENCE SYSTEM
-// ============================================================================
-
-export interface Presence {
-  id: 'nebula' | 'luma' | 'terra' | 'nova'
-  name: string
   description: string
   colors: {
     circle1: string
     circle2: string
     glow: string
   }
-  personality: string
-}
-
-// ============================================================================
-// USER SYSTEM
-// ============================================================================
-
-export interface OnboardingData {
-  completed: boolean
-  selectedPresence?: Presence['id']
-  userName?: string
-  supportStyle?: 'listen' | 'encourage' | 'ground'
-  checkinFrequency?: 'daily' | 'reach-out' | 'surprise'
-}
-
-export interface UserAccount {
-  id: string
-  userName: string
-  email?: string
-  avatar?: string
-  createdAt: Date
-  profileCompleted: boolean
-  bio?: string
-  timezone?: string
-  language?: string
-}
-
-export interface UserPreferences {
-  // Voice settings
-  voiceEnabled: boolean
-  voiceVolume: number
-  voiceSpeed: number
-  voicePitch: number
-  preferredVoice?: string
   
-  // Theme settings
-  theme: 'auto' | 'dark' | 'light'
-  primaryColor: string
-  animationSpeed: 'slow' | 'normal' | 'fast'
-  reduceMotion: boolean
+ 
+
+  notificationTime: string
+  // Social se
+  shareJourney: boolean
+
+
+// SOCIAL FEATURES
+
+  id: string
+  authorName: string
+  type: 'reflection' | 'milestone' | 'support' | 'grati
+ 
+
+  tags: string[]
+
+  id: string
+  connectedUserI
+  connectionType:
+  sharedInterests
+  lastInteraction: Date
+
+  id: string
+  description: stri
+ 
+
+  tags: string[]
+
+  id: string
+  title: string
+  mood: number
+  isShared: boolean
+  timestamp: Date
+  
+
+// CHAT SYSTEM
+
+  id: string
+  senderName: string
   
   // Notification settings
   notificationsEnabled: boolean
@@ -160,72 +160,71 @@ export interface ChatMessage {
   receiverId: string
   content: string
   timestamp: Date
-  isRead: boolean
+
   messageType: 'text' | 'mood-share' | 'journey-moment' | 'system'
-  metadata?: {
+
     mood?: number
     journeyMomentId?: string
     systemType?: 'connection-request' | 'connection-accepted' | 'circle-invite'
-  }
+
 }
 
 export interface ChatConversation {
-  id: string
+
   participantIds: string[]
   participantNames: string[]
   lastMessage?: ChatMessage
-  lastActivity: Date
+
   unreadCount: number
-  isArchived: boolean
+
   conversationType: 'direct' | 'group'
-  conversationName?: string // For group chats
-}
 
-// ============================================================================
-// UI STATE TYPES
-// ============================================================================
 
-export type OnboardingStep = 
-  | 'welcome' 
-  | 'introduction' 
-  | 'presence-selection' 
-  | 'questionnaire' 
-  | 'account-creation' 
-  | 'first-interaction'
 
-export type SocialSection = 
-  | 'community' 
-  | 'connections' 
-  | 'circles' 
-  | 'journey' 
-  | 'chat'
 
-export type CameraFacing = 'front' | 'back'
 
-export interface TouchPosition {
-  x: number
-  y: number
-}
 
-// ============================================================================
-// ANIMATION & VISUAL TYPES
-// ============================================================================
 
-export interface BackgroundOption {
-  id: string
-  name: string
-  preview: string
-}
 
-export interface CircleColors {
-  circle1: string
-  circle2: string
-  glow: string
-}
 
-// ============================================================================
-// UTILITY TYPES
-// ============================================================================
 
-export type MoodLevel = 1 | 2 | 3 | 4 | 5
-export type IntensityLevel = number // 0-100
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
