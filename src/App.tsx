@@ -2970,21 +2970,6 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                                   Support ({post.supportCount})
                                 </Button>
 
-                                {!post.isAnonymous && post.authorId !== userAccount?.id && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      startDirectChat(post.authorId, post.authorName)
-                                      setSocialSection('chat')
-                                    }}
-                                    className="text-xs h-8 px-3 text-white/60 hover:text-purple-300 hover:bg-purple-500/10"
-                                  >
-                                    <ChatCircle size={12} className="mr-1" />
-                                    Message
-                                  </Button>
-                                )}
-
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -3434,69 +3419,6 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                     </Card>
                   )}
 
-                  {/* Active Connections */}
-                  {myConnections.length > 0 && (
-                    <div className="space-y-3">
-                      <h5 className="text-white/80 text-sm">Your Connections</h5>
-                      <div className="space-y-3">
-                        {myConnections.map((connection) => (
-                          <Card key={connection.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <Avatar className="w-10 h-10">
-                                  <AvatarFallback className="bg-blue-500/20 text-blue-200">
-                                    {connection.userName[0].toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <h6 className="text-white font-medium text-sm">{connection.userName}</h6>
-                                  <div className="flex items-center space-x-2 text-xs text-white/60">
-                                    <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 text-xs">
-                                      {connection.connectionType.replace('-', ' ')}
-                                    </Badge>
-                                    <span>Connected {formatRelativeTime(connection.connectedAt)}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => startDirectChat(connection.connectedUserId, connection.userName)}
-                                  className="bg-blue-600/90 hover:bg-blue-700 text-white"
-                                >
-                                  <ChatCircle size={14} className="mr-1" />
-                                  Chat
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            {connection.sharedInterests.length > 0 && (
-                              <div className="mt-3 pt-3 border-t border-white/10">
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-white/60 text-xs">Shared interests:</span>
-                                  <div className="flex space-x-1">
-                                    {connection.sharedInterests.slice(0, 3).map((interest) => (
-                                      <Badge key={interest} variant="secondary" className="bg-green-500/20 text-green-200 text-xs">
-                                        {interest}
-                                      </Badge>
-                                    ))}
-                                    {connection.sharedInterests.length > 3 && (
-                                      <Badge variant="secondary" className="bg-gray-500/20 text-gray-200 text-xs">
-                                        +{connection.sharedInterests.length - 3}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Find New Connections */}
                   <Card className="p-6 bg-black/20 border-white/10 backdrop-blur-sm text-center">
                     <UserPlus size={32} className="mx-auto mb-3 text-blue-400" />
                     <h5 className="text-white font-medium mb-2">Connect & Support</h5>
