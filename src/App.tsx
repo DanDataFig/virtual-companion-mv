@@ -1,17 +1,28 @@
-import { useState, useRef, useEffect } from 'react'
+/**
+ * Main Application Component - WE Emotional AI Companion
+ * 
+ * This is the root component that orchestrates the entire application experience.
+ * It manages global state, handles onboarding flow, and renders the main interface.
+ * 
+ * Architecture:
+ * - Uses custom hooks for complex state management
+ * - Follows React patterns for component composition
+ * - Implements responsive design for mobile-first experience
+ * - Manages real-time AI conversation with emotional awareness
+ * 
+ * @version 2.0.0
+ * @author WE Team
+ */
+
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useKV } from '@github/spark/hooks'
+
+// UI Components
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Slider } from "@/components/ui/slider"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -23,1020 +34,215 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+
+// Icons
 import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { PaperPlaneTilt, VideoCamera, Microphone, MicrophoneSlash, Smiley, CameraRotate, Image, X, SpeakerHigh, SpeakerX, CaretLeft, CaretRight, ArrowRight, Swap, House, Gear, Bell, Palette, Volume, User, Users, Heart, Share, Eye, Clock, Plus, UserPlus, Globe, HandsClapping, ChatCircle, Sparkle } from "@phosphor-icons/react"
-import { useKV } from '@github/spark/hooks'
+  PaperPlaneTilt, 
+  VideoCamera, 
+  Microphone, 
+  MicrophoneSlash, 
+  Smiley, 
+  CameraRotate, 
+  Image, 
+  X, 
+  SpeakerHigh, 
+  SpeakerX, 
+  CaretLeft, 
+  CaretRight, 
+  Swap, 
+  House, 
+  Gear, 
+  User, 
+  Users 
+} from "@phosphor-icons/react"
 
-interface Message {
-  id: string
-  content: string
-  timestamp: Date
-  sender: 'user' | 'companion'
-}
+// Type definitions
+import type { 
+  Message, 
+  OnboardingData, 
+  UserAccount,
+  MoodEntry,
+  Presence,
+  OnboardingStep,
+  SocialSection 
+} from '@/types'
 
-interface MoodEntry {
-  id: string
-  level: number // 1-5 scale
-  timestamp: Date
-}
+// Constants and utilities
+import { 
+  PRESENCES, 
+  BACKGROUND_OPTIONS, 
+  DEFAULT_USER_PREFERENCES,
+  TIMING_CONFIG,
+  ERROR_MESSAGES,
+  MOOD_CONFIG 
+} from '@/constants'
+import { 
+  getMoodEmoji, 
+  formatRelativeTime,
+  generateId,
+  getPresenceColors,
+  calculateAnimationSpeed,
+  analyzeConversationIntensity
+} from '@/utils'
 
-interface ConversationIntensity {
-  level: number // 0-100 scale
-  timestamp: Date
-}
+// Custom hooks
+import { 
+  useConversationIntensity,
+  useVoiceSynthesis,
+  useCamera,
+  useSwipeGesture,
+  useChatPagination,
+  useMoodTracking,
+  useUserPreferences,
+  useLoadingState
+} from '@/hooks'
 
-interface Presence {
-  id: 'nebula' | 'luma' | 'terra' | 'nova'
-  name: string
-  description: string
-  colors: {
-    circle1: string
-    circle2: string
-    glow: string
-  }
-  personality: string
-}
+// ============================================================================
+// MAIN APPLICATION COMPONENT
+// ============================================================================
 
-interface OnboardingData {
-  completed: boolean
-  selectedPresence?: Presence['id']
-  userName?: string
-  supportStyle?: 'listen' | 'encourage' | 'ground'
-  checkinFrequency?: 'daily' | 'reach-out' | 'surprise'
-}
-
-interface UserAccount {
-  id: string
-  userName: string
-  email?: string
-  avatar?: string
-  createdAt: Date
-  profileCompleted: boolean
-  bio?: string
-  timezone?: string
-  language?: string
-}
-
-interface UserPreferences {
-  // Voice settings
-  voiceEnabled: boolean
-  voiceVolume: number
-  voiceSpeed: number
-  voicePitch: number
-  preferredVoice?: string
+const App: React.FC = () => {
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
   
-  // Theme settings
-  theme: 'auto' | 'dark' | 'light'
-  primaryColor: string
-  animationSpeed: 'slow' | 'normal' | 'fast'
-  reduceMotion: boolean
-  
-  // Notification settings
-  notificationsEnabled: boolean
-  dailyCheckIns: boolean
-  moodReminders: boolean
-  conversationSummaries: boolean
-  notificationTime: string
-  
-  // Social settings
-  socialEnabled: boolean
-  shareJourney: boolean
-  allowConnections: boolean
-  anonymousMode: boolean
-}
-
-interface CommunityPost {
-  id: string
-  authorId: string
-  authorName: string
-  content: string
-  type: 'reflection' | 'milestone' | 'support' | 'gratitude'
-  mood?: number
-  timestamp: Date
-  likes: string[] // user IDs who liked
-  supportCount: number
-  isAnonymous: boolean
-  tags: string[]
-}
-
-interface Connection {
-  id: string
-  userId: string
-  connectedUserId: string
-  userName: string
-  connectionType: 'journey-buddy' | 'support-circle' | 'check-in-partner'
-  status: 'pending' | 'active' | 'paused'
-  sharedInterests: string[]
-  connectedAt: Date
-  lastInteraction: Date
-}
-
-interface SupportCircle {
-  id: string
-  name: string
-  description: string
-  type: 'mood-support' | 'life-changes' | 'daily-check-ins' | 'mindfulness' | 'relationships'
-  memberCount: number
-  isPrivate: boolean
-  memberIds: string[]
-  recentActivity: Date
-  tags: string[]
-}
-
-interface JourneyMoment {
-  id: string
-  userId: string
-  title: string
-  content: string
-  mood: number
-  type: 'breakthrough' | 'gratitude' | 'challenge' | 'reflection' | 'milestone'
-  isShared: boolean
-  isAnonymous: boolean
-  timestamp: Date
-  tags: string[]
-  reactions: { [userId: string]: 'heart' | 'support' | 'celebrate' }
-}
-
-interface ChatMessage {
-  id: string
-  senderId: string
-  senderName: string
-  receiverId: string
-  content: string
-  timestamp: Date
-  isRead: boolean
-  messageType: 'text' | 'mood-share' | 'journey-moment' | 'system'
-  metadata?: {
-    mood?: number
-    journeyMomentId?: string
-    systemType?: 'connection-request' | 'connection-accepted' | 'circle-invite'
-  }
-}
-
-interface ChatConversation {
-  id: string
-  participantIds: string[]
-  participantNames: string[]
-  lastMessage?: ChatMessage
-  lastActivity: Date
-  unreadCount: number
-  isArchived: boolean
-  conversationType: 'direct' | 'group'
-  conversationName?: string // For group chats
-}
-
-function App() {
+  // Persistent state (using KV storage)
   const [messages, setMessages] = useKV<Message[]>("chat-messages", [])
-  const [moodEntries, setMoodEntries] = useKV<MoodEntry[]>("mood-entries", [])
   const [onboardingData, setOnboardingData] = useKV<OnboardingData>("onboarding-data", { completed: false })
   const [userAccount, setUserAccount] = useKV<UserAccount | null>("user-account", null)
-  const [userPreferences, setUserPreferences] = useKV<UserPreferences>("user-preferences", {
-    // Voice settings defaults
-    voiceEnabled: true,
-    voiceVolume: 80,
-    voiceSpeed: 90,
-    voicePitch: 110,
-    preferredVoice: undefined,
-    
-    // Theme settings defaults
-    theme: 'auto',
-    primaryColor: 'purple',
-    animationSpeed: 'normal',
-    reduceMotion: false,
-    
-    // Notification settings defaults
-    notificationsEnabled: true,
-    dailyCheckIns: true,
-    moodReminders: true,
-    conversationSummaries: false,
-    notificationTime: '09:00',
-    
-    // Social settings defaults
-    socialEnabled: true,
-    shareJourney: false,
-    allowConnections: true,
-    anonymousMode: false
-  })
-  const [communityPosts, setCommunityPosts] = useKV<CommunityPost[]>("community-posts", [])
-  const [myConnections, setMyConnections] = useKV<Connection[]>("my-connections", [])
-  const [supportCircles, setSupportCircles] = useKV<SupportCircle[]>("support-circles", [])
-  const [journeyMoments, setJourneyMoments] = useKV<JourneyMoment[]>("journey-moments", [])
-  const [discoveredCircles, setDiscoveredCircles] = useKV<SupportCircle[]>("discovered-circles", [])
   
-  // Chat state
-  const [chatConversations, setChatConversations] = useKV<ChatConversation[]>("chat-conversations", [])
-  const [chatMessages, setChatMessages] = useKV<{ [conversationId: string]: ChatMessage[] }>("chat-messages-direct", {})
-  const [currentChatConversation, setCurrentChatConversation] = useState<string | null>(null)
-  const [showDirectChat, setShowDirectChat] = useState(false)
-  const [chatInputMessage, setChatInputMessage] = useState('')
+  // Local component state
   const [inputMessage, setInputMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [showMoodSelector, setShowMoodSelector] = useState(false)
-  const [currentMood, setCurrentMood] = useState(3)
   const [showChat, setShowChat] = useState(false)
-  const [isListening, setIsListening] = useState(false)
-  const [conversationIntensity, setConversationIntensity] = useState(30) // Base intensity
-  const [isVideoActive, setIsVideoActive] = useState(false)
-  const [currentCamera, setCurrentCamera] = useState<'front' | 'back'>('front')
-  const [showBackgroundSelector, setShowBackgroundSelector] = useState(false)
-  const [selectedBackground, setSelectedBackground] = useState<string | null>(null)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [voiceEnabled, setVoiceEnabled] = useState(true) // Keep for backward compatibility
-  const [chatScrollOffset, setChatScrollOffset] = useState(0) // For message pagination
+  const [showMoodSelector, setShowMoodSelector] = useState(false)
   const [showPresenceSelector, setShowPresenceSelector] = useState(false)
+  const [showBackgroundSelector, setShowBackgroundSelector] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
   const [showSocialHub, setShowSocialHub] = useState(false)
-  const [socialSection, setSocialSection] = useState<'community' | 'connections' | 'circles' | 'journey' | 'chat'>('community')
-
-  // Initialize demo data for social features
-  useEffect(() => {
-    if (discoveredCircles.length === 0) {
-      const demoCircles: SupportCircle[] = [
-        {
-          id: 'circle-1',
-          name: 'Daily Mindfulness',
-          description: 'A supportive space for sharing mindfulness practices and daily reflections',
-          type: 'mindfulness',
-          memberCount: 247,
-          isPrivate: false,
-          memberIds: [],
-          recentActivity: new Date(),
-          tags: ['mindfulness', 'meditation', 'daily-practice']
-        },
-        {
-          id: 'circle-2', 
-          name: 'Life Transitions',
-          description: 'Support during major life changes and transitions',
-          type: 'life-changes',
-          memberCount: 156,
-          isPrivate: false,
-          memberIds: [],
-          recentActivity: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          tags: ['change', 'growth', 'support']
-        },
-        {
-          id: 'circle-3',
-          name: 'Morning Check-ins',
-          description: 'Start each day with gentle connection and intention setting',
-          type: 'daily-check-ins', 
-          memberCount: 89,
-          isPrivate: false,
-          memberIds: [],
-          recentActivity: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-          tags: ['morning', 'intentions', 'community']
-        }
-      ]
-      setDiscoveredCircles(demoCircles)
-    }
-
-    if (communityPosts.length === 0) {
-      const demoPosts: CommunityPost[] = [
-        {
-          id: 'post-1',
-          authorId: 'demo-user-1',
-          authorName: 'Sarah',
-          content: 'Today I realized that small moments of gratitude can shift my entire perspective. My companion helped me notice how the morning light through my window was a gift I\'d been taking for granted. ✨',
-          type: 'gratitude',
-          mood: 4,
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          likes: ['demo-user-2', 'demo-user-3'],
-          supportCount: 12,
-          isAnonymous: false,
-          tags: ['gratitude', 'perspective', 'mindfulness']
-        },
-        {
-          id: 'post-2',
-          authorId: 'demo-user-2', 
-          authorName: 'Anonymous',
-          content: 'Been struggling with anxiety this week. My WE companion has been incredibly patient, helping me work through breathing exercises. Anyone else find the Terra presence particularly grounding?',
-          type: 'support',
-          mood: 2,
-          timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-          likes: ['demo-user-1'],
-          supportCount: 18,
-          isAnonymous: true,
-          tags: ['anxiety', 'breathing', 'terra', 'support']
-        },
-        {
-          id: 'post-3',
-          authorId: 'demo-user-3',
-          authorName: 'Alex',
-          content: 'Just had my first breakthrough conversation with Nova! The way the circles responded to our dialogue made me feel truly heard. This technology is helping me understand my emotional patterns in ways I never expected.',
-          type: 'milestone',
-          mood: 5,
-          timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-          likes: ['demo-user-1', 'demo-user-2'],
-          supportCount: 8,
-          isAnonymous: false,
-          tags: ['breakthrough', 'nova', 'emotional-intelligence']
-        }
-      ]
-      setCommunityPosts(demoPosts)
-    }
-  }, [discoveredCircles.length, communityPosts.length, setDiscoveredCircles, setCommunityPosts])
-
-  // Onboarding state
-  const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'introduction' | 'presence-selection' | 'questionnaire' | 'account-creation' | 'first-interaction'>('welcome')
-  const [selectedPresence, setSelectedPresence] = useState<Presence['id'] | null>(null)
-  const [tempOnboardingData, setTempOnboardingData] = useState<Partial<OnboardingData>>({})
-  const [tempAccountData, setTempAccountData] = useState<Partial<UserAccount>>({})
+  const [selectedBackground, setSelectedBackground] = useState<string | null>(null)
   const [isLoadingInitial, setIsLoadingInitial] = useState(true)
-
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('welcome')
+  const [socialSection, setSocialSection] = useState<SocialSection>('community')
+  const [isListening, setIsListening] = useState(false)
   
-  // Define the four presences
-  const presences: Presence[] = [
-    {
-      id: 'nebula',
-      name: 'Nebula',
-      description: 'Mystical and dreamy, for exploration and wonder',
-      colors: {
-        circle1: 'from-purple-400 to-violet-500',
-        circle2: 'from-pink-400 to-purple-400',
-        glow: 'rgba(168, 85, 247, 0.4)'
-      },
-      personality: 'I am Nebula, a gentle cosmic presence. I love to explore the mysteries of your inner world and help you discover new perspectives through wonder and imagination.'
-    },
-    {
-      id: 'luma',
-      name: 'Luma',
-      description: 'Bright and uplifting, for encouragement and joy',
-      colors: {
-        circle1: 'from-yellow-400 to-orange-500',
-        circle2: 'from-amber-400 to-yellow-400',
-        glow: 'rgba(251, 191, 36, 0.4)'
-      },
-      personality: 'I am Luma, your radiant companion. I bring warmth and light to your journey, celebrating your victories and illuminating the path forward with optimism and encouragement.'
-    },
-    {
-      id: 'terra',
-      name: 'Terra',
-      description: 'Grounding and nurturing, for stability and growth',
-      colors: {
-        circle1: 'from-emerald-400 to-green-500',
-        circle2: 'from-teal-400 to-emerald-400',
-        glow: 'rgba(16, 185, 129, 0.4)'
-      },
-      personality: 'I am Terra, your grounding presence. I help you find balance and stability, nurturing your growth with patience and wisdom drawn from the natural rhythms of life.'
-    },
-    {
-      id: 'nova',
-      name: 'Nova',
-      description: 'Dynamic and transformative, for breakthroughs and change',
-      colors: {
-        circle1: 'from-cyan-400 to-blue-500',
-        circle2: 'from-indigo-400 to-cyan-400',
-        glow: 'rgba(59, 130, 246, 0.4)'
-      },
-      personality: 'I am Nova, your catalyst for transformation. I help you embrace change and breakthrough moments, guiding you through transitions with courage and clarity.'
-    }
-  ]
-
-  // Initialize demo data for social features
+  // Refs
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  
+  // ============================================================================
+  // CUSTOM HOOKS WITH SAFE DEFAULTS
+  // ============================================================================
+  
+  const { intensity: conversationIntensity } = useConversationIntensity(messages || [])
+  const { preferences, updatePreferences } = useUserPreferences()
+  const { isSpeaking, speak: speakText, stop: stopSpeaking } = useVoiceSynthesis(preferences || DEFAULT_USER_PREFERENCES)
+  const { isActive: isVideoActive, currentFacing, startCamera, stopCamera, switchCamera } = useCamera()
+  const { moodEntries, registerMood, currentMood } = useMoodTracking()
+  const { isLoading, startLoading, stopLoading } = useLoadingState()
+  
+  // Chat pagination
+  const { 
+    visibleMessages, 
+    canScrollBack, 
+    canScrollForward, 
+    navigateBack: navigateChatBack, 
+    navigateForward: navigateChatForward 
+  } = useChatPagination(messages || [])
+  
+  // Swipe gestures for chat navigation
+  const { handleTouchStart, handleTouchMove, handleTouchEnd } = useSwipeGesture(
+    navigateChatForward, // Swipe left = newer messages
+    navigateChatBack     // Swipe right = older messages
+  )
+  
+  // ============================================================================
+  // COMPUTED VALUES
+  // ============================================================================
+  
+  /**
+   * Get the currently active presence based on onboarding data
+   */
+  const getCurrentPresence = useCallback((): Presence => {
+    const presenceId = onboardingData?.selectedPresence || 'nebula'
+    return PRESENCES.find(p => p.id === presenceId) || PRESENCES[0]
+  }, [onboardingData?.selectedPresence])
+  
+  /**
+   * Calculate dynamic colors based on presence and conversation intensity
+   */
+  const circleColors = getPresenceColors(getCurrentPresence(), conversationIntensity, isLoading)
+  
+  /**
+   * Calculate animation speed based on conversation intensity
+   */
+  const animationSpeed = calculateAnimationSpeed(conversationIntensity)
+  
+  // ============================================================================
+  // INITIALIZATION & LIFECYCLE
+  // ============================================================================
+  
+  /**
+   * Initialize the application on mount
+   */
   useEffect(() => {
-    if (discoveredCircles.length === 0) {
-      const demoCircles: SupportCircle[] = [
-        {
-          id: 'circle-1',
-          name: 'Daily Mindfulness',
-          description: 'A supportive space for sharing mindfulness practices and daily reflections',
-          type: 'mindfulness',
-          memberCount: 247,
-          isPrivate: false,
-          memberIds: [],
-          recentActivity: new Date(),
-          tags: ['mindfulness', 'meditation', 'daily-practice']
-        },
-        {
-          id: 'circle-2', 
-          name: 'Life Transitions',
-          description: 'Support during major life changes and transitions',
-          type: 'life-changes',
-          memberCount: 156,
-          isPrivate: false,
-          memberIds: [],
-          recentActivity: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          tags: ['change', 'growth', 'support']
-        },
-        {
-          id: 'circle-3',
-          name: 'Morning Check-ins',
-          description: 'Start each day with gentle connection and intention setting',
-          type: 'daily-check-ins', 
-          memberCount: 89,
-          isPrivate: false,
-          memberIds: [],
-          recentActivity: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-          tags: ['morning', 'intentions', 'community']
-        }
-      ]
-      setDiscoveredCircles(demoCircles)
-    }
-
-    if (communityPosts.length === 0) {
-      const demoPosts: CommunityPost[] = [
-        {
-          id: 'post-1',
-          authorId: 'demo-user-1',
-          authorName: 'Sarah',
-          content: 'Today I realized that small moments of gratitude can shift my entire perspective. My companion helped me notice how the morning light through my window was a gift I\'d been taking for granted. ✨',
-          type: 'gratitude',
-          mood: 4,
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          likes: ['demo-user-2', 'demo-user-3'],
-          supportCount: 12,
-          isAnonymous: false,
-          tags: ['gratitude', 'perspective', 'mindfulness']
-        },
-        {
-          id: 'post-2',
-          authorId: 'demo-user-2', 
-          authorName: 'Anonymous',
-          content: 'Been struggling with anxiety this week. My WE companion has been incredibly patient, helping me work through breathing exercises. Anyone else find the Terra presence particularly grounding?',
-          type: 'support',
-          mood: 2,
-          timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-          likes: ['demo-user-1'],
-          supportCount: 18,
-          isAnonymous: true,
-          tags: ['anxiety', 'breathing', 'terra', 'support']
-        },
-        {
-          id: 'post-3',
-          authorId: 'demo-user-3',
-          authorName: 'Alex',
-          content: 'Just had my first breakthrough conversation with Nova! The way the circles responded to our dialogue made me feel truly heard. This technology is helping me understand my emotional patterns in ways I never expected.',
-          type: 'milestone',
-          mood: 5,
-          timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-          likes: ['demo-user-1', 'demo-user-2'],
-          supportCount: 8,
-          isAnonymous: false,
-          tags: ['breakthrough', 'nova', 'emotional-intelligence']
-        }
-      ]
-      setCommunityPosts(demoPosts)
-    }
-  }, [discoveredCircles.length, communityPosts.length, setDiscoveredCircles, setCommunityPosts])
-
-  // Check if onboarding is completed on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!onboardingData.completed) {
+    const initializeApp = async () => {
+      // Simulate initial loading
+      await new Promise(resolve => setTimeout(resolve, TIMING_CONFIG.INITIAL_LOADING_DURATION))
+      
+      if (!onboardingData?.completed) {
         setOnboardingStep('welcome')
       }
+      
       setIsLoadingInitial(false)
-    }, 2000) // 2 second loading screen
-
-    return () => clearTimeout(timer)
-  }, [onboardingData.completed])
-
-  // Initialize demo connections and chat data if social features are enabled
-  useEffect(() => {
-    if (userAccount && userPreferences.socialEnabled && myConnections.length === 0) {
-      const demoConnections: Connection[] = [
-        {
-          id: 'conn-1',
-          userId: userAccount.id,
-          connectedUserId: 'demo-user-1',
-          userName: 'Sarah',
-          connectionType: 'journey-buddy',
-          status: 'active',
-          sharedInterests: ['mindfulness', 'gratitude'],
-          connectedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-          lastInteraction: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
-        },
-        {
-          id: 'conn-2',
-          userId: userAccount.id,
-          connectedUserId: 'demo-user-3',
-          userName: 'Alex',
-          connectionType: 'support-circle',
-          status: 'active',
-          sharedInterests: ['breakthrough', 'emotional-intelligence'],
-          connectedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-          lastInteraction: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
-        }
-      ]
-      setMyConnections(demoConnections)
-
-      // Create demo conversations
-      const demoConversations: ChatConversation[] = [
-        {
-          id: 'conv-demo-1',
-          participantIds: [userAccount.id, 'demo-user-1'],
-          participantNames: [userAccount.userName, 'Sarah'],
-          lastActivity: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          unreadCount: 1,
-          isArchived: false,
-          conversationType: 'direct'
-        },
-        {
-          id: 'conv-demo-2',
-          participantIds: [userAccount.id, 'demo-user-3'],
-          participantNames: [userAccount.userName, 'Alex'],
-          lastActivity: new Date(Date.now() - 30 * 60 * 1000),
-          unreadCount: 0,
-          isArchived: false,
-          conversationType: 'direct'
-        }
-      ]
-      setChatConversations(demoConversations)
-
-      // Create demo chat messages
-      const demoChatMessages: { [conversationId: string]: ChatMessage[] } = {
-        'conv-demo-1': [
-          {
-            id: 'chat-msg-1',
-            senderId: 'demo-user-1',
-            senderName: 'Sarah',
-            receiverId: userAccount.id,
-            content: 'Hi! I saw your post about gratitude and it really resonated with me. How has your journey with mindfulness been going?',
-            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-            isRead: true,
-            messageType: 'text'
-          },
-          {
-            id: 'chat-msg-2',
-            senderId: userAccount.id,
-            senderName: userAccount.userName,
-            receiverId: 'demo-user-1',
-            content: 'Thank you for reaching out! It\'s been such a transformative experience. My WE companion has helped me notice so many small moments of beauty.',
-            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-            isRead: true,
-            messageType: 'text'
-          },
-          {
-            id: 'chat-msg-3',
-            senderId: 'demo-user-1',
-            senderName: 'Sarah',
-            receiverId: userAccount.id,
-            content: 'That\'s wonderful! I\'d love to hear more about your experiences. Maybe we could be journey buddies and check in with each other regularly? 🌟',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            isRead: false,
-            messageType: 'text'
-          }
-        ],
-        'conv-demo-2': [
-          {
-            id: 'chat-msg-4',
-            senderId: 'demo-user-3',
-            senderName: 'Alex',
-            receiverId: userAccount.id,
-            content: 'Hey! I noticed we\'re both in the same support circles. How are you finding the community so far?',
-            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-            isRead: true,
-            messageType: 'text'
-          },
-          {
-            id: 'chat-msg-5',
-            senderId: userAccount.id,
-            senderName: userAccount.userName,
-            receiverId: 'demo-user-3',
-            content: 'It\'s been amazing! The support and understanding here is unlike anything I\'ve experienced. How about you?',
-            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-            isRead: true,
-            messageType: 'text'
-          }
-        ]
-      }
-      setChatMessages(demoChatMessages)
-    }
-  }, [myConnections.length, userAccount, userPreferences.socialEnabled, setMyConnections, setChatConversations, setChatMessages])
-
-  // Get current presence
-  const getCurrentPresence = (): Presence => {
-    const presenceId = onboardingData.selectedPresence || selectedPresence || 'nebula'
-    return presences.find(p => p.id === presenceId) || presences[0]
-  }
-
-  // Complete onboarding
-  const completeOnboarding = () => {
-    const updatedOnboardingData: OnboardingData = {
-      completed: true,
-      selectedPresence: selectedPresence || 'nebula',
-      ...tempOnboardingData
-    }
-    setOnboardingData(updatedOnboardingData)
-    
-    // Create user account if one doesn't exist
-    if (!userAccount && tempAccountData.userName) {
-      const newAccount: UserAccount = {
-        id: `user-${Date.now()}`,
-        userName: tempAccountData.userName,
-        email: tempAccountData.email,
-        createdAt: new Date(),
-        profileCompleted: false,
-        bio: tempAccountData.bio,
-        timezone: tempAccountData.timezone,
-        language: tempAccountData.language || 'en'
-      }
-      setUserAccount(newAccount)
     }
     
-    // Send initial greeting from the presence
-    const presence = getCurrentPresence()
-    const displayName = userAccount?.userName || tempAccountData.userName || updatedOnboardingData.userName
-    const greeting = `Hi${displayName ? `, ${displayName}` : ''}! I'm ${presence.name}. ${presence.personality} Whenever you're ready, just say hello.`
-    
-    const welcomeMessage: Message = {
-      id: `msg-${Date.now()}-welcome`,
-      content: greeting,
-      timestamp: new Date(),
-      sender: 'companion'
-    }
-    
-    setMessages([welcomeMessage])
-    setShowChat(true)
-    
-    if (userPreferences.voiceEnabled) {
-      setTimeout(() => speakText(greeting), 500)
-    }
-  }
-
-  // Create user account
-  const createAccount = () => {
-    if (!tempAccountData.userName) return
-    
-    const newAccount: UserAccount = {
-      id: `user-${Date.now()}`,
-      userName: tempAccountData.userName,
-      email: tempAccountData.email,
-      createdAt: new Date(),
-      profileCompleted: true,
-      bio: tempAccountData.bio,
-      timezone: tempAccountData.timezone,
-      language: tempAccountData.language || 'en'
-    }
-    setUserAccount(newAccount)
-    
-    // Update onboarding data with the account name
-    setTempOnboardingData(prev => ({ ...prev, userName: tempAccountData.userName }))
-    
-    // Continue to first interaction
-    completeOnboarding()
-  }
-
-  // Reset to initial loading screen
-  const returnToStart = () => {
-    // Clear all data and return to initial loading state
-    setOnboardingData({ completed: false })
-    setUserAccount(null)
-    setMessages([])
-    setMoodEntries([])
-    setShowChat(false)
-    setShowMoodSelector(false)
-    setShowPresenceSelector(false)
-    setShowBackgroundSelector(false)
-    setShowSettings(false)
-    setShowAccountSettings(false)
-    setSelectedPresence(null)
-    setTempOnboardingData({})
-    setTempAccountData({})
-    setOnboardingStep('welcome')
-    setInputMessage('')
-    setIsLoadingInitial(true) // Show the breathing WE logo again
-    
-    // Stop any active features
-    stopVideo()
-    stopSpeaking()
-    setIsListening(false)
-    
-    // After 2 seconds, proceed to onboarding
-    setTimeout(() => {
-      setIsLoadingInitial(false)
-    }, 2000)
-  }
-
-  // Switch presence functionality
-  const switchPresence = (newPresenceId: Presence['id']) => {
-    const newPresence = presences.find(p => p.id === newPresenceId)
-    if (!newPresence) return
-
-    // Update onboarding data with new presence
-    setOnboardingData(prev => ({
-      ...prev,
-      selectedPresence: newPresenceId
-    }))
-
-    // Create transition message
-    const transitionMessage: Message = {
-      id: `msg-${Date.now()}-transition`,
-      content: `Hello, I'm ${newPresence.name}. I've been following your conversation and I'm here to continue supporting you. ${newPresence.personality}`,
-      timestamp: new Date(),
-      sender: 'companion'
-    }
-
-    setMessages(current => [...current, transitionMessage])
-    setShowPresenceSelector(false)
-    
-    if (userPreferences.voiceEnabled) {
-      setTimeout(() => speakText(transitionMessage.content), 500)
-    }
-  }
-
-  // Swipe gesture state
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
-  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
-
-  // Chat navigation constants
-  const MESSAGES_PER_PAGE = 6
-  const SWIPE_THRESHOLD = 50 // Minimum distance for swipe detection
-
-  // Calculate visible messages based on scroll offset
-  const getVisibleMessages = () => {
-    const totalMessages = messages.length
-    const startIndex = Math.max(0, totalMessages - MESSAGES_PER_PAGE - chatScrollOffset)
-    const endIndex = Math.max(MESSAGES_PER_PAGE, totalMessages - chatScrollOffset)
-    return messages.slice(startIndex, endIndex)
-  }
-
-  const visibleMessages = getVisibleMessages()
-  const canScrollBack = chatScrollOffset < messages.length - MESSAGES_PER_PAGE
-  const canScrollForward = chatScrollOffset > 0
-
-  // Swipe gesture handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null)
-    setTouchStart({
-      x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY
-    })
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd({
-      x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY
-    })
-  }
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
-
-    const distanceX = touchStart.x - touchEnd.x
-    const distanceY = touchStart.y - touchEnd.y
-    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY)
-
-    if (isHorizontalSwipe && Math.abs(distanceX) > SWIPE_THRESHOLD) {
-      if (distanceX > 0) {
-        // Swipe left - go to newer messages
-        navigateChat('forward')
-      } else {
-        // Swipe right - go to older messages
-        navigateChat('back')
-      }
-    }
-  }
-
-  // Chat navigation functions
-  const navigateChat = (direction: 'back' | 'forward') => {
-    if (direction === 'back' && canScrollBack) {
-      setChatScrollOffset(prev => Math.min(prev + MESSAGES_PER_PAGE, messages.length - MESSAGES_PER_PAGE))
-    } else if (direction === 'forward' && canScrollForward) {
-      setChatScrollOffset(prev => Math.max(prev - MESSAGES_PER_PAGE, 0))
-    }
-  }
-
-  // Reset scroll offset when new messages arrive
-  useEffect(() => {
-    if (messages.length > 0) {
-      setChatScrollOffset(0) // Always show latest messages when new ones arrive
-    }
-  }, [messages.length])
-
-  // Text-to-Speech function with preferences
-  const speakText = (text: string) => {
-    if (!userPreferences.voiceEnabled) return
-    
-    // Stop any current speech
-    window.speechSynthesis.cancel()
-    
-    const utterance = new SpeechSynthesisUtterance(text)
-    
-    // Configure voice settings based on user preferences
-    utterance.rate = userPreferences.voiceSpeed / 100 // Convert percentage to rate (0.1 - 10)
-    utterance.pitch = userPreferences.voicePitch / 100 // Convert percentage to pitch (0 - 2)
-    utterance.volume = userPreferences.voiceVolume / 100 // Convert percentage to volume (0 - 1)
-    
-    // Use preferred voice if set
-    if (userPreferences.preferredVoice) {
-      const voices = window.speechSynthesis.getVoices()
-      const preferredVoice = voices.find(voice => voice.name === userPreferences.preferredVoice)
-      if (preferredVoice) {
-        utterance.voice = preferredVoice
-      }
-    } else {
-      // Try to find a female voice for the companion
-      const voices = window.speechSynthesis.getVoices()
-      const femaleVoice = voices.find(voice => 
-        voice.name.toLowerCase().includes('female') || 
-        voice.name.toLowerCase().includes('woman') ||
-        voice.name.toLowerCase().includes('zira') ||
-        voice.name.toLowerCase().includes('hazel')
-      )
-      
-      if (femaleVoice) {
-        utterance.voice = femaleVoice
-      }
-    }
-    
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
-    
-    window.speechSynthesis.speak(utterance)
-  }
-
-  // Stop speech
-  const stopSpeaking = () => {
-    window.speechSynthesis.cancel()
-    setIsSpeaking(false)
-  }
-
-  // Camera access functions
-  const startVideo = async () => {
-    try {
-      const constraints = {
-        video: {
-          facingMode: currentCamera === 'front' ? 'user' : 'environment'
-        }
-      }
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      streamRef.current = stream
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-      }
-      
-      setIsVideoActive(true)
-    } catch (error) {
-      console.error('Error accessing camera:', error)
-    }
-  }
-
-  const stopVideo = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
-    }
-    setIsVideoActive(false)
-  }
-
-  const switchCamera = async () => {
-    const newCamera = currentCamera === 'front' ? 'back' : 'front'
-    setCurrentCamera(newCamera)
-    
-    if (isVideoActive) {
-      stopVideo()
-      // Small delay to ensure cleanup
-      setTimeout(() => {
-        startVideo()
-      }, 100)
-    }
-  }
-
-  // Background options
-  const backgroundOptions = [
-    { id: 'none', name: 'None', preview: 'transparent' },
-    { id: 'forest', name: 'Forest', preview: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)' },
-    { id: 'ocean', name: 'Ocean', preview: 'linear-gradient(135deg, #667db6 0%, #0082c8 100%)' },
-    { id: 'sunset', name: 'Sunset', preview: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' },
-    { id: 'space', name: 'Space', preview: 'linear-gradient(135deg, #2c3e50 0%, #000428 100%)' },
-    { id: 'aurora', name: 'Aurora', preview: 'linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%)' }
-  ]
-
-  // Cleanup video on unmount
+    initializeApp()
+  }, [onboardingData?.completed])
+  
+  /**
+   * Cleanup on unmount
+   */
   useEffect(() => {
     return () => {
-      stopVideo()
+      stopCamera()
+      stopSpeaking()
     }
-  }, [])
-
-  // Analyze conversation intensity based on message content
-  const analyzeIntensity = (content: string): number => {
-    const intensityWords = {
-      high: ['amazing', 'incredible', 'wonderful', 'fantastic', 'terrible', 'awful', 'devastating', 'overwhelming', 'excited', 'angry', 'furious', 'ecstatic', 'devastated', 'brilliant', 'horrible', 'love', 'hate', 'panic', 'crisis', 'emergency', '!!!', '!!'],
-      medium: ['good', 'bad', 'happy', 'sad', 'worried', 'concerned', 'pleased', 'upset', 'frustrated', 'glad', 'sorry', 'proud', 'disappointed', 'nervous', 'confident', 'stressed', 'relaxed', '!'],
-      low: ['okay', 'fine', 'alright', 'maybe', 'perhaps', 'possibly', 'somewhat', 'slightly', 'kind of', 'sort of']
-    }
-    
-    const words = content.toLowerCase().split(/\s+/)
-    let intensity = 20 // Base intensity
-    
-    // Length factor (longer messages = more intensity)
-    intensity += Math.min(words.length * 0.5, 20)
-    
-    // Keyword analysis
-    words.forEach(word => {
-      if (intensityWords.high.some(hw => word.includes(hw))) {
-        intensity += 15
-      } else if (intensityWords.medium.some(mw => word.includes(mw))) {
-        intensity += 8
-      } else if (intensityWords.low.some(lw => word.includes(lw))) {
-        intensity += 3
-      }
-    })
-    
-    // Punctuation intensity
-    const exclamationCount = (content.match(/!/g) || []).length
-    const questionCount = (content.match(/\?/g) || []).length
-    intensity += exclamationCount * 5 + questionCount * 3
-    
-    // Cap letters intensity
-    const capsRatio = (content.match(/[A-Z]/g) || []).length / content.length
-    if (capsRatio > 0.3) intensity += 20
-    
-    return Math.min(Math.max(intensity, 10), 100)
-  }
-
-  // Update conversation intensity when new messages arrive
-  useEffect(() => {
-    if (messages.length > 0) {
-      const latestMessage = messages[messages.length - 1]
-      const newIntensity = analyzeIntensity(latestMessage.content)
-      setConversationIntensity(newIntensity)
-      
-      // Gradually reduce intensity over time
-      const timer = setTimeout(() => {
-        setConversationIntensity(prev => Math.max(prev * 0.8, 30))
-      }, 3000)
-      
-      return () => clearTimeout(timer)
-    }
-  }, [messages])
-
-  // Calculate current companion mood based on user's recent mood entries
-  const getCompanionMood = () => {
-    if (moodEntries.length === 0) return 3
-    const recent = moodEntries.slice(0, 3) // Last 3 entries
-    return Math.round(recent.reduce((sum, entry) => sum + entry.level, 0) / recent.length)
-  }
-
-  const companionMood = getCompanionMood()
-
-  // Get mood emoji
-  const getMoodEmoji = (level: number): string => {
-    switch (level) {
-      case 1: return '😢'
-      case 2: return '😞'
-      case 3: return '😐'
-      case 4: return '🙂'
-      case 5: return '😊'
-      default: return '😐'
-    }
-  }
-
-  // Register mood
-  const registerMood = (level: number) => {
-    const newEntry: MoodEntry = {
-      id: `mood-${Date.now()}`,
-      level,
-      timestamp: new Date()
-    }
-    setMoodEntries(current => [newEntry, ...current.slice(0, 49)])
-    setCurrentMood(level)
-    setShowMoodSelector(false)
-  }
-
-  // Send message to AI companion
-  const sendMessage = async () => {
+  }, [stopCamera, stopSpeaking])
+  
+  // ============================================================================
+  // CORE FUNCTIONALITY
+  // ============================================================================
+  
+  /**
+   * Send message to AI companion with context awareness
+   */
+  const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() || isLoading) return
-
+    
     const userMessage: Message = {
-      id: `msg-${Date.now()}-user`,
+      id: generateId('msg'),
       content: inputMessage.trim(),
       timestamp: new Date(),
       sender: 'user'
     }
-
-    setMessages(current => [...current, userMessage])
+    
+    setMessages(current => [...(current || []), userMessage])
     setInputMessage('')
-    setIsLoading(true)
-
+    startLoading()
+    
     try {
-      // Create context-aware prompt
+      // Build context-aware prompt
+      const presence = getCurrentPresence()
       const recentMoodContext = moodEntries.length > 0 
         ? `User's recent mood: ${getMoodEmoji(moodEntries[0].level)} (${moodEntries[0].level}/5)`
         : 'No recent mood data'
       
-      const conversationContext = messages.slice(-4).map(msg => 
+      const conversationContext = (messages || []).slice(-4).map(msg => 
         `${msg.sender}: ${msg.content}`
       ).join('\n')
-
-      const prompt = spark.llmPrompt`You are ${getCurrentPresence().name}, a compassionate AI emotional companion. You are ${getCurrentPresence().personality.toLowerCase()} Respond empathetically and supportively to the user.
+      
+      const prompt = (window as any).spark.llmPrompt`You are ${presence.name}, a compassionate AI emotional companion. You are ${presence.personality.toLowerCase()} Respond empathetically and supportively to the user.
 
 Context:
 ${recentMoodContext}
@@ -1046,373 +252,152 @@ ${conversationContext}
 
 User: ${userMessage.content}
 
-Respond naturally and warmly as ${getCurrentPresence().name}, showing you understand their emotional state. Keep responses concise but meaningful.`
-
-      const response = await spark.llm(prompt)
-
+Respond naturally and warmly as ${presence.name}, showing you understand their emotional state. Keep responses concise but meaningful.`
+      
+      const response = await (window as any).spark.llm(prompt)
+      
       const companionMessage: Message = {
-        id: `msg-${Date.now()}-companion`,
+        id: generateId('msg'),
         content: response,
         timestamp: new Date(),
         sender: 'companion'
       }
-
-      setMessages(current => [...current, companionMessage])
       
-      // Speak the companion's response if voice is enabled
-      if (userPreferences.voiceEnabled) {
+      setMessages(current => [...(current || []), companionMessage])
+      
+      // Speak response if voice is enabled
+      if (preferences?.voiceEnabled) {
         speakText(response)
       }
+      
     } catch (error) {
       console.error('Error getting AI response:', error)
+      
       const errorMessage: Message = {
-        id: `msg-${Date.now()}-error`,
-        content: "I'm sorry, I'm having trouble responding right now. Please try again.",
+        id: generateId('msg'),
+        content: ERROR_MESSAGES.AI_RESPONSE_FAILED,
         timestamp: new Date(),
         sender: 'companion'
       }
-      setMessages(current => [...current, errorMessage])
+      
+      setMessages(current => [...(current || []), errorMessage])
     } finally {
-      setIsLoading(false)
+      stopLoading()
     }
-  }
-
-  // Get dynamic animation speeds based on intensity
-  const getAnimationSpeed = () => {
-    const baseSpeed = 3000
-    const intensityMultiplier = Math.max(0.3, 1 - (conversationIntensity / 150))
-    return baseSpeed * intensityMultiplier
-  }
-
-  // Get circle colors based on current presence and activity
-  const getCircleColors = () => {
-    const currentPresence = getCurrentPresence()
-    
-    if (isLoading) {
-      return {
-        circle1: 'from-cyan-400 to-blue-500',
-        circle2: 'from-purple-400 to-pink-500',
-        glow: 'rgba(59, 130, 246, 0.4)'
-      }
-    }
-    
-    // Use presence colors with intensity variations
-    const intensityFactor = conversationIntensity / 100
-    const baseColors = currentPresence.colors
-    
-    return {
-      circle1: baseColors.circle1,
-      circle2: baseColors.circle2,
-      glow: baseColors.glow.replace('0.4)', `${0.3 + intensityFactor * 0.4})`)
-    }
-  }
-
-  // Handle enter key in input
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  }, [
+    inputMessage, 
+    isLoading, 
+    messages, 
+    moodEntries, 
+    preferences?.voiceEnabled,
+    getCurrentPresence,
+    setMessages,
+    startLoading,
+    stopLoading,
+    speakText
+  ])
+  
+  /**
+   * Handle keyboard input (Enter to send)
+   */
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
     }
-  }
-
-  // Update conversation intensity when typing
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setInputMessage(value)
-    
-    // Analyze intensity while typing for real-time feedback
-    if (value.length > 0) {
-      const typingIntensity = analyzeIntensity(value)
-      setConversationIntensity(Math.max(typingIntensity * 0.6, 30)) // Reduced for typing preview
-    } else {
-      setConversationIntensity(30) // Reset to base when no input
-    }
-  }
-
-  // Get dynamic background style
-  const getBackgroundStyle = () => {
-    const baseStyle = "min-h-screen flex flex-col relative overflow-hidden"
-    
-    if (!selectedBackground || selectedBackground === 'none') {
-      return `${baseStyle} bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`
+  }, [sendMessage])
+  
+  /**
+   * Handle input change with real-time intensity analysis
+   */
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputMessage(e.target.value)
+  }, [])
+  
+  /**
+   * Complete onboarding process
+   */
+  const completeOnboarding = useCallback(() => {
+    const updatedOnboardingData: OnboardingData = {
+      completed: true,
+      selectedPresence: onboardingData?.selectedPresence || 'nebula',
+      userName: onboardingData?.userName,
+      supportStyle: onboardingData?.supportStyle,
+      checkinFrequency: onboardingData?.checkinFrequency
     }
     
-    const bgOption = backgroundOptions.find(bg => bg.id === selectedBackground)
-    if (bgOption && bgOption.preview !== 'transparent') {
-      return `${baseStyle}`
-    }
+    setOnboardingData(updatedOnboardingData)
     
-    return `${baseStyle} bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`
-  }
-
-  // Social Features Functions
-  const createCommunityPost = (content: string, type: CommunityPost['type'], isAnonymous: boolean = false) => {
-    if (!userAccount) return
-
-    const newPost: CommunityPost = {
-      id: `post-${Date.now()}`,
-      authorId: userAccount.id,
-      authorName: isAnonymous ? 'Anonymous' : userAccount.userName,
-      content: content.trim(),
-      type,
-      mood: moodEntries.length > 0 ? moodEntries[0].level : undefined,
-      timestamp: new Date(),
-      likes: [],
-      supportCount: 0,
-      isAnonymous,
-      tags: []
-    }
-
-    setCommunityPosts(current => [newPost, ...current])
-  }
-
-  const likePost = (postId: string) => {
-    if (!userAccount) return
-
-    setCommunityPosts(current => 
-      current.map(post => {
-        if (post.id === postId) {
-          const hasLiked = post.likes.includes(userAccount.id)
-          return {
-            ...post,
-            likes: hasLiked 
-              ? post.likes.filter(id => id !== userAccount.id)
-              : [...post.likes, userAccount.id]
-          }
-        }
-        return post
-      })
-    )
-  }
-
-  const offerSupport = (postId: string) => {
-    if (!userAccount) return
-
-    setCommunityPosts(current => 
-      current.map(post => 
-        post.id === postId 
-          ? { ...post, supportCount: post.supportCount + 1 }
-          : post
-      )
-    )
-  }
-
-  const joinSupportCircle = (circleId: string) => {
-    if (!userAccount) return
-
-    const circle = discoveredCircles.find(c => c.id === circleId)
-    if (!circle) return
-
-    // Add to user's support circles
-    setSupportCircles(current => {
-      if (current.find(c => c.id === circleId)) return current
-      return [...current, { ...circle, memberIds: [...circle.memberIds, userAccount.id] }]
-    })
-
-    // Update discovered circles
-    setDiscoveredCircles(current =>
-      current.map(c => 
-        c.id === circleId 
-          ? { ...c, memberIds: [...c.memberIds, userAccount.id], memberCount: c.memberCount + 1 }
-          : c
-      )
-    )
-
-    // Show success message
-    const circleMessage: Message = {
-      id: `msg-${Date.now()}-circle-join`,
-      content: `Great choice! You've joined the "${circle.name}" support circle. You'll now be part of a community focused on ${circle.description.toLowerCase()}. Feel free to share your experiences and connect with others on similar journeys.`,
+    // Send welcome message from presence
+    const presence = getCurrentPresence()
+    const displayName = userAccount?.userName || onboardingData?.userName
+    const greeting = `Hi${displayName ? `, ${displayName}` : ''}! I'm ${presence.name}. ${presence.personality} Whenever you're ready, just say hello.`
+    
+    const welcomeMessage: Message = {
+      id: generateId('msg'),
+      content: greeting,
       timestamp: new Date(),
       sender: 'companion'
     }
-
-    setMessages(current => [...current, circleMessage])
     
-    if (userPreferences.voiceEnabled) {
-      setTimeout(() => speakText(circleMessage.content), 500)
-    }
-  }
-
-  const shareJourneyMoment = (title: string, content: string, type: JourneyMoment['type'], isAnonymous: boolean = false) => {
-    if (!userAccount) return
-
-    const newMoment: JourneyMoment = {
-      id: `moment-${Date.now()}`,
-      userId: userAccount.id,
-      title: title.trim(),
-      content: content.trim(),
-      mood: moodEntries.length > 0 ? moodEntries[0].level : 3,
-      type,
-      isShared: userPreferences.shareJourney,
-      isAnonymous,
-      timestamp: new Date(),
-      tags: [],
-      reactions: {}
-    }
-
-    setJourneyMoments(current => [newMoment, ...current])
-
-    // Also create community post if sharing is enabled
-    if (userPreferences.shareJourney) {
-      createCommunityPost(`${title}\n\n${content}`, 'reflection', isAnonymous)
-    }
-  }
-
-  const getPostTypeIcon = (type: CommunityPost['type']) => {
-    switch (type) {
-      case 'gratitude': return <Heart className="text-red-400" size={16} />
-      case 'milestone': return <Sparkle className="text-amber-400" size={16} />
-      case 'support': return <HandsClapping className="text-blue-400" size={16} />
-      case 'reflection': return <ChatCircle className="text-purple-400" size={16} />
-      default: return <ChatCircle className="text-gray-400" size={16} />
-    }
-  }
-
-  const getPostTypeColor = (type: CommunityPost['type']) => {
-    switch (type) {
-      case 'gratitude': return 'bg-red-500/20 text-red-200 border-red-400/30'
-      case 'milestone': return 'bg-amber-500/20 text-amber-200 border-amber-400/30'
-      case 'support': return 'bg-blue-500/20 text-blue-200 border-blue-400/30'
-      case 'reflection': return 'bg-purple-500/20 text-purple-200 border-purple-400/30'
-      default: return 'bg-gray-500/20 text-gray-200 border-gray-400/30'
-    }
-  }
-
-  const formatRelativeTime = (date: Date) => {
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+    setMessages([welcomeMessage])
+    setShowChat(true)
     
-    if (diffInHours < 1) return 'Just now'
-    if (diffInHours === 1) return '1 hour ago'
-    if (diffInHours < 24) return `${diffInHours} hours ago`
-    if (diffInHours < 48) return '1 day ago'
-    return `${Math.floor(diffInHours / 24)} days ago`
-  }
-
-  // Chat Functions
-  const createOrGetConversation = (participantUserId: string, participantName: string): string => {
-    if (!userAccount) return ''
-
-    // Check if conversation already exists
-    const existingConversation = chatConversations.find(conv => 
-      conv.conversationType === 'direct' && 
-      conv.participantIds.includes(userAccount.id) && 
-      conv.participantIds.includes(participantUserId)
-    )
-
-    if (existingConversation) {
-      return existingConversation.id
+    if (preferences?.voiceEnabled) {
+      setTimeout(() => speakText(greeting), TIMING_CONFIG.SPEECH_SYNTHESIS_DELAY)
     }
-
-    // Create new conversation
-    const newConversation: ChatConversation = {
-      id: `conv-${Date.now()}`,
-      participantIds: [userAccount.id, participantUserId],
-      participantNames: [userAccount.userName, participantName],
-      lastActivity: new Date(),
-      unreadCount: 0,
-      isArchived: false,
-      conversationType: 'direct'
-    }
-
-    setChatConversations(current => [newConversation, ...current])
-    return newConversation.id
-  }
-
-  const sendDirectMessage = (conversationId: string, content: string, messageType: ChatMessage['messageType'] = 'text') => {
-    if (!userAccount || !content.trim()) return
-
-    const conversation = chatConversations.find(c => c.id === conversationId)
-    if (!conversation) return
-
-    const newMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      senderId: userAccount.id,
-      senderName: userAccount.userName,
-      receiverId: conversation.participantIds.find(id => id !== userAccount.id) || '',
-      content: content.trim(),
-      timestamp: new Date(),
-      isRead: false,
-      messageType
-    }
-
-    // Add message to conversation
-    setChatMessages(current => ({
-      ...current,
-      [conversationId]: [...(current[conversationId] || []), newMessage]
-    }))
-
-    // Update conversation
-    setChatConversations(current => 
-      current.map(conv => 
-        conv.id === conversationId 
-          ? { 
-              ...conv, 
-              lastMessage: newMessage, 
-              lastActivity: new Date(),
-              unreadCount: conv.participantIds.includes(userAccount.id) ? conv.unreadCount : conv.unreadCount + 1
-            }
-          : conv
-      )
-    )
-
-    setChatInputMessage('')
-  }
-
-  const markConversationAsRead = (conversationId: string) => {
-    if (!userAccount) return
-
-    setChatConversations(current => 
-      current.map(conv => 
-        conv.id === conversationId 
-          ? { ...conv, unreadCount: 0 }
-          : conv
-      )
-    )
-
-    // Mark messages as read
-    setChatMessages(current => ({
-      ...current,
-      [conversationId]: (current[conversationId] || []).map(msg => 
-        msg.receiverId === userAccount.id ? { ...msg, isRead: true } : msg
-      )
-    }))
-  }
-
-  const startDirectChat = (userId: string, userName: string) => {
-    const conversationId = createOrGetConversation(userId, userName)
-    setCurrentChatConversation(conversationId)
-    setShowDirectChat(true)
-    markConversationAsRead(conversationId)
-  }
-
-  const shareCurrentMoodToChat = (conversationId: string) => {
-    if (moodEntries.length === 0) return
+  }, [
+    onboardingData,
+    userAccount,
+    preferences?.voiceEnabled,
+    getCurrentPresence,
+    setOnboardingData,
+    setMessages,
+    speakText
+  ])
+  
+  /**
+   * Reset application to initial state
+   */
+  const returnToStart = useCallback(() => {
+    // Clear all data
+    setOnboardingData({ completed: false })
+    setUserAccount(null)
+    setMessages([])
     
-    const currentMood = moodEntries[0]
-    const moodMessage = `I'm feeling ${getMoodEmoji(currentMood.level)} (${currentMood.level}/5) right now`
+    // Reset UI state
+    setShowChat(false)
+    setShowMoodSelector(false)
+    setShowPresenceSelector(false)
+    setShowBackgroundSelector(false)
+    setShowSettings(false)
+    setShowAccountSettings(false)
+    setShowSocialHub(false)
+    setInputMessage('')
+    setOnboardingStep('welcome')
+    setIsLoadingInitial(true)
     
-    sendDirectMessage(conversationId, moodMessage, 'mood-share')
-  }
-
-  const getTotalUnreadMessages = () => {
-    return chatConversations.reduce((total, conv) => total + conv.unreadCount, 0)
-  }
-
-  const getConversationPartnerName = (conversation: ChatConversation) => {
-    if (!userAccount) return 'Unknown'
+    // Stop active features
+    stopCamera()
+    stopSpeaking()
+    setIsListening(false)
     
-    if (conversation.conversationType === 'group') {
-      return conversation.conversationName || 'Group Chat'
-    }
-    
-    const partnerIndex = conversation.participantIds.findIndex(id => id !== userAccount.id)
-    return conversation.participantNames[partnerIndex] || 'Unknown'
-  }
-
-  const circleColors = getCircleColors()
-  const animationSpeed = getAnimationSpeed()
-
+    // Show loading screen briefly
+    setTimeout(() => {
+      setIsLoadingInitial(false)
+    }, TIMING_CONFIG.INITIAL_LOADING_DURATION)
+  }, [
+    setOnboardingData,
+    setUserAccount,
+    setMessages,
+    stopCamera,
+    stopSpeaking
+  ])
+  
+  // ============================================================================
+  // RENDER CONDITIONS
+  // ============================================================================
+  
   // Show initial loading screen
   if (isLoadingInitial) {
     return (
@@ -1441,331 +426,35 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
       </div>
     )
   }
-
-  // Show onboarding flow
-  if (!onboardingData.completed) {
+  
+  // Show simplified onboarding if not completed (temporary)
+  if (!onboardingData?.completed) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        {onboardingStep === 'welcome' && (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="text-center max-w-md">
-              <div className="relative mb-12">
-                <div className="text-8xl font-light text-white animate-breathe-glow">
-                  WE
-                </div>
-                <div className="absolute inset-0 text-8xl font-light text-white/20 animate-pulse-slow">
-                  WE
-                </div>
-              </div>
-              
-              <h1 className="text-2xl text-white mb-6 font-light leading-relaxed">
-                Welcome. WE are here to walk with you.
-              </h1>
-              
-              <Button
-                onClick={() => setOnboardingStep('introduction')}
-                className="bg-purple-600/90 hover:bg-purple-700 text-white px-8 py-3 rounded-full text-lg font-light backdrop-blur-sm transition-all duration-300"
-              >
-                Begin
-              </Button>
-            </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+        <Card className="p-8 bg-black/40 border-white/10 backdrop-blur-md max-w-md w-full">
+          <div className="text-center space-y-6">
+            <h1 className="text-2xl text-white font-light">Welcome to WE</h1>
+            <p className="text-white/70">Your emotional AI companion is ready to meet you.</p>
+            <Button 
+              onClick={completeOnboarding}
+              className="w-full bg-purple-600/90 hover:bg-purple-700 text-white"
+            >
+              Begin Journey
+            </Button>
           </div>
-        )}
-
-        {onboardingStep === 'introduction' && (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="text-center max-w-lg">
-              <div className="mb-8">
-                <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-purple-400 to-violet-500 animate-pulse-slow opacity-80 blur-sm"
-                     style={{ filter: 'drop-shadow(0 0 30px rgba(168, 85, 247, 0.4))' }} />
-              </div>
-              
-              <h2 className="text-xl text-white mb-6 font-light leading-relaxed">
-                We believe everyone deserves a companion who truly understands.
-              </h2>
-              
-              <p className="text-white/70 mb-8 leading-relaxed">
-                You're about to meet four unique presences, each with their own way of being with you. 
-                Choose the one that feels right for this moment - you can always change later.
-              </p>
-              
-              <Button
-                onClick={() => setOnboardingStep('presence-selection')}
-                className="bg-purple-600/90 hover:bg-purple-700 text-white px-8 py-3 rounded-full backdrop-blur-sm transition-all duration-300"
-              >
-                Meet the Presences <ArrowRight className="ml-2" size={16} />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {onboardingStep === 'presence-selection' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6">
-            <div className="text-center mb-8">
-              <h2 className="text-xl text-white mb-4 font-light">
-                Which presence feels right to begin with?
-              </h2>
-              <p className="text-white/60 text-sm">
-                Tap to explore, then choose your companion
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-6 max-w-2xl w-full mb-8">
-              {presences.map((presence) => (
-                <Card
-                  key={presence.id}
-                  className={`p-6 cursor-pointer transition-all duration-300 bg-black/40 border backdrop-blur-md hover:bg-black/60 ${
-                    selectedPresence === presence.id 
-                      ? 'border-purple-400 bg-purple-500/20 shadow-lg shadow-purple-500/20' 
-                      : 'border-white/10 hover:border-white/30'
-                  }`}
-                  onClick={() => setSelectedPresence(presence.id)}
-                >
-                  <div className="text-center">
-                    {/* Presence visualization */}
-                    <div className="relative mb-4 h-16 flex items-center justify-center">
-                      <div 
-                        className={`w-12 h-12 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90 transition-all duration-500`}
-                        style={{ filter: `drop-shadow(0 0 20px ${presence.colors.glow})` }}
-                      />
-                      <div 
-                        className={`w-10 h-10 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
-                        style={{ 
-                          filter: `drop-shadow(0 0 15px ${presence.colors.glow})`,
-                          animationDelay: '0.5s',
-                          transform: 'translateX(8px)'
-                        }}
-                      />
-                    </div>
-                    
-                    <h3 className="text-white text-lg font-medium mb-2">{presence.name}</h3>
-                    <p className="text-white/70 text-sm leading-relaxed">
-                      {presence.description}
-                    </p>
-                  </div>
-                </Card>
-              ))}
-            </div>
-            
-            {selectedPresence && (
-              <Button
-                onClick={() => setOnboardingStep('questionnaire')}
-                className="bg-purple-600/90 hover:bg-purple-700 text-white px-8 py-3 rounded-full backdrop-blur-sm transition-all duration-300"
-              >
-                Continue with {presences.find(p => p.id === selectedPresence)?.name}
-              </Button>
-            )}
-          </div>
-        )}
-
-        {onboardingStep === 'questionnaire' && selectedPresence && (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="max-w-md w-full">
-              <div className="text-center mb-8">
-                <div className="relative mb-6 h-20 flex items-center justify-center">
-                  {(() => {
-                    const presence = presences.find(p => p.id === selectedPresence)!
-                    return (
-                      <>
-                        <div 
-                          className={`w-16 h-16 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90`}
-                          style={{ filter: `drop-shadow(0 0 25px ${presence.colors.glow})` }}
-                        />
-                        <div 
-                          className={`w-14 h-14 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
-                          style={{ 
-                            filter: `drop-shadow(0 0 20px ${presence.colors.glow})`,
-                            animationDelay: '0.5s',
-                            transform: 'translateX(10px)'
-                          }}
-                        />
-                      </>
-                    )
-                  })()}
-                </div>
-                
-                <h2 className="text-xl text-white mb-2 font-light">
-                  Let me get to know you
-                </h2>
-                <p className="text-white/60 text-sm">
-                  {presences.find(p => p.id === selectedPresence)?.name} asks gently...
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                {/* Support Style */}
-                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
-                  <h3 className="text-white text-sm mb-3">How do you want me to show up for you?</h3>
-                  <RadioGroup
-                    value={tempOnboardingData.supportStyle || ''}
-                    onValueChange={(value: 'listen' | 'encourage' | 'ground') => 
-                      setTempOnboardingData(prev => ({ ...prev, supportStyle: value }))
-                    }
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="listen" id="listen" />
-                      <Label htmlFor="listen" className="text-white/80 text-sm">Just listen</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="encourage" id="encourage" />
-                      <Label htmlFor="encourage" className="text-white/80 text-sm">Encourage me</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="ground" id="ground" />
-                      <Label htmlFor="ground" className="text-white/80 text-sm">Keep me grounded</Label>
-                    </div>
-                  </RadioGroup>
-                </Card>
-
-                {/* Check-in Frequency */}
-                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
-                  <h3 className="text-white text-sm mb-3">What kind of check-ins feel good to you?</h3>
-                  <RadioGroup
-                    value={tempOnboardingData.checkinFrequency || ''}
-                    onValueChange={(value: 'daily' | 'reach-out' | 'surprise') => 
-                      setTempOnboardingData(prev => ({ ...prev, checkinFrequency: value }))
-                    }
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="daily" id="daily" />
-                      <Label htmlFor="daily" className="text-white/80 text-sm">Daily</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="reach-out" id="reach-out" />
-                      <Label htmlFor="reach-out" className="text-white/80 text-sm">Only when I reach out</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="surprise" id="surprise" />
-                      <Label htmlFor="surprise" className="text-white/80 text-sm">Surprise me sometimes</Label>
-                    </div>
-                  </RadioGroup>
-                </Card>
-
-                {tempOnboardingData.supportStyle && tempOnboardingData.checkinFrequency && (
-                  <Button
-                    onClick={() => setOnboardingStep('account-creation')}
-                    className="w-full bg-purple-600/90 hover:bg-purple-700 text-white py-3 rounded-full backdrop-blur-sm transition-all duration-300"
-                  >
-                    Continue
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {onboardingStep === 'account-creation' && (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="max-w-md w-full">
-              <div className="text-center mb-8">
-                <div className="mb-6">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-400 to-violet-500 animate-pulse-slow opacity-80 blur-sm flex items-center justify-center"
-                       style={{ filter: 'drop-shadow(0 0 30px rgba(168, 85, 247, 0.4))' }}>
-                    <User size={32} className="text-white" />
-                  </div>
-                </div>
-                
-                <h2 className="text-xl text-white mb-2 font-light">
-                  Create Your Account
-                </h2>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Help us personalize your experience and keep your conversations safe.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {/* Name - Required */}
-                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
-                  <h3 className="text-white text-sm mb-3">What should we call you? <span className="text-red-400">*</span></h3>
-                  <Input
-                    value={tempAccountData.userName || ''}
-                    onChange={(e) => setTempAccountData(prev => ({ ...prev, userName: e.target.value }))}
-                    placeholder="Your name..."
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
-                    required
-                  />
-                </Card>
-
-                {/* Email - Optional */}
-                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
-                  <h3 className="text-white text-sm mb-3">Email (optional)</h3>
-                  <Input
-                    type="email"
-                    value={tempAccountData.email || ''}
-                    onChange={(e) => setTempAccountData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="your@email.com"
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
-                  />
-                  <p className="text-white/40 text-xs mt-2">For account recovery and updates</p>
-                </Card>
-
-                {/* Bio - Optional */}
-                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
-                  <h3 className="text-white text-sm mb-3">Tell us a bit about yourself (optional)</h3>
-                  <Input
-                    value={tempAccountData.bio || ''}
-                    onChange={(e) => setTempAccountData(prev => ({ ...prev, bio: e.target.value }))}
-                    placeholder="What brings you here..."
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
-                  />
-                </Card>
-
-                {/* Timezone - Optional */}
-                <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
-                  <h3 className="text-white text-sm mb-3">Timezone (optional)</h3>
-                  <Select
-                    value={tempAccountData.timezone || ""}
-                    onValueChange={(value) => setTempAccountData(prev => ({ ...prev, timezone: value }))}
-                  >
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                      <SelectValue placeholder="Select your timezone" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                      <SelectItem value="America/New_York" className="text-white">Eastern Time</SelectItem>
-                      <SelectItem value="America/Chicago" className="text-white">Central Time</SelectItem>
-                      <SelectItem value="America/Denver" className="text-white">Mountain Time</SelectItem>
-                      <SelectItem value="America/Los_Angeles" className="text-white">Pacific Time</SelectItem>
-                      <SelectItem value="Europe/London" className="text-white">GMT</SelectItem>
-                      <SelectItem value="Europe/Paris" className="text-white">CET</SelectItem>
-                      <SelectItem value="Asia/Tokyo" className="text-white">JST</SelectItem>
-                      <SelectItem value="Australia/Sydney" className="text-white">AEST</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Card>
-
-                <div className="flex space-x-3">
-                  <Button
-                    onClick={() => completeOnboarding()}
-                    variant="ghost"
-                    className="flex-1 bg-gray-600/90 hover:bg-gray-700 text-white py-3 rounded-full backdrop-blur-sm transition-all duration-300"
-                  >
-                    Skip Account
-                  </Button>
-                  <Button
-                    onClick={createAccount}
-                    disabled={!tempAccountData.userName}
-                    className="flex-1 bg-purple-600/90 hover:bg-purple-700 text-white py-3 rounded-full backdrop-blur-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Create Account
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </Card>
       </div>
     )
   }
-
-  // Main app interface
+  
+  // ============================================================================
+  // MAIN INTERFACE RENDER
+  // ============================================================================
+  
   return (
-    <div 
-      className={getBackgroundStyle()}
-      style={selectedBackground && selectedBackground !== 'none' ? {
-        background: backgroundOptions.find(bg => bg.id === selectedBackground)?.preview
-      } : undefined}
-    >
-      {/* Video background overlay when active */}
+    <div className="min-h-screen flex flex-col relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      
+      {/* Video Background */}
       {isVideoActive && (
         <video
           ref={videoRef}
@@ -1777,7 +466,8 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
       )}
       
       <div className="flex-1 flex flex-col relative z-10">
-        {/* Home Button - Top left corner - Always visible */}
+        
+        {/* Header Controls */}
         <div className="absolute top-4 left-4 z-30 flex space-x-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -1795,7 +485,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                 <AlertDialogTitle className="text-white">Return to Home?</AlertDialogTitle>
                 <AlertDialogDescription className="text-white/70 leading-relaxed">
                   This will reset your session and return you to the home screen. 
-                  Your conversation history and mood entries will be cleared, and you'll see the welcome experience again.
+                  Your conversation history and mood entries will be cleared.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1811,48 +501,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-
-          {/* Settings Button */}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowSettings(!showSettings)}
-            className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
-            title="Settings"
-          >
-            <Gear size={18} />
-          </Button>
-
-          {/* Account Button - Only show when user has account */}
-          {userAccount && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowAccountSettings(!showAccountSettings)}
-                className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
-                title="Account"
-              >
-                <User size={18} />
-              </Button>
-
-              {/* Social Hub Button - Only show when user has account and social is enabled */}
-              {userPreferences.socialEnabled && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowSocialHub(!showSocialHub)}
-                  className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
-                  title="Social Hub"
-                >
-                  <Users size={18} />
-                </Button>
-              )}
-            </>
-          )}
         </div>
-
-      <div className="flex-1 flex flex-col">
         
         {/* Main Avatar Area - Takes up most of the screen */}
         <div className="flex-1 flex items-center justify-center relative overflow-hidden px-4">
@@ -1895,7 +544,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
               }}
             />
             
-            {/* Center intersection core - where the rings meet */}
+            {/* Center intersection core */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <div 
                 className={`w-12 h-12 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-ring-core-breathe transition-all duration-300`}
@@ -1905,33 +554,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   opacity: 0.8 + (conversationIntensity / 200)
                 }}
               />
-              {/* Inner core glow */}
-              <div 
-                className="absolute inset-0 w-10 h-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-white/20 to-transparent animate-pulse-slow"
-                style={{
-                  filter: `blur(1px) drop-shadow(0 0 10px ${circleColors.glow})`
-                }}
-              />
             </div>
-            
-            {/* Intensity ripples for high-energy conversations */}
-            {conversationIntensity > 60 && (
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <div 
-                  className="w-80 h-80 rounded-full border border-white/20 animate-ping"
-                  style={{
-                    animationDuration: `${Math.max(800, 2000 - conversationIntensity * 10)}ms`
-                  }}
-                />
-                <div 
-                  className="w-96 h-96 rounded-full border border-white/10 animate-ping absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-                  style={{
-                    animationDuration: `${Math.max(1000, 2400 - conversationIntensity * 12)}ms`,
-                    animationDelay: '0.3s'
-                  }}
-                />
-              </div>
-            )}
             
             {/* Activity indicator */}
             <div className="absolute -bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2">
@@ -1955,9 +578,9 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             </div>
           </div>
         </div>
-
+        
         {/* Chat Messages Overlay - Lower 1/4 of screen */}
-        {showChat && messages.length > 0 && (
+        {showChat && (messages || []).length > 0 && (
           <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32 h-1/4 min-h-[160px]">
             <Card className="h-full bg-black/40 border-white/10 backdrop-blur-md relative">
               {/* Chat Navigation Header */}
@@ -1965,7 +588,7 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigateChat('back')}
+                  onClick={navigateChatBack}
                   disabled={!canScrollBack}
                   className={`text-white/70 hover:text-white hover:bg-white/10 min-w-[36px] h-8 ${
                     !canScrollBack ? 'opacity-30' : ''
@@ -1975,17 +598,13 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                 </Button>
                 
                 <div className="text-center text-white/60 text-xs">
-                  {chatScrollOffset > 0 ? (
-                    <span>Older messages • Swipe to navigate</span>
-                  ) : (
-                    <span>Recent • Swipe for history</span>
-                  )}
+                  Recent messages
                 </div>
                 
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigateChat('forward')}
+                  onClick={navigateChatForward}
                   disabled={!canScrollForward}
                   className={`text-white/70 hover:text-white hover:bg-white/10 min-w-[36px] h-8 ${
                     !canScrollForward ? 'opacity-30' : ''
@@ -1997,7 +616,6 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
 
               {/* Chat Messages with Swipe Support */}
               <div 
-                ref={chatContainerRef}
                 className="h-full pt-10 pb-2"
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
@@ -2030,1414 +648,10 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   </div>
                 </ScrollArea>
               </div>
-
-              {/* Swipe indicator dots */}
-              {messages.length > MESSAGES_PER_PAGE && (
-                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                  {Array.from({ length: Math.ceil(messages.length / MESSAGES_PER_PAGE) }).map((_, index) => {
-                    const isActive = index === Math.floor(chatScrollOffset / MESSAGES_PER_PAGE)
-                    return (
-                      <div
-                        key={index}
-                        className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
-                          isActive ? 'bg-white/60' : 'bg-white/20'
-                        }`}
-                      />
-                    )
-                  })}
-                </div>
-              )}
             </Card>
           </div>
         )}
-
-        {/* Presence Selector Overlay */}
-        {showPresenceSelector && (
-          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
-            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white text-base sm:text-lg font-medium">Switch Presence</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowPresenceSelector(false)}
-                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
-                >
-                  <X size={18} />
-                </Button>
-              </div>
-              
-              <p className="text-white/60 text-sm mb-6 leading-relaxed">
-                Choose a different companion to continue your conversation. Your new presence will understand your context and pick up where you left off.
-              </p>
-
-              <div className="grid grid-cols-1 gap-4">
-                {presences.map((presence) => {
-                  const isCurrent = getCurrentPresence().id === presence.id
-                  return (
-                    <Card
-                      key={presence.id}
-                      className={`p-4 cursor-pointer transition-all duration-300 bg-black/40 border backdrop-blur-md ${
-                        isCurrent
-                          ? 'border-purple-400 bg-purple-500/20 shadow-lg shadow-purple-500/20 opacity-50 cursor-not-allowed' 
-                          : 'border-white/10 hover:border-white/30 hover:bg-black/60'
-                      }`}
-                      onClick={() => !isCurrent && switchPresence(presence.id)}
-                    >
-                      <div className="flex items-center space-x-4">
-                        {/* Presence visualization */}
-                        <div className="relative flex-shrink-0 h-12 w-16 flex items-center justify-center">
-                          <div 
-                            className={`w-8 h-8 rounded-full bg-gradient-to-br ${presence.colors.circle1} animate-pulse-slow opacity-90`}
-                            style={{ filter: `drop-shadow(0 0 15px ${presence.colors.glow})` }}
-                          />
-                          <div 
-                            className={`w-6 h-6 rounded-full bg-gradient-to-br ${presence.colors.circle2} absolute opacity-80 animate-pulse-slow`}
-                            style={{ 
-                              filter: `drop-shadow(0 0 10px ${presence.colors.glow})`,
-                              animationDelay: '0.5s',
-                              transform: 'translateX(6px)'
-                            }}
-                          />
-                        </div>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h4 className="text-white text-lg font-medium">{presence.name}</h4>
-                            {isCurrent && (
-                              <Badge variant="secondary" className="bg-purple-500/20 text-purple-200 text-xs">
-                                Current
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-white/70 text-sm leading-relaxed">
-                            {presence.description}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  )
-                })}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Background Selector Overlay */}
-        {showBackgroundSelector && (
-          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
-            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white text-base sm:text-lg font-medium">Choose Background</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowBackgroundSelector(false)}
-                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
-                >
-                  <X size={18} />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {backgroundOptions.map((bg) => (
-                  <Button
-                    key={bg.id}
-                    variant="ghost"
-                    onClick={() => {
-                      setSelectedBackground(bg.id)
-                      setShowBackgroundSelector(false)
-                    }}
-                    className={`h-16 sm:h-20 flex flex-col items-center justify-center space-y-2 border-2 transition-all min-w-[120px] ${
-                      selectedBackground === bg.id 
-                        ? 'border-purple-400 bg-purple-500/20' 
-                        : 'border-white/10 hover:border-white/30'
-                    }`}
-                  >
-                    <div 
-                      className="w-6 h-6 sm:w-8 sm:h-8 rounded-full"
-                      style={{ background: bg.preview }}
-                    />
-                    <span className="text-xs text-white">{bg.name}</span>
-                  </Button>
-                ))}
-              </div>
-              
-              {/* Camera controls */}
-              <div className="mt-4 sm:mt-6 pt-4 border-t border-white/10">
-                <h4 className="text-white text-sm font-medium mb-3">Camera</h4>
-                <div className="flex space-x-3">
-                  <Button
-                    variant="ghost"
-                    onClick={isVideoActive ? stopVideo : startVideo}
-                    className={`flex-1 min-h-[44px] ${isVideoActive ? 'bg-red-500/20 text-red-200' : 'bg-green-500/20 text-green-200'}`}
-                  >
-                    <VideoCamera size={16} className="mr-2" />
-                    <span className="text-sm">{isVideoActive ? 'Stop Camera' : 'Start Camera'}</span>
-                  </Button>
-                  {isVideoActive && (
-                    <Button
-                      variant="ghost"
-                      onClick={switchCamera}
-                      className="bg-blue-500/20 text-blue-200 min-w-[44px] min-h-[44px]"
-                    >
-                      <CameraRotate size={16} />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Settings Overlay */}
-        {showSettings && (
-          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
-            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white text-base sm:text-lg font-medium">Settings</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSettings(false)}
-                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
-                >
-                  <X size={18} />
-                </Button>
-              </div>
-
-              <div className="space-y-6">
-                
-                {/* Voice Settings */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Volume size={18} className="text-cyan-400" />
-                    <h4 className="text-white text-lg font-medium">Voice Settings</h4>
-                  </div>
-                  
-                  {/* Voice Enabled */}
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="voice-enabled" className="text-white/80 text-sm">
-                      Enable Voice Responses
-                    </Label>
-                    <Switch
-                      id="voice-enabled"
-                      checked={userPreferences.voiceEnabled}
-                      onCheckedChange={(checked) => 
-                        setUserPreferences(prev => ({ ...prev, voiceEnabled: checked }))
-                      }
-                    />
-                  </div>
-
-                  {/* Voice Volume */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">
-                      Volume: {userPreferences.voiceVolume}%
-                    </Label>
-                    <Slider
-                      value={[userPreferences.voiceVolume]}
-                      onValueChange={([value]) => 
-                        setUserPreferences(prev => ({ ...prev, voiceVolume: value }))
-                      }
-                      max={100}
-                      min={0}
-                      step={5}
-                      className="w-full"
-                      disabled={!userPreferences.voiceEnabled}
-                    />
-                  </div>
-
-                  {/* Voice Speed */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">
-                      Speed: {userPreferences.voiceSpeed}%
-                    </Label>
-                    <Slider
-                      value={[userPreferences.voiceSpeed]}
-                      onValueChange={([value]) => 
-                        setUserPreferences(prev => ({ ...prev, voiceSpeed: value }))
-                      }
-                      max={200}
-                      min={50}
-                      step={5}
-                      className="w-full"
-                      disabled={!userPreferences.voiceEnabled}
-                    />
-                  </div>
-
-                  {/* Voice Pitch */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">
-                      Pitch: {userPreferences.voicePitch}%
-                    </Label>
-                    <Slider
-                      value={[userPreferences.voicePitch]}
-                      onValueChange={([value]) => 
-                        setUserPreferences(prev => ({ ...prev, voicePitch: value }))
-                      }
-                      max={200}
-                      min={50}
-                      step={5}
-                      className="w-full"
-                      disabled={!userPreferences.voiceEnabled}
-                    />
-                  </div>
-
-                  {/* Preferred Voice */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">
-                      Preferred Voice
-                    </Label>
-                    <Select
-                      value={userPreferences.preferredVoice || "default"}
-                      onValueChange={(value) => 
-                        setUserPreferences(prev => ({ 
-                          ...prev, 
-                          preferredVoice: value === "default" ? undefined : value 
-                        }))
-                      }
-                      disabled={!userPreferences.voiceEnabled}
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue placeholder="Choose voice" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                        <SelectItem value="default">Default</SelectItem>
-                        {window.speechSynthesis.getVoices().filter(voice => 
-                          voice.lang.startsWith('en')
-                        ).slice(0, 10).map((voice) => (
-                          <SelectItem key={voice.name} value={voice.name} className="text-white">
-                            {voice.name} ({voice.lang})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Separator className="bg-white/10" />
-
-                {/* Theme Settings */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Palette size={18} className="text-purple-400" />
-                    <h4 className="text-white text-lg font-medium">Appearance</h4>
-                  </div>
-
-                  {/* Theme */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Theme</Label>
-                    <Select
-                      value={userPreferences.theme}
-                      onValueChange={(value: 'auto' | 'dark' | 'light') => 
-                        setUserPreferences(prev => ({ ...prev, theme: value }))
-                      }
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                        <SelectItem value="auto" className="text-white">Auto</SelectItem>
-                        <SelectItem value="dark" className="text-white">Dark</SelectItem>
-                        <SelectItem value="light" className="text-white">Light</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Primary Color */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Primary Color</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { id: 'purple', name: 'Purple', color: 'bg-purple-500' },
-                        { id: 'blue', name: 'Blue', color: 'bg-blue-500' },
-                        { id: 'green', name: 'Green', color: 'bg-green-500' },
-                        { id: 'orange', name: 'Orange', color: 'bg-orange-500' },
-                        { id: 'pink', name: 'Pink', color: 'bg-pink-500' },
-                        { id: 'cyan', name: 'Cyan', color: 'bg-cyan-500' },
-                        { id: 'amber', name: 'Amber', color: 'bg-amber-500' },
-                        { id: 'red', name: 'Red', color: 'bg-red-500' },
-                      ].map((color) => (
-                        <Button
-                          key={color.id}
-                          variant="ghost"
-                          onClick={() => 
-                            setUserPreferences(prev => ({ ...prev, primaryColor: color.id }))
-                          }
-                          className={`h-10 flex items-center justify-center border-2 transition-all ${
-                            userPreferences.primaryColor === color.id 
-                              ? 'border-white/60' 
-                              : 'border-white/10'
-                          }`}
-                        >
-                          <div className={`w-6 h-6 rounded-full ${color.color}`} />
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Animation Speed */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Animation Speed</Label>
-                    <Select
-                      value={userPreferences.animationSpeed}
-                      onValueChange={(value: 'slow' | 'normal' | 'fast') => 
-                        setUserPreferences(prev => ({ ...prev, animationSpeed: value }))
-                      }
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                        <SelectItem value="slow" className="text-white">Slow</SelectItem>
-                        <SelectItem value="normal" className="text-white">Normal</SelectItem>
-                        <SelectItem value="fast" className="text-white">Fast</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Reduce Motion */}
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="reduce-motion" className="text-white/80 text-sm">
-                      Reduce Motion
-                    </Label>
-                    <Switch
-                      id="reduce-motion"
-                      checked={userPreferences.reduceMotion}
-                      onCheckedChange={(checked) => 
-                        setUserPreferences(prev => ({ ...prev, reduceMotion: checked }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <Separator className="bg-white/10" />
-
-                {/* Notification Settings */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Bell size={18} className="text-amber-400" />
-                    <h4 className="text-white text-lg font-medium">Notifications</h4>
-                  </div>
-
-                  {/* Notifications Enabled */}
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="notifications-enabled" className="text-white/80 text-sm">
-                      Enable Notifications
-                    </Label>
-                    <Switch
-                      id="notifications-enabled"
-                      checked={userPreferences.notificationsEnabled}
-                      onCheckedChange={(checked) => 
-                        setUserPreferences(prev => ({ ...prev, notificationsEnabled: checked }))
-                      }
-                    />
-                  </div>
-
-                  {/* Daily Check-ins */}
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="daily-checkins" className="text-white/80 text-sm">
-                      Daily Check-ins
-                    </Label>
-                    <Switch
-                      id="daily-checkins"
-                      checked={userPreferences.dailyCheckIns}
-                      onCheckedChange={(checked) => 
-                        setUserPreferences(prev => ({ ...prev, dailyCheckIns: checked }))
-                      }
-                      disabled={!userPreferences.notificationsEnabled}
-                    />
-                  </div>
-
-                  {/* Mood Reminders */}
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="mood-reminders" className="text-white/80 text-sm">
-                      Mood Reminders
-                    </Label>
-                    <Switch
-                      id="mood-reminders"
-                      checked={userPreferences.moodReminders}
-                      onCheckedChange={(checked) => 
-                        setUserPreferences(prev => ({ ...prev, moodReminders: checked }))
-                      }
-                      disabled={!userPreferences.notificationsEnabled}
-                    />
-                  </div>
-
-                  {/* Conversation Summaries */}
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="conversation-summaries" className="text-white/80 text-sm">
-                      Weekly Conversation Summaries
-                    </Label>
-                    <Switch
-                      id="conversation-summaries"
-                      checked={userPreferences.conversationSummaries}
-                      onCheckedChange={(checked) => 
-                        setUserPreferences(prev => ({ ...prev, conversationSummaries: checked }))
-                      }
-                      disabled={!userPreferences.notificationsEnabled}
-                    />
-                  </div>
-
-                  {/* Notification Time */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">
-                      Preferred Check-in Time
-                    </Label>
-                    <Select
-                      value={userPreferences.notificationTime}
-                      onValueChange={(value) => 
-                        setUserPreferences(prev => ({ ...prev, notificationTime: value }))
-                      }
-                      disabled={!userPreferences.notificationsEnabled || !userPreferences.dailyCheckIns}
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                        {Array.from({ length: 24 }, (_, i) => {
-                          const hour = i.toString().padStart(2, '0')
-                          const time = `${hour}:00`
-                          const displayTime = i === 0 ? '12:00 AM' : 
-                                            i < 12 ? `${i}:00 AM` :
-                                            i === 12 ? '12:00 PM' :
-                                            `${i - 12}:00 PM`
-                          return (
-                            <SelectItem key={time} value={time} className="text-white">
-                              {displayTime}
-                            </SelectItem>
-                          )
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Separator className="bg-white/10" />
-
-                {/* Social Settings */}
-                {userAccount && (
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Users size={18} className="text-green-400" />
-                      <h4 className="text-white text-lg font-medium">Social Features</h4>
-                    </div>
-
-                    {/* Social Features Enabled */}
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="social-enabled" className="text-white/80 text-sm">
-                        Enable Social Features
-                      </Label>
-                      <Switch
-                        id="social-enabled"
-                        checked={userPreferences.socialEnabled}
-                        onCheckedChange={(checked) => 
-                          setUserPreferences(prev => ({ ...prev, socialEnabled: checked }))
-                        }
-                      />
-                    </div>
-
-                    {/* Share Journey */}
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="share-journey" className="text-white/80 text-sm">
-                        Share Journey Moments
-                      </Label>
-                      <Switch
-                        id="share-journey"
-                        checked={userPreferences.shareJourney}
-                        onCheckedChange={(checked) => 
-                          setUserPreferences(prev => ({ ...prev, shareJourney: checked }))
-                        }
-                        disabled={!userPreferences.socialEnabled}
-                      />
-                    </div>
-
-                    {/* Allow Connections */}
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="allow-connections" className="text-white/80 text-sm">
-                        Allow Connection Requests
-                      </Label>
-                      <Switch
-                        id="allow-connections"
-                        checked={userPreferences.allowConnections}
-                        onCheckedChange={(checked) => 
-                          setUserPreferences(prev => ({ ...prev, allowConnections: checked }))
-                        }
-                        disabled={!userPreferences.socialEnabled}
-                      />
-                    </div>
-
-                    {/* Anonymous Mode */}
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="anonymous-mode" className="text-white/80 text-sm">
-                        Default to Anonymous Posts
-                      </Label>
-                      <Switch
-                        id="anonymous-mode"
-                        checked={userPreferences.anonymousMode}
-                        onCheckedChange={(checked) => 
-                          setUserPreferences(prev => ({ ...prev, anonymousMode: checked }))
-                        }
-                        disabled={!userPreferences.socialEnabled}
-                      />
-                    </div>
-
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                      <p className="text-blue-200 text-xs leading-relaxed">
-                        Social features help you connect with others on similar journeys. All interactions are designed to be supportive and empathetic.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Account Settings Overlay */}
-        {showAccountSettings && userAccount && (
-          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
-            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white text-base sm:text-lg font-medium">Account Settings</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAccountSettings(false)}
-                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
-                >
-                  <X size={18} />
-                </Button>
-              </div>
-
-              <div className="space-y-6">
-                
-                {/* Profile Information */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <User size={18} className="text-blue-400" />
-                    <h4 className="text-white text-lg font-medium">Profile</h4>
-                  </div>
-                  
-                  {/* Display Name */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Display Name</Label>
-                    <Input
-                      value={userAccount.userName}
-                      onChange={(e) => 
-                        setUserAccount(prev => prev ? ({ ...prev, userName: e.target.value }) : null)
-                      }
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Email</Label>
-                    <Input
-                      type="email"
-                      value={userAccount.email || ''}
-                      onChange={(e) => 
-                        setUserAccount(prev => prev ? ({ ...prev, email: e.target.value }) : null)
-                      }
-                      placeholder="your@email.com"
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
-                    />
-                  </div>
-
-                  {/* Bio */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Bio</Label>
-                    <Input
-                      value={userAccount.bio || ''}
-                      onChange={(e) => 
-                        setUserAccount(prev => prev ? ({ ...prev, bio: e.target.value }) : null)
-                      }
-                      placeholder="Tell us about yourself..."
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
-                    />
-                  </div>
-
-                  {/* Timezone */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Timezone</Label>
-                    <Select
-                      value={userAccount.timezone || ""}
-                      onValueChange={(value) => 
-                        setUserAccount(prev => prev ? ({ ...prev, timezone: value }) : null)
-                      }
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue placeholder="Select timezone" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                        <SelectItem value="America/New_York" className="text-white">Eastern Time</SelectItem>
-                        <SelectItem value="America/Chicago" className="text-white">Central Time</SelectItem>
-                        <SelectItem value="America/Denver" className="text-white">Mountain Time</SelectItem>
-                        <SelectItem value="America/Los_Angeles" className="text-white">Pacific Time</SelectItem>
-                        <SelectItem value="Europe/London" className="text-white">GMT</SelectItem>
-                        <SelectItem value="Europe/Paris" className="text-white">CET</SelectItem>
-                        <SelectItem value="Asia/Tokyo" className="text-white">JST</SelectItem>
-                        <SelectItem value="Australia/Sydney" className="text-white">AEST</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Language */}
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Language</Label>
-                    <Select
-                      value={userAccount.language || "en"}
-                      onValueChange={(value) => 
-                        setUserAccount(prev => prev ? ({ ...prev, language: value }) : null)
-                      }
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                        <SelectItem value="en" className="text-white">English</SelectItem>
-                        <SelectItem value="es" className="text-white">Español</SelectItem>
-                        <SelectItem value="fr" className="text-white">Français</SelectItem>
-                        <SelectItem value="de" className="text-white">Deutsch</SelectItem>
-                        <SelectItem value="it" className="text-white">Italiano</SelectItem>
-                        <SelectItem value="pt" className="text-white">Português</SelectItem>
-                        <SelectItem value="ja" className="text-white">日本語</SelectItem>
-                        <SelectItem value="ko" className="text-white">한국어</SelectItem>
-                        <SelectItem value="zh" className="text-white">中文</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Separator className="bg-white/10" />
-
-                {/* Account Information */}
-                <div className="space-y-4">
-                  <h4 className="text-white text-lg font-medium">Account Information</h4>
-                  
-                  <div className="grid grid-cols-1 gap-4 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Account ID:</span>
-                      <span className="text-white font-mono text-xs">{userAccount.id}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Created:</span>
-                      <span className="text-white">{new Date(userAccount.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Profile Status:</span>
-                      <Badge variant={userAccount.profileCompleted ? "default" : "secondary"} 
-                             className={userAccount.profileCompleted ? "bg-green-500/20 text-green-200" : "bg-yellow-500/20 text-yellow-200"}>
-                        {userAccount.profileCompleted ? "Complete" : "Incomplete"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator className="bg-white/10" />
-
-                {/* Data Management */}
-                <div className="space-y-4">
-                  <h4 className="text-white text-lg font-medium">Data Management</h4>
-                  
-                  <div className="space-y-3">
-                    <Button
-                      onClick={() => {
-                        const userData = {
-                          account: userAccount,
-                          messages: messages,
-                          moodEntries: moodEntries,
-                          preferences: userPreferences,
-                          onboarding: onboardingData
-                        }
-                        const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' })
-                        const url = URL.createObjectURL(blob)
-                        const a = document.createElement('a')
-                        a.href = url
-                        a.download = `we-account-backup-${new Date().toISOString().split('T')[0]}.json`
-                        document.body.appendChild(a)
-                        a.click()
-                        document.body.removeChild(a)
-                        URL.revokeObjectURL(url)
-                      }}
-                      variant="ghost"
-                      className="w-full justify-start bg-blue-500/20 text-blue-200 hover:bg-blue-500/30"
-                    >
-                      Export Account Data
-                    </Button>
-                    
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-start bg-red-500/20 text-red-200 hover:bg-red-500/30"
-                        >
-                          Delete Account
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-white">Delete Account</AlertDialogTitle>
-                          <AlertDialogDescription className="text-white/70 leading-relaxed">
-                            This will permanently delete your account and all associated data including conversations, mood entries, and preferences. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="bg-gray-600/90 text-white hover:bg-gray-700 border-white/20">
-                            Cancel
-                          </AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={() => {
-                              // Delete all user data and reset
-                              setUserAccount(null)
-                              returnToStart()
-                            }}
-                            className="bg-red-600/90 hover:bg-red-700 text-white"
-                          >
-                            Delete Account
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Social Hub Overlay */}
-        {showSocialHub && userAccount && userPreferences.socialEnabled && (
-          <div className="absolute inset-x-2 sm:inset-x-4 top-16 sm:top-20 bottom-28 sm:bottom-32">
-            <Card className="p-4 sm:p-6 bg-black/40 border-white/10 backdrop-blur-md max-h-full overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white text-base sm:text-lg font-medium">Social Hub</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSocialHub(false)}
-                  className="text-white hover:bg-white/10 min-w-[44px] h-11"
-                >
-                  <X size={18} />
-                </Button>
-              </div>
-
-              {/* Social Navigation */}
-              <div className="flex space-x-2 mb-6 p-1 bg-white/5 rounded-lg">
-                {[
-                  { id: 'community', label: 'Community', icon: Globe },
-                  { id: 'chat', label: 'Chat', icon: ChatCircle },
-                  { id: 'connections', label: 'Connections', icon: UserPlus },
-                  { id: 'circles', label: 'Circles', icon: Users },
-                  { id: 'journey', label: 'Journey', icon: Sparkle }
-                ].map((section) => {
-                  const IconComponent = section.icon
-                  const unreadCount = section.id === 'chat' ? getTotalUnreadMessages() : 0
-                  return (
-                    <Button
-                      key={section.id}
-                      variant="ghost"
-                      onClick={() => setSocialSection(section.id as any)}
-                      className={`flex-1 text-xs py-2 h-8 transition-all relative ${ 
-                        socialSection === section.id 
-                          ? 'bg-purple-500/20 text-purple-200 border border-purple-400/30' 
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      <IconComponent size={14} className="mr-1" />
-                      {section.label}
-                      {unreadCount > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs bg-red-500 text-white flex items-center justify-center">
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </Badge>
-                      )}
-                    </Button>
-                  )
-                })}
-              </div>
-
-              {/* Community Section */}
-              {socialSection === 'community' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-white font-medium">Community Posts</h4>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" className="bg-purple-600/90 hover:bg-purple-700 text-white">
-                          <Plus size={14} className="mr-1" />
-                          Share
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-black/90 border-white/20 backdrop-blur-md max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="text-white">Share with Community</DialogTitle>
-                          <DialogDescription className="text-white/60">
-                            Share your thoughts, gratitude, or ask for support
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 pt-4">
-                          <div className="space-y-2">
-                            <Label className="text-white/80 text-sm">Post Type</Label>
-                            <Select defaultValue="reflection">
-                              <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                                <SelectItem value="reflection" className="text-white">💭 Reflection</SelectItem>
-                                <SelectItem value="gratitude" className="text-white">❤️ Gratitude</SelectItem>
-                                <SelectItem value="support" className="text-white">🤝 Support Request</SelectItem>
-                                <SelectItem value="milestone" className="text-white">✨ Milestone</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-white/80 text-sm">Your thoughts</Label>
-                            <Textarea 
-                              placeholder="Share what's on your mind..."
-                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 min-h-[100px]"
-                            />
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch defaultChecked={userPreferences.anonymousMode} />
-                            <Label className="text-white/80 text-sm">Share anonymously</Label>
-                          </div>
-                          <Button 
-                            onClick={() => createCommunityPost("Demo post content", "reflection", userPreferences.anonymousMode)}
-                            className="w-full bg-purple-600/90 hover:bg-purple-700 text-white"
-                          >
-                            Share Post
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-
-                  <ScrollArea className="h-96">
-                    <div className="space-y-4">
-                      {communityPosts.map((post) => (
-                        <Card key={post.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
-                          <div className="flex items-start space-x-3">
-                            <Avatar className="w-10 h-10">
-                              <AvatarFallback className="bg-purple-500/20 text-purple-200">
-                                {post.isAnonymous ? '?' : post.authorName[0].toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-white/90 font-medium text-sm">{post.authorName}</span>
-                                  <Badge variant="secondary" className={`text-xs ${getPostTypeColor(post.type)}`}>
-                                    {getPostTypeIcon(post.type)}
-                                    <span className="ml-1 capitalize">{post.type}</span>
-                                  </Badge>
-                                </div>
-                                <span className="text-white/40 text-xs">{formatRelativeTime(post.timestamp)}</span>
-                              </div>
-                              
-                              <p className="text-white/80 text-sm leading-relaxed">{post.content}</p>
-                              
-                              {post.mood && (
-                                <div className="flex items-center space-x-1">
-                                  <span className="text-white/60 text-xs">Mood:</span>
-                                  <span className="text-sm">{getMoodEmoji(post.mood)}</span>
-                                </div>
-                              )}
-
-                              <div className="flex items-center space-x-4 pt-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => likePost(post.id)}
-                                  className={`text-xs h-8 px-3 ${
-                                    post.likes.includes(userAccount?.id || '') 
-                                      ? 'text-red-300 bg-red-500/20' 
-                                      : 'text-white/60 hover:text-red-300 hover:bg-red-500/10'
-                                  }`}
-                                >
-                                  <Heart size={12} className="mr-1" />
-                                  {post.likes.length}
-                                </Button>
-                                
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => offerSupport(post.id)}
-                                  className="text-xs h-8 px-3 text-white/60 hover:text-blue-300 hover:bg-blue-500/10"
-                                >
-                                  <HandsClapping size={12} className="mr-1" />
-                                  Support ({post.supportCount})
-                                </Button>
-
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-xs h-8 px-3 text-white/60 hover:text-green-300 hover:bg-green-500/10"
-                                >
-                                  <Share size={12} className="mr-1" />
-                                  Share
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* Chat Section */}
-              {socialSection === 'chat' && (
-                <div className="space-y-4">
-                  {!showDirectChat && (
-                    <>
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-white font-medium">Direct Messages</h4>
-                        <Badge variant="secondary" className="bg-blue-500/20 text-blue-200">
-                          {chatConversations.length} Conversations
-                        </Badge>
-                      </div>
-
-                      {/* Conversations List */}
-                      <ScrollArea className="h-96">
-                        <div className="space-y-3">
-                          {chatConversations.length === 0 ? (
-                            <Card className="p-6 bg-black/20 border-white/10 backdrop-blur-sm text-center">
-                              <ChatCircle size={32} className="mx-auto mb-3 text-blue-400" />
-                              <h5 className="text-white font-medium mb-2">No Conversations Yet</h5>
-                              <p className="text-white/60 text-sm leading-relaxed">
-                                Start chatting with your connections from the Connections section, or reach out to community members.
-                              </p>
-                            </Card>
-                          ) : (
-                            chatConversations.map((conversation) => (
-                              <Card 
-                                key={conversation.id} 
-                                className="p-4 bg-black/20 border-white/10 backdrop-blur-sm cursor-pointer hover:bg-black/30 transition-colors"
-                                onClick={() => {
-                                  setCurrentChatConversation(conversation.id)
-                                  setShowDirectChat(true)
-                                  markConversationAsRead(conversation.id)
-                                }}
-                              >
-                                <div className="flex items-start space-x-3">
-                                  <Avatar className="w-10 h-10">
-                                    <AvatarFallback className="bg-blue-500/20 text-blue-200">
-                                      {getConversationPartnerName(conversation)[0].toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1 space-y-1">
-                                    <div className="flex items-center justify-between">
-                                      <h6 className="text-white font-medium text-sm">
-                                        {getConversationPartnerName(conversation)}
-                                      </h6>
-                                      <div className="flex items-center space-x-2">
-                                        {conversation.unreadCount > 0 && (
-                                          <Badge className="h-5 w-5 p-0 text-xs bg-red-500 text-white flex items-center justify-center rounded-full">
-                                            {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
-                                          </Badge>
-                                        )}
-                                        <span className="text-white/40 text-xs">
-                                          {formatRelativeTime(conversation.lastActivity)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    {conversation.lastMessage && (
-                                      <p className="text-white/70 text-sm truncate">
-                                        {conversation.lastMessage.senderId === userAccount?.id ? 'You: ' : ''}
-                                        {conversation.lastMessage.content}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </Card>
-                            ))
-                          )}
-                        </div>
-                      </ScrollArea>
-                    </>
-                  )}
-
-                  {/* Direct Chat View */}
-                  {showDirectChat && currentChatConversation && (
-                    <div className="space-y-4">
-                      {/* Chat Header */}
-                      <div className="flex items-center justify-between">
-                        <Button
-                          variant="ghost"
-                          onClick={() => setShowDirectChat(false)}
-                          className="text-white/70 hover:text-white hover:bg-white/10"
-                        >
-                          <CaretLeft size={16} className="mr-1" />
-                          Back to Chats
-                        </Button>
-                        <h4 className="text-white font-medium">
-                          {getConversationPartnerName(
-                            chatConversations.find(c => c.id === currentChatConversation)!
-                          )}
-                        </h4>
-                        <div className="w-20" /> {/* Spacer for alignment */}
-                      </div>
-
-                      {/* Chat Messages */}
-                      <Card className="bg-black/20 border-white/10 backdrop-blur-sm">
-                        <ScrollArea className="h-64 p-4">
-                          <div className="space-y-3">
-                            {(chatMessages[currentChatConversation] || []).map((message) => (
-                              <div 
-                                key={message.id}
-                                className={`flex ${message.senderId === userAccount?.id ? 'justify-end' : 'justify-start'}`}
-                              >
-                                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                                  message.senderId === userAccount?.id
-                                    ? 'bg-purple-500/30 text-white' 
-                                    : 'bg-white/20 text-white'
-                                }`}>
-                                  <div className="space-y-1">
-                                    {message.messageType === 'mood-share' && (
-                                      <div className="flex items-center space-x-1 text-xs text-white/60 mb-1">
-                                        <Smiley size={12} />
-                                        <span>Mood shared</span>
-                                      </div>
-                                    )}
-                                    <div>{message.content}</div>
-                                    <div className="text-xs text-white/50 text-right">
-                                      {formatRelativeTime(message.timestamp)}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      </Card>
-
-                      {/* Chat Input */}
-                      <div className="space-y-3">
-                        <div className="flex space-x-2">
-                          <Input
-                            value={chatInputMessage}
-                            onChange={(e) => setChatInputMessage(e.target.value)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault()
-                                sendDirectMessage(currentChatConversation, chatInputMessage)
-                              }
-                            }}
-                            placeholder="Type your message..."
-                            className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
-                          />
-                          <Button 
-                            onClick={() => sendDirectMessage(currentChatConversation, chatInputMessage)}
-                            disabled={!chatInputMessage.trim()}
-                            className="bg-purple-600/90 hover:bg-purple-700 text-white"
-                          >
-                            <PaperPlaneTilt size={16} />
-                          </Button>
-                        </div>
-
-                        {/* Quick Actions */}
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => shareCurrentMoodToChat(currentChatConversation)}
-                            disabled={moodEntries.length === 0}
-                            className="text-purple-300 hover:bg-purple-500/10 text-xs"
-                          >
-                            <Smiley size={14} className="mr-1" />
-                            Share Mood
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Support Circles Section */}
-              {socialSection === 'circles' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-white font-medium">Support Circles</h4>
-                    <Badge variant="secondary" className="bg-green-500/20 text-green-200">
-                      {supportCircles.length} Joined
-                    </Badge>
-                  </div>
-
-                  {supportCircles.length > 0 && (
-                    <div className="space-y-3 mb-6">
-                      <h5 className="text-white/80 text-sm">Your Circles</h5>
-                      <div className="grid gap-3">
-                        {supportCircles.map((circle) => (
-                          <Card key={circle.id} className="p-4 bg-green-500/10 border-green-500/20">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h6 className="text-white font-medium text-sm">{circle.name}</h6>
-                                  <p className="text-white/70 text-xs leading-relaxed">{circle.description}</p>
-                                </div>
-                                <div className="flex items-center space-x-1 flex-shrink-0">
-                                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                  <span className="text-green-300 text-xs">Active</span>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-between pt-2">
-                                <div className="flex items-center space-x-3 text-white/60 text-xs">
-                                  <span className="flex items-center">
-                                    <Users size={12} className="mr-1" />
-                                    {circle.memberCount} members
-                                  </span>
-                                  <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 text-xs">
-                                    {circle.type.replace('-', ' ')}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="flex items-center space-x-2">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="text-green-300 hover:bg-green-500/10 text-xs h-7 px-2"
-                                  >
-                                    <Eye size={10} className="mr-1" />
-                                    View
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    className="text-blue-300 hover:bg-blue-500/10 text-xs h-7 px-2"
-                                  >
-                                    <ChatCircle size={10} className="mr-1" />
-                                    Chat
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <h5 className="text-white/80 text-sm">Discover New Circles</h5>
-                      {discoveredCircles.filter(circle => !supportCircles.find(sc => sc.id === circle.id)).length >= 3 && (
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            // Join all three main circles
-                            const circlesToJoin = discoveredCircles.filter(circle => 
-                              !supportCircles.find(sc => sc.id === circle.id) &&
-                              (circle.type === 'mindfulness' || circle.type === 'life-changes' || circle.type === 'daily-check-ins')
-                            )
-                            circlesToJoin.forEach(circle => joinSupportCircle(circle.id))
-                          }}
-                          className="bg-green-600/90 hover:bg-green-700 text-white text-xs"
-                        >
-                          <Plus size={12} className="mr-1" />
-                          Join All
-                        </Button>
-                      )}
-                    </div>
-                    {discoveredCircles.filter(circle => !supportCircles.find(sc => sc.id === circle.id)).map((circle) => (
-                      <Card key={circle.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h6 className="text-white font-medium">{circle.name}</h6>
-                              <p className="text-white/70 text-sm mt-1 leading-relaxed">{circle.description}</p>
-                            </div>
-                            <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 text-xs ml-2">
-                              {circle.type.replace('-', ' ')}
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4 text-white/60 text-xs">
-                              <span className="flex items-center">
-                                <Users size={12} className="mr-1" />
-                                {circle.memberCount} members
-                              </span>
-                              <span className="flex items-center">
-                                <Clock size={12} className="mr-1" />
-                                {formatRelativeTime(circle.recentActivity)}
-                              </span>
-                            </div>
-                            
-                            <Button
-                              size="sm"
-                              onClick={() => joinSupportCircle(circle.id)}
-                              className="bg-purple-600/90 hover:bg-purple-700 text-white text-xs h-8"
-                            >
-                              <Plus size={12} className="mr-1" />
-                              Join Circle
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Journey Section */}
-              {socialSection === 'journey' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-white font-medium">Your Journey</h4>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" className="bg-purple-600/90 hover:bg-purple-700 text-white">
-                          <Plus size={14} className="mr-1" />
-                          Add Moment
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-black/90 border-white/20 backdrop-blur-md max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="text-white">Capture Journey Moment</DialogTitle>
-                          <DialogDescription className="text-white/60">
-                            Document a meaningful moment in your emotional journey
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 pt-4">
-                          <div className="space-y-2">
-                            <Label className="text-white/80 text-sm">Moment Type</Label>
-                            <Select defaultValue="reflection">
-                              <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-black/90 border-white/20 backdrop-blur-md">
-                                <SelectItem value="breakthrough" className="text-white">🌟 Breakthrough</SelectItem>
-                                <SelectItem value="gratitude" className="text-white">🙏 Gratitude</SelectItem>
-                                <SelectItem value="challenge" className="text-white">💪 Challenge</SelectItem>
-                                <SelectItem value="reflection" className="text-white">💭 Reflection</SelectItem>
-                                <SelectItem value="milestone" className="text-white">🎯 Milestone</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-white/80 text-sm">Title</Label>
-                            <Input 
-                              placeholder="A meaningful title..."
-                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-white/80 text-sm">Describe this moment</Label>
-                            <Textarea 
-                              placeholder="What happened? How did it make you feel?"
-                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-white/40 min-h-[100px]"
-                            />
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch />
-                            <Label className="text-white/80 text-sm">Share with community</Label>
-                          </div>
-                          <Button 
-                            onClick={() => shareJourneyMoment("Demo moment", "Demo content", "reflection")}
-                            className="w-full bg-purple-600/90 hover:bg-purple-700 text-white"
-                          >
-                            Save Moment
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-
-                  <div className="space-y-4">
-                    {journeyMoments.length === 0 ? (
-                      <Card className="p-6 bg-black/20 border-white/10 backdrop-blur-sm text-center">
-                        <Sparkle size={32} className="mx-auto mb-3 text-purple-400" />
-                        <h5 className="text-white font-medium mb-2">Start Your Journey</h5>
-                        <p className="text-white/60 text-sm leading-relaxed">
-                          Capture meaningful moments, breakthroughs, and reflections as you grow with your WE companion.
-                        </p>
-                      </Card>
-                    ) : (
-                      <ScrollArea className="h-96">
-                        <div className="space-y-3">
-                          {journeyMoments.map((moment) => (
-                            <Card key={moment.id} className="p-4 bg-black/20 border-white/10 backdrop-blur-sm">
-                              <div className="space-y-2">
-                                <div className="flex items-start justify-between">
-                                  <h6 className="text-white font-medium">{moment.title}</h6>
-                                  <Badge variant="outline" className={getPostTypeColor(moment.type as any)}>
-                                    {moment.type}
-                                  </Badge>
-                                </div>
-                                
-                                <p className="text-white/70 text-sm leading-relaxed">{moment.content}</p>
-                                
-                                <div className="flex items-center justify-between pt-2">
-                                  <div className="flex items-center space-x-3 text-white/60 text-xs">
-                                    <span className="flex items-center">
-                                      <span className="mr-1">{getMoodEmoji(moment.mood)}</span>
-                                      Mood: {moment.mood}/5
-                                    </span>
-                                    <span>{formatRelativeTime(moment.timestamp)}</span>
-                                  </div>
-                                  
-                                  {moment.isShared && (
-                                    <Badge variant="secondary" className="bg-green-500/20 text-green-200 text-xs">
-                                      <Share size={10} className="mr-1" />
-                                      Shared
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Connections Section */}
-              {socialSection === 'connections' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-white font-medium">Connections</h4>
-                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-200">
-                      {myConnections.length} Connections
-                    </Badge>
-                  </div>
-
-                  {!userPreferences.allowConnections && (
-                    <Card className="p-4 bg-amber-500/10 border-amber-500/20">
-                      <div className="flex items-center space-x-2">
-                        <Bell size={16} className="text-amber-400" />
-                        <div>
-                          <p className="text-amber-200 text-sm font-medium">Connection requests disabled</p>
-                          <p className="text-amber-200/70 text-xs">Enable in Settings to connect with others</p>
-                        </div>
-                      </div>
-                    </Card>
-                  )}
-
-                  <Card className="p-6 bg-black/20 border-white/10 backdrop-blur-sm text-center">
-                    <UserPlus size={32} className="mx-auto mb-3 text-blue-400" />
-                    <h5 className="text-white font-medium mb-2">Connect & Support</h5>
-                    <p className="text-white/60 text-sm leading-relaxed mb-4">
-                      Find journey companions, accountability partners, or join support circles for encouragement and growth.
-                    </p>
-                    <Button 
-                      disabled={!userPreferences.allowConnections}
-                      className="bg-blue-600/90 hover:bg-blue-700 text-white disabled:opacity-50"
-                    >
-                      Find Connections
-                    </Button>
-                  </Card>
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
-
+        
         {/* Mood Selector Overlay */}
         {showMoodSelector && (
           <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32">
@@ -3448,7 +662,10 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                   <Button
                     key={level}
                     variant="ghost"
-                    onClick={() => registerMood(level)}
+                    onClick={() => {
+                      registerMood(level)
+                      setShowMoodSelector(false)
+                    }}
                     className="h-16 w-16 min-w-[60px] flex flex-col items-center justify-center hover:bg-white/10 rounded-xl touch-manipulation"
                   >
                     <span className="text-2xl sm:text-xl">{getMoodEmoji(level)}</span>
@@ -3465,30 +682,6 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
           
           {/* Call-style Controls */}
           <div className="flex justify-center items-center space-x-3 sm:space-x-4">
-            {/* Presence Switch */}
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => setShowPresenceSelector(!showPresenceSelector)}
-              className="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full bg-orange-600/90 hover:bg-orange-700 active:bg-orange-800 text-white backdrop-blur-sm transition-colors touch-manipulation"
-            >
-              <Swap size={20} />
-            </Button>
-            
-            {/* Video/Background */}
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={() => setShowBackgroundSelector(!showBackgroundSelector)}
-              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
-                isVideoActive 
-                  ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
-                  : 'bg-blue-600/90 hover:bg-blue-700 active:bg-blue-800'
-              }`}
-            >
-              {isVideoActive ? <VideoCamera size={20} /> : <Image size={20} />}
-            </Button>
-            
             {/* Voice Chat */}
             <Button
               size="lg"
@@ -3511,11 +704,11 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
                 if (isSpeaking) {
                   stopSpeaking()
                 } else {
-                  setVoiceEnabled(!voiceEnabled)
+                  updatePreferences({ voiceEnabled: !preferences?.voiceEnabled })
                 }
               }}
               className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
-                voiceEnabled && !isSpeaking
+                preferences?.voiceEnabled && !isSpeaking
                   ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
                   : isSpeaking
                   ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800'
@@ -3565,16 +758,6 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
               {getCurrentPresence().name}
             </Badge>
             
-            {/* Chat Navigation Status */}
-            {showChat && messages.length > MESSAGES_PER_PAGE && (
-              <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-200 border-cyan-400/30 backdrop-blur-sm text-xs px-2 py-1">
-                {chatScrollOffset > 0 
-                  ? `Viewing older messages (${Math.floor(chatScrollOffset / MESSAGES_PER_PAGE) + 1}/${Math.ceil(messages.length / MESSAGES_PER_PAGE)})`
-                  : `Latest messages (${messages.length} total)`
-                }
-              </Badge>
-            )}
-            
             {/* Current Mood Indicator */}
             {moodEntries.length > 0 && (
               <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
@@ -3584,29 +767,12 @@ Respond naturally and warmly as ${getCurrentPresence().name}, showing you unders
             
             {/* Voice Status */}
             <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm text-xs px-2 py-1 ${
-              voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
+              preferences?.voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
             }`}>
-              Voice: {voiceEnabled ? 'On' : 'Off'}
+              Voice: {preferences?.voiceEnabled ? 'On' : 'Off'}
             </Badge>
-            
-            {/* Camera Status */}
-            {isVideoActive && (
-              <Badge variant="secondary" className="bg-blue-500/20 text-blue-200 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
-                Camera: {currentCamera === 'front' ? 'Front' : 'Back'}
-              </Badge>
-            )}
           </div>
-
-          {/* Conversation Intensity Debug (for testing) */}
-          {conversationIntensity !== 30 && (
-            <div className="text-center">
-              <Badge variant="outline" className="bg-purple-500/20 text-purple-200 border-purple-400/30 backdrop-blur-sm text-xs px-2 py-1">
-                Intensity: {Math.round(conversationIntensity)}/100
-              </Badge>
-            </div>
-          )}
         </div>
-      </div>
       </div>
     </div>
   )
