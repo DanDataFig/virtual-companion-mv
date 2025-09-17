@@ -3,83 +3,68 @@
  * Centralizes all TypeScript interfaces and types for better maintainability
  */
 
-  id: string
-  timestamp: 
-}
+// ============================================================================
+// CORE MESSAGING & CONVERSATION TYPES
+// ============================================================================
 
-  level: number // 1-5 sca
+export interface Message {
   id: string
   content: string
   timestamp: Date
   sender: 'user' | 'companion'
-/
+}
 
-  id: 'nebula' | 'luma' | 't
-  descriptio
-    circle1: string
-    glow: string
- 
-
-// USER SYSTEM
-
-  completed: bool
- 
-
-
+export interface MoodEntry {
   id: string
-  email?: string
+  level: number // 1-5 scale
+  timestamp: Date
+  note?: string
+}
 
-  bio?: string
-  language?: string
+// ============================================================================
+// PRESENCE & AVATAR SYSTEM
+// ============================================================================
 
+export interface Presence {
+  id: 'nebula' | 'luma' | 'terra' | 'nova'
+  name: string
   description: string
+  personality: string
   colors: {
     circle1: string
     circle2: string
     glow: string
   }
-  
- 
+}
 
-  notificationTime: string
-  // Social se
-  shareJourney: boolean
+// ============================================================================
+// USER SYSTEM & ONBOARDING
+// ============================================================================
 
+export interface OnboardingData {
+  completed: boolean
+  selectedPresence?: 'nebula' | 'luma' | 'terra' | 'nova'
+  userName?: string
+  supportStyle?: 'listener' | 'encourager' | 'grounded'
+  checkinFrequency?: 'daily' | 'on-demand' | 'surprise'
+}
 
-// SOCIAL FEATURES
-
+export interface UserAccount {
   id: string
-  authorName: string
-  type: 'reflection' | 'milestone' | 'support' | 'grati
- 
+  userName: string
+  email?: string
+  avatarUrl?: string
+  bio?: string
+  language?: string
+  createdAt: Date
+}
 
-  tags: string[]
-
-  id: string
-  connectedUserI
-  connectionType:
-  sharedInterests
-  lastInteraction: Date
-
-  id: string
-  description: stri
- 
-
-  tags: string[]
-
-  id: string
-  title: string
-  mood: number
-  isShared: boolean
-  timestamp: Date
-  
-
-// CHAT SYSTEM
-
-  id: string
-  senderName: string
-  
-  // Notification settings
+export interface UserPreferences {
+  voiceEnabled: boolean
+  voiceSpeed: number
+  voicePitch: number
+  voiceVolume: number
+  preferredVoice: string
   notificationsEnabled: boolean
   dailyCheckIns: boolean
   moodReminders: boolean
@@ -160,71 +145,64 @@ export interface ChatMessage {
   receiverId: string
   content: string
   timestamp: Date
-
   messageType: 'text' | 'mood-share' | 'journey-moment' | 'system'
-
+  metadata?: {
     mood?: number
     journeyMomentId?: string
     systemType?: 'connection-request' | 'connection-accepted' | 'circle-invite'
-
+  }
 }
 
 export interface ChatConversation {
-
+  id: string
   participantIds: string[]
   participantNames: string[]
   lastMessage?: ChatMessage
-
+  lastActivity: Date
   unreadCount: number
-
   conversationType: 'direct' | 'group'
+}
 
+// ============================================================================
+// UI & INTERACTION TYPES
+// ============================================================================
 
+export type OnboardingStep = 'welcome' | 'presence-selection' | 'personalization' | 'preferences' | 'complete'
 
+export type SocialSection = 'community' | 'connections' | 'circles' | 'chat'
 
+export type BackgroundOption = {
+  id: string
+  name: string
+  url?: string
+  gradient?: string
+  preview?: string
+}
 
+// ============================================================================
+// ANIMATION & STATE TYPES
+// ============================================================================
 
+export interface AnimationState {
+  isAnimating: boolean
+  animationType: 'pulse' | 'glow' | 'ripple' | 'breathe'
+  intensity: number
+}
 
+export interface ConversationIntensity {
+  level: number // 0-100
+  trend: 'rising' | 'falling' | 'stable'
+  factors: string[]
+}
 
+// ============================================================================
+// UTILITY TYPES
+// ============================================================================
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+export type MoodLevel = 1 | 2 | 3 | 4 | 5
+export type IntensityLevel = number // 0-100
+export type TouchPosition = {
+  x: number
+  y: number
+  timestamp: number
+}

@@ -102,13 +102,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   voiceVolume: 80,
   voiceSpeed: 90,
   voicePitch: 110,
-  preferredVoice: undefined,
-  
-  // Theme settings defaults
-  theme: 'auto',
-  primaryColor: 'purple',
-  animationSpeed: 'normal',
-  reduceMotion: false,
+  preferredVoice: 'default',
   
   // Notification settings defaults
   notificationsEnabled: true,

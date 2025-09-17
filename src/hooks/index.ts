@@ -229,14 +229,16 @@ export const useSwipeGesture = (onSwipeLeft?: () => void, onSwipeRight?: () => v
     setTouchEnd(null)
     setTouchStart({
       x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY
+      y: e.targetTouches[0].clientY,
+      timestamp: Date.now()
     })
   }, [])
   
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     setTouchEnd({
       x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY
+      y: e.targetTouches[0].clientY,
+      timestamp: Date.now()
     })
   }, [])
   
