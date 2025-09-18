@@ -555,6 +555,41 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   background: `radial-gradient(circle at 70% 70%, rgba(0,0,0,0.4) 0%, transparent 70%)`,
                 }}
               />
+              
+              {/* Flowing Particles - only during active conversation */}
+              {(conversationIntensity > 20 || isLoading) && (
+                <>
+                  {/* Primary particles */}
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={`primary-${i}`}
+                      className="absolute w-2 h-2 rounded-full animate-tube-particle-flow-left"
+                      style={{
+                        background: `radial-gradient(circle, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 0%, transparent 70%)`,
+                        filter: `drop-shadow(0 0 8px ${circleColors.glow})`,
+                        animationDelay: `${i * 0.3}s`,
+                        animationDuration: `${2 + (conversationIntensity / 50)}s`,
+                        opacity: 0.8 + (conversationIntensity / 500)
+                      }}
+                    />
+                  ))}
+                  
+                  {/* Secondary trail particles for enhanced effect */}
+                  {conversationIntensity > 50 && [...Array(4)].map((_, i) => (
+                    <div
+                      key={`trail-${i}`}
+                      className="absolute w-1 h-1 rounded-full animate-tube-particle-flow-left"
+                      style={{
+                        background: `radial-gradient(circle, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}80 0%, transparent 60%)`,
+                        filter: `drop-shadow(0 0 4px ${circleColors.glow})`,
+                        animationDelay: `${i * 0.45 + 0.15}s`,
+                        animationDuration: `${2.5 + (conversationIntensity / 60)}s`,
+                        opacity: 0.6
+                      }}
+                    />
+                  ))}
+                </>
+              )}
             </div>
             
             {/* Right Ring Tube - overlapping */}
@@ -600,6 +635,41 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   background: `radial-gradient(circle at 70% 70%, rgba(0,0,0,0.4) 0%, transparent 70%)`,
                 }}
               />
+              
+              {/* Flowing Particles - only during active conversation */}
+              {(conversationIntensity > 20 || isLoading) && (
+                <>
+                  {/* Primary particles */}
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={`primary-${i}`}
+                      className="absolute w-2 h-2 rounded-full animate-tube-particle-flow-right"
+                      style={{
+                        background: `radial-gradient(circle, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 0%, transparent 70%)`,
+                        filter: `drop-shadow(0 0 8px ${circleColors.glow})`,
+                        animationDelay: `${i * 0.4}s`,
+                        animationDuration: `${2.5 + (conversationIntensity / 40)}s`,
+                        opacity: 0.7 + (conversationIntensity / 400)
+                      }}
+                    />
+                  ))}
+                  
+                  {/* Secondary trail particles for enhanced effect */}
+                  {conversationIntensity > 50 && [...Array(4)].map((_, i) => (
+                    <div
+                      key={`trail-${i}`}
+                      className="absolute w-1 h-1 rounded-full animate-tube-particle-flow-right"
+                      style={{
+                        background: `radial-gradient(circle, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}80 0%, transparent 60%)`,
+                        filter: `drop-shadow(0 0 4px ${circleColors.glow})`,
+                        animationDelay: `${i * 0.5 + 0.2}s`,
+                        animationDuration: `${3 + (conversationIntensity / 45)}s`,
+                        opacity: 0.5
+                      }}
+                    />
+                  ))}
+                </>
+              )}
             </div>
             
             {/* Center intersection core */}
@@ -612,16 +682,57 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   opacity: 0.8 + (conversationIntensity / 200)
                 }}
               />
+              
+              {/* Cross-ring particle exchange during high intensity */}
+              {conversationIntensity > 70 && (
+                <>
+                  {[...Array(3)].map((_, i) => (
+                    <div
+                      key={`exchange-${i}`}
+                      className="absolute w-1.5 h-1.5 rounded-full animate-cross-ring-exchange"
+                      style={{
+                        background: `radial-gradient(circle, #ffffff 0%, ${circleColors.glow} 50%, transparent 80%)`,
+                        filter: `drop-shadow(0 0 6px ${circleColors.glow})`,
+                        animationDelay: `${i * 0.6}s`,
+                        animationDuration: '1.8s',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                    />
+                  ))}
+                </>
+              )}
             </div>
             
             {/* Activity indicator */}
             <div className="absolute -bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2">
               {isLoading ? (
-                <div className="flex items-center space-x-2 text-white/80">
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <span className="text-sm ml-2">Thinking...</span>
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="flex items-center space-x-2 text-white/80">
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <span className="text-sm ml-2">Thinking...</span>
+                  </div>
+                  
+                  {/* Loading particle burst */}
+                  <div className="relative w-8 h-8">
+                    {[...Array(8)].map((_, i) => (
+                      <div
+                        key={`loading-particle-${i}`}
+                        className="absolute w-1 h-1 bg-cyan-400 rounded-full animate-loading-burst"
+                        style={{
+                          animationDelay: `${i * 0.1}s`,
+                          animationDuration: '2s',
+                          filter: 'drop-shadow(0 0 4px #22d3ee)',
+                          top: '50%',
+                          left: '50%',
+                          transform: `translate(-50%, -50%) rotate(${i * 45}deg) translateX(0px)`
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="text-center text-white/60">

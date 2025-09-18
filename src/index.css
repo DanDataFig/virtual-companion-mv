@@ -487,3 +487,115 @@ input[type="text"] {
 .animate-presence-switch-glow {
   animation: presenceSwitchGlow 1.5s ease-in-out infinite;
 }
+
+/* Tube particle flow animations for left ring */
+@keyframes tube-particle-flow-left {
+  0% {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(0deg) translateX(70px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(360deg) translateX(70px) rotate(-360deg);
+    opacity: 0;
+  }
+}
+
+.animate-tube-particle-flow-left {
+  animation: tube-particle-flow-left 3s linear infinite;
+}
+
+/* Tube particle flow animations for right ring - counter-clockwise */
+@keyframes tube-particle-flow-right {
+  0% {
+    top: 50%;
+    right: 50%;
+    transform: translate(50%, -50%) rotate(0deg) translateX(70px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 50%;
+    right: 50%;
+    transform: translate(50%, -50%) rotate(-360deg) translateX(70px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-tube-particle-flow-right {
+  animation: tube-particle-flow-right 3.5s linear infinite;
+}
+
+/* Cross-ring particle exchange animation for high intensity */
+@keyframes cross-ring-exchange {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(-100px, -50%) scale(1.2);
+    opacity: 0.8;
+  }
+  60% {
+    transform: translate(50px, -50%) scale(1.2);
+    opacity: 0.8;
+  }
+  80% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+}
+
+.animate-cross-ring-exchange {
+  animation: cross-ring-exchange 1.8s ease-in-out infinite;
+}
+
+/* Loading particle burst animation */
+@keyframes loading-burst {
+  0% {
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg)) translateX(0px) scale(0);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg)) translateX(15px) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg)) translateX(20px) scale(1.2);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg)) translateX(15px) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg)) translateX(0px) scale(0);
+    opacity: 0;
+  }
+}
+
+.animate-loading-burst {
+  animation: loading-burst 2s ease-in-out infinite;
+}
