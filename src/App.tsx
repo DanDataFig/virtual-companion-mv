@@ -511,9 +511,9 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
           
           {/* Infinity Ring Avatar - Responsive sizing */}
           <div className="relative flex items-center justify-center" style={{ width: '320px', height: '180px' }}>
-            {/* Left Ring */}
+            {/* Left Ring Tube */}
             <div 
-              className={`absolute rounded-full border-6 sm:border-8 md:border-10 animate-infinity-flow transition-all duration-500`}
+              className={`absolute rounded-full animate-infinity-flow transition-all duration-500`}
               style={{
                 width: '160px',
                 height: '160px',
@@ -521,28 +521,86 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                 top: '50%',
                 transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1000)})`,
                 animationDuration: `${animationSpeed}ms`,
-                borderColor: 'transparent',
-                borderImage: `linear-gradient(135deg, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 30%, transparent 70%) 1`,
-                filter: `drop-shadow(0 0 25px ${circleColors.glow})`,
-                background: 'transparent'
+                background: `conic-gradient(from 0deg, 
+                  ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}20 0deg, 
+                  transparent 30deg, 
+                  ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}40 90deg,
+                  transparent 120deg,
+                  ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}20 180deg,
+                  transparent 210deg,
+                  ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}40 270deg,
+                  transparent 300deg)`,
+                filter: `drop-shadow(0 0 25px ${circleColors.glow}) drop-shadow(inset 0 0 20px rgba(0,0,0,0.3))`,
+                border: '2px solid rgba(255,255,255,0.1)',
+                boxShadow: `
+                  inset 0 0 20px rgba(255,255,255,0.1),
+                  inset 0 0 40px rgba(0,0,0,0.2),
+                  0 0 30px ${circleColors.glow}40,
+                  0 0 60px ${circleColors.glow}20
+                `
               }}
-            />
+            >
+              {/* Inner tube highlight */}
+              <div 
+                className="absolute inset-2 rounded-full"
+                style={{
+                  background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)`,
+                  filter: 'blur(1px)'
+                }}
+              />
+              {/* Inner shadow for depth */}
+              <div 
+                className="absolute inset-4 rounded-full"
+                style={{
+                  background: `radial-gradient(circle at 70% 70%, rgba(0,0,0,0.4) 0%, transparent 70%)`,
+                }}
+              />
+            </div>
             
-            {/* Right Ring - overlapping */}
+            {/* Right Ring Tube - overlapping */}
             <div 
-              className={`absolute rounded-full border-6 sm:border-8 md:border-10 animate-infinity-counter-flow transition-all duration-500`}
+              className={`absolute rounded-full animate-infinity-counter-flow transition-all duration-500`}
               style={{
                 width: '160px',
                 height: '160px',
                 right: '20px',
                 top: '50%',
                 transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1200)})`,
-                borderColor: 'transparent',
-                borderImage: `linear-gradient(225deg, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 30%, transparent 70%) 1`,
-                filter: `drop-shadow(0 0 20px ${circleColors.glow})`,
-                background: 'transparent'
+                background: `conic-gradient(from 180deg, 
+                  ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}20 0deg, 
+                  transparent 30deg, 
+                  ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}40 90deg,
+                  transparent 120deg,
+                  ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}20 180deg,
+                  transparent 210deg,
+                  ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}40 270deg,
+                  transparent 300deg)`,
+                filter: `drop-shadow(0 0 20px ${circleColors.glow}) drop-shadow(inset 0 0 20px rgba(0,0,0,0.3))`,
+                border: '2px solid rgba(255,255,255,0.1)',
+                boxShadow: `
+                  inset 0 0 20px rgba(255,255,255,0.1),
+                  inset 0 0 40px rgba(0,0,0,0.2),
+                  0 0 30px ${circleColors.glow}40,
+                  0 0 60px ${circleColors.glow}20
+                `
               }}
-            />
+            >
+              {/* Inner tube highlight */}
+              <div 
+                className="absolute inset-2 rounded-full"
+                style={{
+                  background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)`,
+                  filter: 'blur(1px)'
+                }}
+              />
+              {/* Inner shadow for depth */}
+              <div 
+                className="absolute inset-4 rounded-full"
+                style={{
+                  background: `radial-gradient(circle at 70% 70%, rgba(0,0,0,0.4) 0%, transparent 70%)`,
+                }}
+              />
+            </div>
             
             {/* Center intersection core */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">

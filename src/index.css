@@ -91,52 +91,54 @@ body {
   animation: ring-pulse 3s ease-in-out infinite;
 }
 
-/* Infinity ring breathing - creates a flowing effect between the two rings */
+/* Tube-style ring animations with 3D effect */
 @keyframes infinity-flow {
   0%, 100% { 
-    transform: translateY(-50%) scale(1);
+    transform: translateY(-50%) scale(1) rotateX(0deg);
     opacity: 0.9;
   }
   25% { 
-    transform: translateY(-50%) scale(1.05);
+    transform: translateY(-50%) scale(1.05) rotateX(10deg);
     opacity: 1;
   }
   50% { 
-    transform: translateY(-50%) scale(1.02);
+    transform: translateY(-50%) scale(1.02) rotateX(5deg);
     opacity: 0.95;
   }
   75% { 
-    transform: translateY(-50%) scale(1.08);
+    transform: translateY(-50%) scale(1.08) rotateX(-5deg);
     opacity: 1;
   }
 }
 
 .animate-infinity-flow {
   animation: infinity-flow 4s ease-in-out infinite;
+  transform-style: preserve-3d;
 }
 
-/* Infinity ring counter-flow for the right ring */
+/* Infinity ring counter-flow for the right ring with 3D */
 @keyframes infinity-counter-flow {
   0%, 100% { 
-    transform: translateY(-50%) scale(1.02);
+    transform: translateY(-50%) scale(1.02) rotateX(5deg);
     opacity: 0.95;
   }
   25% { 
-    transform: translateY(-50%) scale(1);
+    transform: translateY(-50%) scale(1) rotateX(-10deg);
     opacity: 0.9;
   }
   50% { 
-    transform: translateY(-50%) scale(1.05);
+    transform: translateY(-50%) scale(1.05) rotateX(0deg);
     opacity: 1;
   }
   75% { 
-    transform: translateY(-50%) scale(0.98);
+    transform: translateY(-50%) scale(0.98) rotateX(8deg);
     opacity: 0.85;
   }
 }
 
 .animate-infinity-counter-flow {
   animation: infinity-counter-flow 4s ease-in-out infinite;
+  transform-style: preserve-3d;
 }
 
 /* Keep original pulse for other elements */
