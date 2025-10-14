@@ -804,6 +804,19 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             <Swap size={18} />
           </Button>
         </div>
+
+        {/* Settings Button - Top Right */}
+        <div className="absolute top-4 right-4 z-30">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowSettings(!showSettings)}
+            className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
+            title="Settings"
+          >
+            <Gear size={18} />
+          </Button>
+        </div>
         
         {/* Main Avatar Area - Takes up most of the screen */}
         <div className="flex-1 flex items-center justify-center relative overflow-hidden px-4">
@@ -1301,6 +1314,156 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   })}
                 </div>
               )}
+            </Card>
+          </div>
+        )}
+
+        {/* Settings Overlay */}
+        {showSettings && (
+          <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32 max-h-[70vh] overflow-y-auto">
+            <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white text-lg font-medium">Settings</h3>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowSettings(false)}
+                  className="h-8 w-8 p-0 hover:bg-white/10 text-white/70 hover:text-white rounded-full"
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Profile Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2 text-white/80">
+                    <User size={18} />
+                    <h4 className="font-medium">Profile</h4>
+                  </div>
+                  
+                  <div className="space-y-3 pl-7">
+                    <div className="space-y-2">
+                      <label className="text-white/70 text-sm">Display Name</label>
+                      <Input
+                        value={userAccount?.userName || onboardingData?.userName || ''}
+                        onChange={(e) => {
+                          if (userAccount) {
+                            setUserAccount({ ...userAccount, userName: e.target.value })
+                          } else {
+                            setOnboardingData((prev) => ({ ...prev, completed: true, userName: e.target.value }))
+                          }
+                        }}
+                        placeholder="Enter your name"
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50 text-base"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex-1">
+                        <div className="text-white/80 text-sm font-medium">Current Companion</div>
+                        <div className="text-white/60 text-xs">{getCurrentPresence().name}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowSettings(false)
+                          setShowPresenceSelector(true)
+                        }}
+                        className="text-purple-400 hover:text-purple-300 hover:bg-white/10"
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preferences Section */}
+                <div className="space-y-3 pt-3 border-t border-white/10">
+                  <div className="flex items-center space-x-2 text-white/80">
+                    <Gear size={18} />
+                    <h4 className="font-medium">Preferences</h4>
+                  </div>
+                  
+                  <div className="space-y-3 pl-7">
+                    <div className="space-y-2">
+                      <label className="text-white/70 text-sm">Support Style</label>
+                      <div className="space-y-2">
+                        {[
+                          { id: 'listening', label: 'Active Listening' },
+                          { id: 'advice', label: 'Guidance & Advice' },
+                          { id: 'motivation', label: 'Motivation & Encouragement' },
+                          { id: 'reflection', label: 'Reflective Exploration' }
+                        ].map((style) => (
+                          <button
+                            key={style.id}
+                            onClick={() => setOnboardingData((prev) => ({ ...prev, completed: true, supportStyle: style.id }))}
+                            className={`w-full p-2 rounded-lg border transition-all text-left text-sm ${
+                              onboardingData?.supportStyle === style.id
+                                ? 'border-purple-400 bg-purple-500/20 text-white'
+                                : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 text-white/70'
+                            }`}
+                          >
+                            {style.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-white/70 text-sm">Check-in Frequency</label>
+                      <div className="space-y-2">
+                        {[
+                          { id: 'multiple', label: 'Multiple times daily' },
+                          { id: 'daily', label: 'Once a day' },
+                          { id: 'few-times', label: 'A few times a week' },
+                          { id: 'manual', label: "I'll reach out when ready" }
+                        ].map((freq) => (
+                          <button
+                            key={freq.id}
+                            onClick={() => setOnboardingData((prev) => ({ ...prev, completed: true, checkinFrequency: freq.id }))}
+                            className={`w-full p-2 rounded-lg border transition-all text-left text-sm ${
+                              onboardingData?.checkinFrequency === freq.id
+                                ? 'border-purple-400 bg-purple-500/20 text-white'
+                                : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 text-white/70'
+                            }`}
+                          >
+                            {freq.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="flex-1">
+                        <div className="text-white/80 text-sm font-medium">Voice Responses</div>
+                        <div className="text-white/60 text-xs">Hear responses aloud</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => updatePreferences({ voiceEnabled: !preferences?.voiceEnabled })}
+                        className={`px-4 ${
+                          preferences?.voiceEnabled 
+                            ? 'text-purple-400 hover:text-purple-300 hover:bg-white/10' 
+                            : 'text-white/60 hover:text-white/80 hover:bg-white/10'
+                        }`}
+                      >
+                        {preferences?.voiceEnabled ? 'On' : 'Off'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* About Section */}
+                <div className="pt-3 border-t border-white/10">
+                  <div className="text-white/50 text-xs text-center space-y-1">
+                    <div>WE - Your Emotional AI Companion</div>
+                    <div>Version 2.0.0</div>
+                  </div>
+                </div>
+              </div>
             </Card>
           </div>
         )}
