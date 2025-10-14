@@ -728,9 +728,9 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
           
           {/* Infinity Ring Avatar - Responsive sizing */}
           <div className="relative flex items-center justify-center" style={{ width: '320px', height: '180px' }}>
-            {/* Left Ring Tube */}
+            {/* Left Ring Tube - Multi-layered glowing design */}
             <div 
-              className={`absolute rounded-full animate-infinity-flow transition-all duration-500`}
+              className={`absolute animate-infinity-flow transition-all duration-500`}
               style={{
                 width: '160px',
                 height: '160px',
@@ -738,38 +738,74 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                 top: '50%',
                 transform: `translateY(-50%) scale(${particleConfig.ringScaleFactor})`,
                 animationDuration: `${animationSpeed}ms`,
-                background: `conic-gradient(from 0deg, 
-                  ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}20 0deg, 
-                  transparent 30deg, 
-                  ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}40 90deg,
-                  transparent 120deg,
-                  ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}20 180deg,
-                  transparent 210deg,
-                  ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}40 270deg,
-                  transparent 300deg)`,
-                filter: `drop-shadow(0 0 25px ${circleColors.glow}) drop-shadow(inset 0 0 20px rgba(0,0,0,0.3))`,
-                border: '2px solid rgba(255,255,255,0.1)',
-                boxShadow: `
-                  inset 0 0 20px rgba(255,255,255,0.1),
-                  inset 0 0 40px rgba(0,0,0,0.2),
-                  0 0 30px ${circleColors.glow}40,
-                  0 0 60px ${circleColors.glow}20
-                `
               }}
             >
-              {/* Inner tube highlight */}
+              {/* Outer glow halo */}
               <div 
-                className="absolute inset-2 rounded-full"
+                className="absolute inset-0 rounded-full"
                 style={{
-                  background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)`,
-                  filter: 'blur(1px)'
+                  background: `radial-gradient(circle, transparent 40%, #0ea5e9 50%, transparent 60%)`,
+                  filter: `blur(20px)`,
+                  opacity: 0.6
                 }}
               />
-              {/* Inner shadow for depth */}
+              
+              {/* Main glowing ring - outermost layer */}
               <div 
-                className="absolute inset-4 rounded-full"
+                className="absolute inset-0 rounded-full"
                 style={{
-                  background: `radial-gradient(circle at 70% 70%, rgba(0,0,0,0.4) 0%, transparent 70%)`,
+                  background: `transparent`,
+                  border: '3px solid #3b82f6',
+                  boxShadow: `
+                    0 0 20px #3b82f6,
+                    0 0 40px #3b82f6,
+                    inset 0 0 20px #3b82f6,
+                    inset 0 0 40px rgba(59, 130, 246, 0.3)
+                  `,
+                  opacity: 0.9
+                }}
+              />
+              
+              {/* Second bright ring */}
+              <div 
+                className="absolute rounded-full"
+                style={{
+                  inset: '6px',
+                  background: `transparent`,
+                  border: '2px solid #60a5fa',
+                  boxShadow: `
+                    0 0 15px #60a5fa,
+                    0 0 30px #60a5fa,
+                    inset 0 0 15px #60a5fa
+                  `,
+                  opacity: 0.95
+                }}
+              />
+              
+              {/* Third inner bright ring */}
+              <div 
+                className="absolute rounded-full"
+                style={{
+                  inset: '12px',
+                  background: `transparent`,
+                  border: '2px solid #93c5fd',
+                  boxShadow: `
+                    0 0 10px #93c5fd,
+                    0 0 20px #93c5fd,
+                    inset 0 0 10px #93c5fd
+                  `,
+                  opacity: 0.85
+                }}
+              />
+              
+              {/* Innermost core glow */}
+              <div 
+                className="absolute rounded-full"
+                style={{
+                  inset: '18px',
+                  background: `radial-gradient(circle, rgba(147, 197, 253, 0.3) 0%, transparent 70%)`,
+                  border: '1px solid rgba(147, 197, 253, 0.4)',
+                  boxShadow: `inset 0 0 20px rgba(147, 197, 253, 0.5)`
                 }}
               />
               
@@ -784,8 +820,8 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                       style={{
                         width: `${particleConfig.particleSize.primary}px`,
                         height: `${particleConfig.particleSize.primary}px`,
-                        background: `radial-gradient(circle, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 0%, transparent 70%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px ${circleColors.glow})`,
+                        background: `radial-gradient(circle, #60a5fa 0%, transparent 70%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px #60a5fa)`,
                         animationDelay: `${i * particleConfig.delayVariation}s`,
                         animationDuration: `${particleConfig.particleSpeed.primary}s`,
                         opacity: particleConfig.particleOpacity.base
@@ -801,8 +837,8 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                       style={{
                         width: `${particleConfig.particleSize.trail}px`,
                         height: `${particleConfig.particleSize.trail}px`,
-                        background: `radial-gradient(circle, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}80 0%, transparent 60%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px ${circleColors.glow})`,
+                        background: `radial-gradient(circle, #93c5fd 0%, transparent 60%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px #93c5fd)`,
                         animationDelay: `${i * particleConfig.delayVariation * 1.2 + 0.15}s`,
                         animationDuration: `${particleConfig.particleSpeed.trail}s`,
                         opacity: particleConfig.particleOpacity.base * 0.75
@@ -813,47 +849,83 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               )}
             </div>
             
-            {/* Right Ring Tube - overlapping */}
+            {/* Right Ring Tube - overlapping with same glowing multi-layer design */}
             <div 
-              className={`absolute rounded-full animate-infinity-counter-flow transition-all duration-500`}
+              className={`absolute animate-infinity-counter-flow transition-all duration-500`}
               style={{
                 width: '160px',
                 height: '160px',
                 right: '20px',
                 top: '50%',
-                transform: `translateY(-50%) scale(${particleConfig.ringScaleFactor * 0.98})`,
-                background: `conic-gradient(from 180deg, 
-                  ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}20 0deg, 
-                  transparent 30deg, 
-                  ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}40 90deg,
-                  transparent 120deg,
-                  ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}20 180deg,
-                  transparent 210deg,
-                  ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}40 270deg,
-                  transparent 300deg)`,
-                filter: `drop-shadow(0 0 20px ${circleColors.glow}) drop-shadow(inset 0 0 20px rgba(0,0,0,0.3))`,
-                border: '2px solid rgba(255,255,255,0.1)',
-                boxShadow: `
-                  inset 0 0 20px rgba(255,255,255,0.1),
-                  inset 0 0 40px rgba(0,0,0,0.2),
-                  0 0 30px ${circleColors.glow}40,
-                  0 0 60px ${circleColors.glow}20
-                `
+                transform: `translateY(-50%) scale(${particleConfig.ringScaleFactor * 0.98})`
               }}
             >
-              {/* Inner tube highlight */}
+              {/* Outer glow halo */}
               <div 
-                className="absolute inset-2 rounded-full"
+                className="absolute inset-0 rounded-full"
                 style={{
-                  background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%)`,
-                  filter: 'blur(1px)'
+                  background: `radial-gradient(circle, transparent 40%, #a855f7 50%, transparent 60%)`,
+                  filter: `blur(20px)`,
+                  opacity: 0.6
                 }}
               />
-              {/* Inner shadow for depth */}
+              
+              {/* Main glowing ring - outermost layer */}
               <div 
-                className="absolute inset-4 rounded-full"
+                className="absolute inset-0 rounded-full"
                 style={{
-                  background: `radial-gradient(circle at 70% 70%, rgba(0,0,0,0.4) 0%, transparent 70%)`,
+                  background: `transparent`,
+                  border: '3px solid #8b5cf6',
+                  boxShadow: `
+                    0 0 20px #8b5cf6,
+                    0 0 40px #8b5cf6,
+                    inset 0 0 20px #8b5cf6,
+                    inset 0 0 40px rgba(139, 92, 246, 0.3)
+                  `,
+                  opacity: 0.9
+                }}
+              />
+              
+              {/* Second bright ring */}
+              <div 
+                className="absolute rounded-full"
+                style={{
+                  inset: '6px',
+                  background: `transparent`,
+                  border: '2px solid #a78bfa',
+                  boxShadow: `
+                    0 0 15px #a78bfa,
+                    0 0 30px #a78bfa,
+                    inset 0 0 15px #a78bfa
+                  `,
+                  opacity: 0.95
+                }}
+              />
+              
+              {/* Third inner bright ring */}
+              <div 
+                className="absolute rounded-full"
+                style={{
+                  inset: '12px',
+                  background: `transparent`,
+                  border: '2px solid #c4b5fd',
+                  boxShadow: `
+                    0 0 10px #c4b5fd,
+                    0 0 20px #c4b5fd,
+                    inset 0 0 10px #c4b5fd
+                  `,
+                  opacity: 0.85
+                }}
+              />
+              
+              {/* Innermost core glow */}
+              <div 
+                className="absolute rounded-full"
+                style={{
+                  inset: '18px',
+                  background: `radial-gradient(circle, rgba(196, 181, 253, 0.3) 0%, transparent 70%)`,
+                  border: '1px solid rgba(196, 181, 253, 0.4)',
+                  boxShadow: `inset 0 0 20px rgba(196, 181, 253, 0.5)`
                 }}
               />
               
@@ -868,8 +940,8 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                       style={{
                         width: `${particleConfig.particleSize.primary}px`,
                         height: `${particleConfig.particleSize.primary}px`,
-                        background: `radial-gradient(circle, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 0%, transparent 70%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px ${circleColors.glow})`,
+                        background: `radial-gradient(circle, #a78bfa 0%, transparent 70%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px #a78bfa)`,
                         animationDelay: `${i * particleConfig.delayVariation * 1.1}s`,
                         animationDuration: `${particleConfig.particleSpeed.primary * 1.1}s`,
                         opacity: particleConfig.particleOpacity.base * 0.9
@@ -885,8 +957,8 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                       style={{
                         width: `${particleConfig.particleSize.trail}px`,
                         height: `${particleConfig.particleSize.trail}px`,
-                        background: `radial-gradient(circle, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}80 0%, transparent 60%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px ${circleColors.glow})`,
+                        background: `radial-gradient(circle, #c4b5fd 0%, transparent 60%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px #c4b5fd)`,
                         animationDelay: `${i * particleConfig.delayVariation * 1.3 + 0.2}s`,
                         animationDuration: `${particleConfig.particleSpeed.trail * 1.15}s`,
                         opacity: particleConfig.particleOpacity.base * 0.65
@@ -900,11 +972,17 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             {/* Center intersection core */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <div 
-                className={`w-12 h-12 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-ring-core-breathe transition-all duration-300`}
+                className={`w-16 h-16 rounded-full animate-ring-core-breathe transition-all duration-300`}
                 style={{
-                  filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 1.5}px ${circleColors.glow})`,
+                  background: `radial-gradient(circle, #ddd6fe 0%, #8b5cf6 50%, #3b82f6 100%)`,
+                  filter: `drop-shadow(0 0 30px #8b5cf6) drop-shadow(0 0 50px #3b82f6)`,
                   transform: `scale(${particleConfig.coreScaleFactor})`,
-                  opacity: particleConfig.particleOpacity.peak
+                  opacity: particleConfig.particleOpacity.peak,
+                  boxShadow: `
+                    0 0 20px #8b5cf6,
+                    0 0 40px #3b82f6,
+                    inset 0 0 30px rgba(139, 92, 246, 0.8)
+                  `
                 }}
               />
               
@@ -918,8 +996,8 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                       style={{
                         width: `${particleConfig.particleSize.trail * 1.5}px`,
                         height: `${particleConfig.particleSize.trail * 1.5}px`,
-                        background: `radial-gradient(circle, #ffffff 0%, ${circleColors.glow} 50%, transparent 80%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.8}px ${circleColors.glow})`,
+                        background: `radial-gradient(circle, #ffffff 0%, #60a5fa 50%, transparent 80%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.8}px #60a5fa)`,
                         animationDelay: `${i * particleConfig.delayVariation * 1.5}s`,
                         animationDuration: `${1.8 - (conversationIntensity / 200)}s`,
                         top: '50%',
