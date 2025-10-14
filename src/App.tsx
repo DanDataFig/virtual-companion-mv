@@ -433,21 +433,232 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
     )
   }
   
-  // Show simplified onboarding if not completed (temporary)
+  // Show onboarding flow if not completed
   if (!onboardingData?.completed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
         <Card className="p-8 bg-black/40 border-white/10 backdrop-blur-md max-w-md w-full">
-          <div className="text-center space-y-6">
-            <h1 className="text-2xl text-white font-light">Welcome to WE</h1>
-            <p className="text-white/70">Your emotional AI companion is ready to meet you.</p>
-            <Button 
-              onClick={completeOnboarding}
-              className="w-full bg-purple-600/90 hover:bg-purple-700 text-white"
-            >
-              Begin Journey
-            </Button>
-          </div>
+          
+          {/* Welcome Step */}
+          {onboardingStep === 'welcome' && (
+            <div className="text-center space-y-6 animate-fade-in-up">
+              <div className="text-6xl font-light text-white mb-4 animate-breathe-glow">WE</div>
+              <h1 className="text-2xl text-white font-light">Welcome</h1>
+              <p className="text-white/70 leading-relaxed">
+                We're here to support your emotional wellbeing through compassionate AI companionship and community connection.
+              </p>
+              <p className="text-white/60 text-sm">
+                Let's get to know you in a few quick steps.
+              </p>
+              <Button 
+                onClick={() => setOnboardingStep('name')}
+                className="w-full bg-purple-600/90 hover:bg-purple-700 text-white"
+              >
+                Get Started
+              </Button>
+            </div>
+          )}
+          
+          {/* Name Step */}
+          {onboardingStep === 'name' && (
+            <div className="space-y-6 animate-fade-in-up">
+              <div className="text-center">
+                <h2 className="text-xl text-white font-light mb-2">What should we call you?</h2>
+                <p className="text-white/60 text-sm">You can use your real name or a nickname</p>
+              </div>
+              <Input
+                placeholder="Your name (optional)"
+                value={onboardingData?.userName || ''}
+                onChange={(e) => setOnboardingData((prev) => ({ completed: false, ...prev, userName: e.target.value }))}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 text-base"
+              />
+              <div className="flex space-x-3">
+                <Button 
+                  onClick={() => setOnboardingStep('welcome')}
+                  variant="outline"
+                  className="flex-1 border-white/20 text-white hover:bg-white/10"
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={() => setOnboardingStep('presence')}
+                  className="flex-1 bg-purple-600/90 hover:bg-purple-700 text-white"
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Presence Selection Step */}
+          {onboardingStep === 'presence' && (
+            <div className="space-y-6 animate-fade-in-up">
+              <div className="text-center">
+                <h2 className="text-xl text-white font-light mb-2">Choose Your Companion</h2>
+                <p className="text-white/60 text-sm">Each presence has a unique personality and approach</p>
+              </div>
+              <div className="space-y-3">
+                {PRESENCES.map((presence) => (
+                  <button
+                    key={presence.id}
+                    onClick={() => setOnboardingData((prev) => ({ completed: false, ...prev, selectedPresence: presence.id }))}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      onboardingData?.selectedPresence === presence.id
+                        ? 'border-purple-400 bg-purple-500/20'
+                        : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="text-white font-medium mb-1">{presence.name}</div>
+                        <div className="text-white/70 text-sm mb-2">{presence.personality.split('.')[0]}.</div>
+                        <div className="text-white/50 text-xs">{presence.description}</div>
+                      </div>
+                      <div 
+                        className={`w-12 h-12 rounded-full ml-3 bg-gradient-to-br ${presence.colors.circle1}`}
+                        style={{
+                          boxShadow: `0 0 20px ${presence.colors.glow}`
+                        }}
+                      />
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex space-x-3">
+                <Button 
+                  onClick={() => setOnboardingStep('name')}
+                  variant="outline"
+                  className="flex-1 border-white/20 text-white hover:bg-white/10"
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={() => setOnboardingStep('support-style')}
+                  disabled={!onboardingData?.selectedPresence}
+                  className="flex-1 bg-purple-600/90 hover:bg-purple-700 text-white disabled:opacity-50"
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Support Style Step */}
+          {onboardingStep === 'support-style' && (
+            <div className="space-y-6 animate-fade-in-up">
+              <div className="text-center">
+                <h2 className="text-xl text-white font-light mb-2">How can we best support you?</h2>
+                <p className="text-white/60 text-sm">Choose the approach that resonates most</p>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { id: 'listening', label: 'Active Listening', desc: 'I need someone to hear me without judgment' },
+                  { id: 'advice', label: 'Guidance & Advice', desc: 'I want suggestions and actionable steps' },
+                  { id: 'motivation', label: 'Motivation & Encouragement', desc: 'I need positive reinforcement and energy' },
+                  { id: 'reflection', label: 'Reflective Exploration', desc: 'Help me understand my feelings deeper' }
+                ].map((style) => (
+                  <button
+                    key={style.id}
+                    onClick={() => setOnboardingData((prev) => ({ completed: false, ...prev, supportStyle: style.id }))}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      onboardingData?.supportStyle === style.id
+                        ? 'border-purple-400 bg-purple-500/20'
+                        : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="text-white font-medium mb-1">{style.label}</div>
+                    <div className="text-white/60 text-sm">{style.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex space-x-3">
+                <Button 
+                  onClick={() => setOnboardingStep('presence')}
+                  variant="outline"
+                  className="flex-1 border-white/20 text-white hover:bg-white/10"
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={() => setOnboardingStep('checkin')}
+                  disabled={!onboardingData?.supportStyle}
+                  className="flex-1 bg-purple-600/90 hover:bg-purple-700 text-white disabled:opacity-50"
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Check-in Frequency Step */}
+          {onboardingStep === 'checkin' && (
+            <div className="space-y-6 animate-fade-in-up">
+              <div className="text-center">
+                <h2 className="text-xl text-white font-light mb-2">How often should we check in?</h2>
+                <p className="text-white/60 text-sm">We can remind you to share how you're feeling</p>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { id: 'multiple', label: 'Multiple times daily', desc: 'Morning, afternoon, and evening' },
+                  { id: 'daily', label: 'Once a day', desc: 'A daily moment of reflection' },
+                  { id: 'few-times', label: 'A few times a week', desc: 'Regular but not overwhelming' },
+                  { id: 'manual', label: "I'll reach out when ready", desc: 'No scheduled reminders' }
+                ].map((freq) => (
+                  <button
+                    key={freq.id}
+                    onClick={() => setOnboardingData((prev) => ({ completed: false, ...prev, checkinFrequency: freq.id }))}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      onboardingData?.checkinFrequency === freq.id
+                        ? 'border-purple-400 bg-purple-500/20'
+                        : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="text-white font-medium mb-1">{freq.label}</div>
+                    <div className="text-white/60 text-sm">{freq.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex space-x-3">
+                <Button 
+                  onClick={() => setOnboardingStep('support-style')}
+                  variant="outline"
+                  className="flex-1 border-white/20 text-white hover:bg-white/10"
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={() => setOnboardingStep('complete')}
+                  disabled={!onboardingData?.checkinFrequency}
+                  className="flex-1 bg-purple-600/90 hover:bg-purple-700 text-white disabled:opacity-50"
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Completion Step */}
+          {onboardingStep === 'complete' && (
+            <div className="text-center space-y-6 animate-fade-in-up">
+              <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center animate-breathe-glow">
+                <Smiley size={40} className="text-white" weight="fill" />
+              </div>
+              <h2 className="text-2xl text-white font-light">You're all set!</h2>
+              <p className="text-white/70 leading-relaxed">
+                {onboardingData?.userName ? `${onboardingData.userName}, your` : 'Your'} companion {PRESENCES.find(p => p.id === onboardingData?.selectedPresence)?.name || 'Nebula'} is ready to support you.
+              </p>
+              <p className="text-white/60 text-sm">
+                Remember, this is a safe space for your thoughts and feelings. We're here whenever you need us.
+              </p>
+              <Button 
+                onClick={completeOnboarding}
+                className="w-full bg-purple-600/90 hover:bg-purple-700 text-white"
+              >
+                Begin Your Journey
+              </Button>
+            </div>
+          )}
+          
         </Card>
       </div>
     )

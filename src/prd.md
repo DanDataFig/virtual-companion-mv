@@ -139,10 +139,54 @@
 - **Feature Integration**: Social feature usage alongside AI companion interactions, cross-feature user flows
 
 ## Core User Flow (Enhanced)
-1. **Onboarding**: Welcome → Introduction → Presence Selection → Preference Setup → Community Introduction
+1. **Onboarding**: Welcome → Name Input → Presence Selection → Support Style Selection → Check-in Frequency → Completion
 2. **Daily Use**: Open app → See companion in remembered state → Check community updates → Engage with posts or connections
 3. **Social Discovery**: Browse support circles → Join relevant groups → Connect with compatible journey partners
 4. **Community Interaction**: Share mood moments → Receive support → Offer encouragement → Build relationships
 5. **Crisis Support**: Access immediate community assistance → Connect with trained peer supporters → Follow up care
 6. **Growth Celebration**: Document breakthroughs → Share with community → Receive celebration and encouragement
 7. **Privacy Management**: Adjust sharing preferences → Control connection visibility → Manage anonymous interactions
+
+## Onboarding Flow Details
+
+The onboarding process establishes a personalized baseline for each user through a multi-step guided experience:
+
+### Step 1: Welcome
+- **Purpose**: Introduce the app's mission and set expectations
+- **Content**: Brief overview of WE's emotional support capabilities
+- **Action**: Single "Get Started" button to begin journey
+
+### Step 2: Name Input (Optional)
+- **Purpose**: Personalize the experience without requiring formal registration
+- **Content**: Text input for name or nickname
+- **Outcome**: Companion can address user by name in conversations
+
+### Step 3: Presence Selection
+- **Purpose**: Choose AI companion personality that matches user's emotional needs
+- **Options**: 4 distinct presences (Nebula, Luma, Terra, Nova)
+- **Display**: Visual representation with gradient colors and personality descriptions
+- **Outcome**: Selected presence becomes the user's primary companion
+
+### Step 4: Support Style Selection
+- **Purpose**: Understand how the user wants to be supported
+- **Options**:
+  - **Active Listening**: Needs someone to hear without judgment
+  - **Guidance & Advice**: Wants suggestions and actionable steps
+  - **Motivation & Encouragement**: Needs positive reinforcement
+  - **Reflective Exploration**: Help understanding feelings deeper
+- **Outcome**: AI companion adapts conversation style accordingly
+
+### Step 5: Check-in Frequency
+- **Purpose**: Set expectations for proactive engagement reminders
+- **Options**:
+  - **Multiple times daily**: Morning, afternoon, evening
+  - **Once a day**: Daily moment of reflection
+  - **A few times a week**: Regular but not overwhelming
+  - **Manual (I'll reach out when ready)**: No scheduled reminders
+- **Outcome**: System schedules appropriate reminder notifications
+
+### Step 6: Completion
+- **Purpose**: Celebrate setup completion and transition to main experience
+- **Content**: Confirmation message with selected companion's introduction
+- **Action**: "Begin Your Journey" finalizes onboarding
+- **Outcome**: User enters main app with personalized companion ready

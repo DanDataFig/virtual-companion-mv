@@ -45,8 +45,8 @@ export interface OnboardingData {
   completed: boolean
   selectedPresence?: 'nebula' | 'luma' | 'terra' | 'nova'
   userName?: string
-  supportStyle?: 'listener' | 'encourager' | 'grounded'
-  checkinFrequency?: 'daily' | 'on-demand' | 'surprise'
+  supportStyle?: string
+  checkinFrequency?: string
 }
 
 export interface UserAccount {
@@ -167,7 +167,7 @@ export interface ChatConversation {
 // UI & INTERACTION TYPES
 // ============================================================================
 
-export type OnboardingStep = 'welcome' | 'presence-selection' | 'personalization' | 'preferences' | 'complete'
+export type OnboardingStep = 'welcome' | 'name' | 'presence' | 'support-style' | 'checkin' | 'complete'
 
 export type SocialSection = 'community' | 'connections' | 'circles' | 'chat'
 
