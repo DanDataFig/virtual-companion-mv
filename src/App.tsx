@@ -213,6 +213,14 @@ const App: React.FC = () => {
   }, [onboardingData?.completed])
   
   /**
+   * Update color scheme when presence changes
+   */
+  useEffect(() => {
+    const presenceId = onboardingData?.selectedPresence || 'nebula'
+    document.documentElement.setAttribute('data-presence', presenceId)
+  }, [onboardingData?.selectedPresence])
+  
+  /**
    * Cleanup on unmount
    */
   useEffect(() => {

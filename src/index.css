@@ -8,7 +8,6 @@
 }
 
 :root {
-  /* Dark mobile theme inspired by the UI references */
   --background: oklch(0.10 0.01 240);
   --foreground: oklch(0.95 0.002 240);
   
@@ -38,6 +37,40 @@
   --ring: oklch(0.65 0.20 300);
   
   --radius: 1rem;
+  
+  transition: 
+    --primary 0.6s ease-in-out,
+    --accent 0.6s ease-in-out,
+    --ring 0.6s ease-in-out,
+    --secondary 0.6s ease-in-out;
+}
+
+:root[data-presence="nebula"] {
+  --primary: oklch(0.60 0.22 290);
+  --accent: oklch(0.65 0.20 300);
+  --ring: oklch(0.65 0.20 300);
+  --secondary: oklch(0.20 0.015 280);
+}
+
+:root[data-presence="luma"] {
+  --primary: oklch(0.72 0.18 75);
+  --accent: oklch(0.70 0.20 65);
+  --ring: oklch(0.70 0.20 65);
+  --secondary: oklch(0.22 0.012 70);
+}
+
+:root[data-presence="terra"] {
+  --primary: oklch(0.58 0.18 155);
+  --accent: oklch(0.62 0.20 165);
+  --ring: oklch(0.62 0.20 165);
+  --secondary: oklch(0.20 0.012 160);
+}
+
+:root[data-presence="nova"] {
+  --primary: oklch(0.60 0.20 230);
+  --accent: oklch(0.65 0.22 210);
+  --ring: oklch(0.65 0.22 210);
+  --secondary: oklch(0.20 0.015 220);
 }
 
 @theme {
@@ -73,6 +106,12 @@
 body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 500ms;
 }
 
 /* Ring pulse animation - more subtle than circle pulse */
