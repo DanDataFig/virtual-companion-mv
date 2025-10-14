@@ -83,6 +83,51 @@ export const calculateAnimationSpeed = (intensity: IntensityLevel, baseSpeed = 3
   return baseSpeed * intensityMultiplier
 }
 
+/**
+ * Calculate dynamic particle configuration based on conversation intensity
+ * Returns configuration for particle count, speed, opacity, and size
+ */
+export const calculateParticleConfig = (intensity: IntensityLevel) => {
+  const normalizedIntensity = intensity / 100
+  
+  const particleCount = {
+    primary: Math.max(3, Math.floor(4 + normalizedIntensity * 8)),
+    trail: Math.max(0, Math.floor(normalizedIntensity * 6))
+  }
+  
+  const particleSpeed = {
+    primary: Math.max(1.5, 3 - normalizedIntensity * 1.5),
+    trail: Math.max(2, 3.5 - normalizedIntensity * 1.8)
+  }
+  
+  const particleOpacity = {
+    base: Math.max(0.5, 0.6 + normalizedIntensity * 0.4),
+    peak: Math.min(1, 0.8 + normalizedIntensity * 0.2)
+  }
+  
+  const particleSize = {
+    primary: Math.max(6, 8 + normalizedIntensity * 4),
+    trail: Math.max(3, 4 + normalizedIntensity * 2)
+  }
+  
+  const glowIntensity = Math.max(8, 8 + normalizedIntensity * 12)
+  
+  const delayVariation = Math.max(0.2, 0.5 - normalizedIntensity * 0.3)
+  
+  return {
+    particleCount,
+    particleSpeed,
+    particleOpacity,
+    particleSize,
+    glowIntensity,
+    delayVariation,
+    shouldShowCrossRing: intensity > 70,
+    shouldShowTrails: intensity > 40,
+    ringScaleFactor: 1 + (normalizedIntensity * 0.15),
+    coreScaleFactor: 0.8 + (normalizedIntensity * 0.4)
+  }
+}
+
 // ============================================================================
 // TIME FORMATTING UTILITIES
 // ============================================================================

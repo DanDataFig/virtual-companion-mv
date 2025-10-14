@@ -16,10 +16,18 @@
 - **Purpose**: Provide emotional support through natural dialogue with visual feedback that reflects engagement levels
 - **Success Criteria**: AI responses feel appropriate to user's emotional context, visual circles respond dynamically to conversation intensity
 
-### 2. Real-time Conversation Intensity Animation
-- **Functionality**: Circles change color, scale, animation speed, and glow based on analyzed conversation intensity (word choice, punctuation, length, emotional content)
+### 2. Real-time Conversation Intensity Animation with Dynamic Particles
+- **Functionality**: Infinity ring circles change color, scale, animation speed, and glow based on analyzed conversation intensity (word choice, punctuation, length, emotional content). Particle effects dynamically adjust count, speed, size, opacity, and glow based on engagement level.
 - **Purpose**: Create immersive feedback that makes the companion feel alive and responsive to user engagement
-- **Success Criteria**: Visual feedback feels natural and enhances emotional connection without being distracting
+- **Trigger**: Automatic analysis of each message sent and received
+- **Progression**: Message sent → intensity analysis (0-100) → particle configuration calculated → visual updates applied (particle count 3-12, speed 1.5-3s, size 6-12px, opacity 50-100%, glow 8-20px)
+- **Success Criteria**: Visual feedback feels natural and enhances emotional connection without being distracting; particles are sparse at low engagement and abundant/fast at high engagement
+
+#### Particle Intensity Levels:
+- **Low (0-30)**: 3-4 primary particles, slow movement (2.5-3s), subtle glow (8-10px), minimal opacity (60-70%)
+- **Medium (31-50)**: 5-7 primary particles, moderate speed (2-2.5s), noticeable glow (10-14px), increased opacity (70-80%)
+- **High (51-70)**: 8-10 primary particles, faster movement (1.7-2s), strong glow (14-18px), high opacity (80-90%), trail particles appear
+- **Very High (71-100)**: 10-12 primary particles, rapid movement (1.5-1.7s), intense glow (18-20px), maximum opacity (90-100%), abundant trail particles, cross-ring exchange particles activate
 
 ### 3. Quick Mood Check-in
 - **Functionality**: 5-point emoji scale (😢 to 😊) for rapid mood logging that influences companion visual state

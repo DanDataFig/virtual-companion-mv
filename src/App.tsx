@@ -82,6 +82,7 @@ import {
   generateId,
   getPresenceColors,
   calculateAnimationSpeed,
+  calculateParticleConfig,
   analyzeConversationIntensity
 } from '@/utils'
 
@@ -177,6 +178,11 @@ const App: React.FC = () => {
    * Calculate animation speed based on conversation intensity
    */
   const animationSpeed = calculateAnimationSpeed(conversationIntensity)
+  
+  /**
+   * Calculate dynamic particle configuration based on conversation intensity
+   */
+  const particleConfig = calculateParticleConfig(conversationIntensity)
   
   // ============================================================================
   // INITIALIZATION & LIFECYCLE
@@ -519,7 +525,7 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                 height: '160px',
                 left: '20px',
                 top: '50%',
-                transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1000)})`,
+                transform: `translateY(-50%) scale(${particleConfig.ringScaleFactor})`,
                 animationDuration: `${animationSpeed}ms`,
                 background: `conic-gradient(from 0deg, 
                   ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}20 0deg, 
@@ -560,31 +566,35 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               {(conversationIntensity > 20 || isLoading) && (
                 <>
                   {/* Primary particles */}
-                  {[...Array(6)].map((_, i) => (
+                  {[...Array(particleConfig.particleCount.primary)].map((_, i) => (
                     <div
                       key={`primary-${i}`}
-                      className="absolute w-2 h-2 rounded-full animate-tube-particle-flow-left"
+                      className="absolute rounded-full animate-tube-particle-flow-left"
                       style={{
+                        width: `${particleConfig.particleSize.primary}px`,
+                        height: `${particleConfig.particleSize.primary}px`,
                         background: `radial-gradient(circle, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'} 0%, transparent 70%)`,
-                        filter: `drop-shadow(0 0 8px ${circleColors.glow})`,
-                        animationDelay: `${i * 0.3}s`,
-                        animationDuration: `${2 + (conversationIntensity / 50)}s`,
-                        opacity: 0.8 + (conversationIntensity / 500)
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px ${circleColors.glow})`,
+                        animationDelay: `${i * particleConfig.delayVariation}s`,
+                        animationDuration: `${particleConfig.particleSpeed.primary}s`,
+                        opacity: particleConfig.particleOpacity.base
                       }}
                     />
                   ))}
                   
                   {/* Secondary trail particles for enhanced effect */}
-                  {conversationIntensity > 50 && [...Array(4)].map((_, i) => (
+                  {particleConfig.shouldShowTrails && [...Array(particleConfig.particleCount.trail)].map((_, i) => (
                     <div
                       key={`trail-${i}`}
-                      className="absolute w-1 h-1 rounded-full animate-tube-particle-flow-left"
+                      className="absolute rounded-full animate-tube-particle-flow-left"
                       style={{
+                        width: `${particleConfig.particleSize.trail}px`,
+                        height: `${particleConfig.particleSize.trail}px`,
                         background: `radial-gradient(circle, ${circleColors.circle1.includes('purple') ? '#a855f7' : circleColors.circle1.includes('yellow') ? '#f59e0b' : circleColors.circle1.includes('emerald') ? '#10b981' : '#3b82f6'}80 0%, transparent 60%)`,
-                        filter: `drop-shadow(0 0 4px ${circleColors.glow})`,
-                        animationDelay: `${i * 0.45 + 0.15}s`,
-                        animationDuration: `${2.5 + (conversationIntensity / 60)}s`,
-                        opacity: 0.6
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px ${circleColors.glow})`,
+                        animationDelay: `${i * particleConfig.delayVariation * 1.2 + 0.15}s`,
+                        animationDuration: `${particleConfig.particleSpeed.trail}s`,
+                        opacity: particleConfig.particleOpacity.base * 0.75
                       }}
                     />
                   ))}
@@ -600,7 +610,7 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                 height: '160px',
                 right: '20px',
                 top: '50%',
-                transform: `translateY(-50%) scale(${1 + (conversationIntensity / 1200)})`,
+                transform: `translateY(-50%) scale(${particleConfig.ringScaleFactor * 0.98})`,
                 background: `conic-gradient(from 180deg, 
                   ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}20 0deg, 
                   transparent 30deg, 
@@ -640,31 +650,35 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               {(conversationIntensity > 20 || isLoading) && (
                 <>
                   {/* Primary particles */}
-                  {[...Array(6)].map((_, i) => (
+                  {[...Array(particleConfig.particleCount.primary)].map((_, i) => (
                     <div
                       key={`primary-${i}`}
-                      className="absolute w-2 h-2 rounded-full animate-tube-particle-flow-right"
+                      className="absolute rounded-full animate-tube-particle-flow-right"
                       style={{
+                        width: `${particleConfig.particleSize.primary}px`,
+                        height: `${particleConfig.particleSize.primary}px`,
                         background: `radial-gradient(circle, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'} 0%, transparent 70%)`,
-                        filter: `drop-shadow(0 0 8px ${circleColors.glow})`,
-                        animationDelay: `${i * 0.4}s`,
-                        animationDuration: `${2.5 + (conversationIntensity / 40)}s`,
-                        opacity: 0.7 + (conversationIntensity / 400)
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px ${circleColors.glow})`,
+                        animationDelay: `${i * particleConfig.delayVariation * 1.1}s`,
+                        animationDuration: `${particleConfig.particleSpeed.primary * 1.1}s`,
+                        opacity: particleConfig.particleOpacity.base * 0.9
                       }}
                     />
                   ))}
                   
                   {/* Secondary trail particles for enhanced effect */}
-                  {conversationIntensity > 50 && [...Array(4)].map((_, i) => (
+                  {particleConfig.shouldShowTrails && [...Array(particleConfig.particleCount.trail)].map((_, i) => (
                     <div
                       key={`trail-${i}`}
-                      className="absolute w-1 h-1 rounded-full animate-tube-particle-flow-right"
+                      className="absolute rounded-full animate-tube-particle-flow-right"
                       style={{
+                        width: `${particleConfig.particleSize.trail}px`,
+                        height: `${particleConfig.particleSize.trail}px`,
                         background: `radial-gradient(circle, ${circleColors.circle2.includes('pink') ? '#ec4899' : circleColors.circle2.includes('amber') ? '#f59e0b' : circleColors.circle2.includes('teal') ? '#14b8a6' : '#6366f1'}80 0%, transparent 60%)`,
-                        filter: `drop-shadow(0 0 4px ${circleColors.glow})`,
-                        animationDelay: `${i * 0.5 + 0.2}s`,
-                        animationDuration: `${3 + (conversationIntensity / 45)}s`,
-                        opacity: 0.5
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px ${circleColors.glow})`,
+                        animationDelay: `${i * particleConfig.delayVariation * 1.3 + 0.2}s`,
+                        animationDuration: `${particleConfig.particleSpeed.trail * 1.15}s`,
+                        opacity: particleConfig.particleOpacity.base * 0.65
                       }}
                     />
                   ))}
@@ -677,24 +691,26 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               <div 
                 className={`w-12 h-12 rounded-full bg-gradient-to-br ${circleColors.circle1} animate-ring-core-breathe transition-all duration-300`}
                 style={{
-                  filter: `drop-shadow(0 0 20px ${circleColors.glow})`,
-                  transform: `scale(${0.8 + (conversationIntensity / 150)})`,
-                  opacity: 0.8 + (conversationIntensity / 200)
+                  filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 1.5}px ${circleColors.glow})`,
+                  transform: `scale(${particleConfig.coreScaleFactor})`,
+                  opacity: particleConfig.particleOpacity.peak
                 }}
               />
               
               {/* Cross-ring particle exchange during high intensity */}
-              {conversationIntensity > 70 && (
+              {particleConfig.shouldShowCrossRing && (
                 <>
-                  {[...Array(3)].map((_, i) => (
+                  {[...Array(Math.floor(3 + conversationIntensity / 50))].map((_, i) => (
                     <div
                       key={`exchange-${i}`}
-                      className="absolute w-1.5 h-1.5 rounded-full animate-cross-ring-exchange"
+                      className="absolute rounded-full animate-cross-ring-exchange"
                       style={{
+                        width: `${particleConfig.particleSize.trail * 1.5}px`,
+                        height: `${particleConfig.particleSize.trail * 1.5}px`,
                         background: `radial-gradient(circle, #ffffff 0%, ${circleColors.glow} 50%, transparent 80%)`,
-                        filter: `drop-shadow(0 0 6px ${circleColors.glow})`,
-                        animationDelay: `${i * 0.6}s`,
-                        animationDuration: '1.8s',
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.8}px ${circleColors.glow})`,
+                        animationDelay: `${i * particleConfig.delayVariation * 1.5}s`,
+                        animationDuration: `${1.8 - (conversationIntensity / 200)}s`,
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)'
@@ -738,9 +754,11 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                 <div className="text-center text-white/60">
                   <div className="text-sm">{getCurrentPresence().name}</div>
                   <div className="text-xs">
-                    {conversationIntensity > 70 ? 'Deeply engaged' : 
-                     conversationIntensity > 50 ? 'Actively listening' : 
-                     'Tap to chat or speak'}
+                    {conversationIntensity > 85 ? '✨ Deeply engaged' : 
+                     conversationIntensity > 70 ? '💫 Highly attentive' :
+                     conversationIntensity > 50 ? '🎯 Actively listening' : 
+                     conversationIntensity > 30 ? '👂 Attentive' :
+                     '💬 Ready to chat'}
                   </div>
                 </div>
               )}
@@ -926,6 +944,22 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             <Badge variant="secondary" className="bg-orange-500/20 text-orange-200 border-orange-400/30 backdrop-blur-sm text-xs px-2 py-1">
               {getCurrentPresence().name}
             </Badge>
+            
+            {/* Engagement Intensity Indicator */}
+            {conversationIntensity > 30 && (
+              <Badge 
+                variant="secondary" 
+                className={`backdrop-blur-sm text-xs px-2 py-1 transition-all duration-300 ${
+                  conversationIntensity > 70 
+                    ? 'bg-purple-500/30 text-purple-200 border-purple-400/50 animate-pulse' 
+                    : conversationIntensity > 50 
+                    ? 'bg-blue-500/20 text-blue-200 border-blue-400/30' 
+                    : 'bg-cyan-500/20 text-cyan-200 border-cyan-400/30'
+                }`}
+              >
+                ⚡ {Math.round(conversationIntensity)}% engaged
+              </Badge>
+            )}
             
             {/* Current Mood Indicator */}
             {moodEntries.length > 0 && (
