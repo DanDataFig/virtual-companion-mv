@@ -126,6 +126,7 @@ const App: React.FC = () => {
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('welcome')
   const [socialSection, setSocialSection] = useState<SocialSection>('community')
   const [isListening, setIsListening] = useState(false)
+  const [isTransitioningPresence, setIsTransitioningPresence] = useState(false)
   
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -402,6 +403,62 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
     setUserAccount,
     setMessages,
     stopCamera,
+    stopSpeaking
+  ])
+  
+  /**
+   * Change presence with smooth transition
+   */
+  const changePresence = useCallback(async (newPresenceId: 'nebula' | 'luma' | 'terra' | 'nova') => {
+    if (newPresenceId === onboardingData?.selectedPresence) {
+      setShowPresenceSelector(false)
+      return
+    }
+    
+    setIsTransitioningPresence(true)
+    stopSpeaking()
+    
+    // Update presence in onboarding data
+    setOnboardingData(prev => ({
+      ...prev,
+      completed: true,
+      selectedPresence: newPresenceId
+    }))
+    
+    // Get the new presence
+    const newPresence = PRESENCES.find(p => p.id === newPresenceId)
+    if (!newPresence) return
+    
+    // Wait for transition animation
+    await new Promise(resolve => setTimeout(resolve, 800))
+    
+    // Send introduction message from new presence
+    const displayName = userAccount?.userName || onboardingData?.userName
+    const introMessage = `Hi${displayName ? `, ${displayName}` : ''}! I'm ${newPresence.name}. ${newPresence.personality} I'm here for you now.`
+    
+    const presenceMessage: Message = {
+      id: generateId('msg'),
+      content: introMessage,
+      timestamp: new Date(),
+      sender: 'companion'
+    }
+    
+    setMessages(current => [...(current || []), presenceMessage])
+    
+    // Speak introduction if voice is enabled
+    if (preferences?.voiceEnabled) {
+      setTimeout(() => speakText(introMessage), TIMING_CONFIG.SPEECH_SYNTHESIS_DELAY)
+    }
+    
+    setIsTransitioningPresence(false)
+    setShowPresenceSelector(false)
+  }, [
+    onboardingData,
+    userAccount,
+    preferences?.voiceEnabled,
+    setOnboardingData,
+    setMessages,
+    speakText,
     stopSpeaking
   ])
   
@@ -723,6 +780,16 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowPresenceSelector(!showPresenceSelector)}
+            className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
+            title="Change presence"
+          >
+            <Swap size={18} />
+          </Button>
         </div>
         
         {/* Main Avatar Area - Takes up most of the screen */}
@@ -1153,6 +1220,74 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   </Button>
                 ))}
               </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Presence Selector Overlay */}
+        {showPresenceSelector && (
+          <div className="absolute inset-x-2 sm:inset-x-4 bottom-28 sm:bottom-32 max-h-[60vh] overflow-y-auto">
+            <Card className="p-4 bg-black/40 border-white/10 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white text-sm font-medium">Choose Your Companion</h3>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowPresenceSelector(false)}
+                  className="h-8 w-8 p-0 hover:bg-white/10 text-white/70 hover:text-white rounded-full"
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+              
+              {isTransitioningPresence ? (
+                <div className="py-8 text-center space-y-4">
+                  <div className="relative w-20 h-20 mx-auto">
+                    <div className="absolute inset-0 rounded-full border-4 border-purple-400/30 animate-ping"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-t-purple-400 animate-spin"></div>
+                  </div>
+                  <p className="text-white/70 text-sm">Transitioning presence...</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+                  {PRESENCES.map((presence) => {
+                    const isSelected = onboardingData?.selectedPresence === presence.id
+                    return (
+                      <button
+                        key={presence.id}
+                        onClick={() => changePresence(presence.id)}
+                        disabled={isSelected}
+                        className={`w-full p-4 rounded-xl border-2 transition-all text-left touch-manipulation ${
+                          isSelected
+                            ? 'border-purple-400 bg-purple-500/20 cursor-default'
+                            : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10 active:bg-white/15'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="text-white font-medium">{presence.name}</div>
+                              {isSelected && (
+                                <Badge variant="secondary" className="bg-purple-500/30 text-purple-200 text-xs px-2 py-0">
+                                  Active
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-white/70 text-sm mb-2">{presence.personality.split('.')[0]}.</div>
+                            <div className="text-white/50 text-xs">{presence.description}</div>
+                          </div>
+                          <div 
+                            className={`w-12 h-12 rounded-full ml-3 bg-gradient-to-br ${presence.colors.circle1} flex-shrink-0`}
+                            style={{
+                              boxShadow: `0 0 20px ${presence.colors.glow}`
+                            }}
+                          />
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </Card>
           </div>
         )}
