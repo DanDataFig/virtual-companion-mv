@@ -976,7 +976,6 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                 style={{
                   background: `radial-gradient(circle, #ddd6fe 0%, #8b5cf6 50%, #3b82f6 100%)`,
                   filter: `drop-shadow(0 0 30px #8b5cf6) drop-shadow(0 0 50px #3b82f6)`,
-                  transform: `scale(${particleConfig.coreScaleFactor})`,
                   opacity: particleConfig.particleOpacity.peak,
                   boxShadow: `
                     0 0 20px #8b5cf6,
