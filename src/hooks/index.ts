@@ -61,13 +61,12 @@ export const useConversationIntensity = (messages: Message[]) => {
 // ============================================================================
 
 /**
- * Manages text-to-speech functionality with user preferences
+ * Manages text-to-speech functionality with presence-specific voices
  */
-export const useVoiceSynthesis = (preferences: UserPreferences) => {
+export const useVoiceSynthesis = (preferences: UserPreferences, presence?: { voice: { pitch: number, rate: number, preferredNames: string[] } }) => {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
   
-  // Load available voices
   useEffect(() => {
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices()
@@ -85,35 +84,61 @@ export const useVoiceSynthesis = (preferences: UserPreferences) => {
   const speak = useCallback((text: string) => {
     if (!preferences.voiceEnabled || !text.trim()) return
     
-    // Stop any current speech
     window.speechSynthesis.cancel()
     
     const utterance = new SpeechSynthesisUtterance(text)
     
-    // Configure voice settings
-    utterance.rate = preferences.voiceSpeed / 100
-    utterance.pitch = preferences.voicePitch / 100
+    const baseRate = presence?.voice.rate ?? 0.95
+    const basePitch = presence?.voice.pitch ?? 1.1
+    
+    utterance.rate = baseRate * (preferences.voiceSpeed / 90)
+    utterance.pitch = basePitch * (preferences.voicePitch / 110)
     utterance.volume = preferences.voiceVolume / 100
     
-    // Set preferred voice
-    if (preferences.preferredVoice) {
-      const preferredVoice = availableVoices.find(
+    let selectedVoice: SpeechSynthesisVoice | undefined
+    
+    if (preferences.preferredVoice && preferences.preferredVoice !== 'default') {
+      selectedVoice = availableVoices.find(
         voice => voice.name === preferences.preferredVoice
       )
-      if (preferredVoice) {
-        utterance.voice = preferredVoice
+    }
+    
+    if (!selectedVoice && presence?.voice.preferredNames) {
+      for (const preferredName of presence.voice.preferredNames) {
+        selectedVoice = availableVoices.find(voice => 
+          voice.name.includes(preferredName)
+        )
+        if (selectedVoice) break
       }
-    } else {
-      // Try to find a suitable female voice
-      const femaleVoice = availableVoices.find(voice => 
-        voice.name.toLowerCase().includes('female') || 
-        voice.name.toLowerCase().includes('woman') ||
-        voice.name.toLowerCase().includes('zira') ||
-        voice.name.toLowerCase().includes('hazel')
+    }
+    
+    if (!selectedVoice) {
+      const highQualityVoices = availableVoices.filter(voice =>
+        voice.localService === false ||
+        voice.name.includes('Google') ||
+        voice.name.includes('Microsoft') ||
+        voice.name.toLowerCase().includes('enhanced') ||
+        voice.name.toLowerCase().includes('premium')
       )
-      if (femaleVoice) {
-        utterance.voice = femaleVoice
-      }
+      
+      const femaleVoice = highQualityVoices.find(voice => 
+        voice.name.toLowerCase().includes('female') || 
+        voice.name.includes('Zira') ||
+        voice.name.includes('Samantha') ||
+        voice.name.includes('Karen') ||
+        voice.name.includes('Fiona') ||
+        voice.name.includes('Victoria') ||
+        voice.name.includes('Ava') ||
+        voice.name.includes('Allison') ||
+        voice.name.includes('Susan') ||
+        voice.name.includes('Vicki')
+      )
+      
+      selectedVoice = femaleVoice || highQualityVoices[0] || availableVoices[0]
+    }
+    
+    if (selectedVoice) {
+      utterance.voice = selectedVoice
     }
     
     utterance.onstart = () => setIsSpeaking(true)
@@ -121,7 +146,7 @@ export const useVoiceSynthesis = (preferences: UserPreferences) => {
     utterance.onerror = () => setIsSpeaking(false)
     
     window.speechSynthesis.speak(utterance)
-  }, [preferences, availableVoices])
+  }, [preferences, availableVoices, presence])
   
   const stop = useCallback(() => {
     window.speechSynthesis.cancel()

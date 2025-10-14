@@ -132,12 +132,25 @@ const App: React.FC = () => {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   
   // ============================================================================
+  // COMPUTED VALUES
+  // ============================================================================
+  
+  /**
+   * Get the currently active presence based on onboarding data
+   */
+  const getCurrentPresence = useCallback((): Presence => {
+    const presenceId = onboardingData?.selectedPresence || 'nebula'
+    return PRESENCES.find(p => p.id === presenceId) || PRESENCES[0]
+  }, [onboardingData?.selectedPresence])
+  
+  // ============================================================================
   // CUSTOM HOOKS WITH SAFE DEFAULTS
   // ============================================================================
   
   const { intensity: conversationIntensity } = useConversationIntensity(messages || [])
   const { preferences, updatePreferences } = useUserPreferences()
-  const { isSpeaking, speak: speakText, stop: stopSpeaking } = useVoiceSynthesis(preferences || DEFAULT_USER_PREFERENCES)
+  const currentPresence = getCurrentPresence()
+  const { isSpeaking, speak: speakText, stop: stopSpeaking } = useVoiceSynthesis(preferences || DEFAULT_USER_PREFERENCES, currentPresence)
   const { isActive: isVideoActive, currentFacing, startCamera, stopCamera, switchCamera } = useCamera()
   const { moodEntries, registerMood, currentMood } = useMoodTracking()
   const { isLoading, startLoading, stopLoading } = useLoadingState()
@@ -158,16 +171,8 @@ const App: React.FC = () => {
   )
   
   // ============================================================================
-  // COMPUTED VALUES
+  // COMPUTED VALUES (CONTINUED)
   // ============================================================================
-  
-  /**
-   * Get the currently active presence based on onboarding data
-   */
-  const getCurrentPresence = useCallback((): Presence => {
-    const presenceId = onboardingData?.selectedPresence || 'nebula'
-    return PRESENCES.find(p => p.id === presenceId) || PRESENCES[0]
-  }, [onboardingData?.selectedPresence])
   
   /**
    * Calculate dynamic colors based on presence and conversation intensity

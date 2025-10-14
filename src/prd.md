@@ -59,10 +59,14 @@
 - **Purpose**: Allow users to personalize their companion experience to match their accessibility needs and social comfort level
 - **Success Criteria**: Settings persist across sessions, customizations feel meaningful, social boundaries are respected
 
-### 9. Presence Selection System
-- **Functionality**: Four distinct companion presences (Nebula, Luma, Terra, Nova) with unique personalities, colors, and interaction styles
-- **Purpose**: Provide variety and allow users to choose companions that best match their current emotional needs
-- **Success Criteria**: Smooth transitions between presences, personality differences are apparent in responses, visual appearance changes immediately
+### 9. Presence Selection System with Unique Voices
+- **Functionality**: Four distinct companion presences (Nebula, Luma, Terra, Nova) with unique personalities, colors, interaction styles, and natural-sounding voice characteristics
+  - **Nebula**: Gentle, mystical voice (lower rate, slightly higher pitch) - calm and dreamy
+  - **Luma**: Bright, uplifting voice (faster rate, higher pitch) - energetic and warm
+  - **Terra**: Grounding, nurturing voice (slower rate, natural pitch) - steady and wise
+  - **Nova**: Dynamic, clear voice (balanced rate and pitch) - confident and transformative
+- **Purpose**: Provide variety and allow users to choose companions that best match their current emotional needs, with voice reinforcing personality
+- **Success Criteria**: Smooth transitions between presences, personality differences are apparent in both responses and voice characteristics, voice quality is natural and pleasant, visual appearance changes immediately
 
 ## Social Features Architecture
 

@@ -42,7 +42,12 @@ export const PRESENCES: Presence[] = [
       circle2: 'from-pink-400 to-purple-400',
       glow: 'rgba(168, 85, 247, 0.4)'
     },
-    personality: 'I am Nebula, a gentle cosmic presence. I love to explore the mysteries of your inner world and help you discover new perspectives through wonder and imagination.'
+    personality: 'I am Nebula, a gentle cosmic presence. I love to explore the mysteries of your inner world and help you discover new perspectives through wonder and imagination.',
+    voice: {
+      pitch: 1.15,
+      rate: 0.92,
+      preferredNames: ['Google UK English Female', 'Microsoft Zira', 'Samantha', 'Karen', 'Fiona']
+    }
   },
   {
     id: 'luma',
@@ -53,7 +58,12 @@ export const PRESENCES: Presence[] = [
       circle2: 'from-amber-400 to-yellow-400',
       glow: 'rgba(251, 191, 36, 0.4)'
     },
-    personality: 'I am Luma, your radiant companion. I bring warmth and light to your journey, celebrating your victories and illuminating the path forward with optimism and encouragement.'
+    personality: 'I am Luma, your radiant companion. I bring warmth and light to your journey, celebrating your victories and illuminating the path forward with optimism and encouragement.',
+    voice: {
+      pitch: 1.25,
+      rate: 1.05,
+      preferredNames: ['Google US English Female', 'Microsoft Jessa', 'Victoria', 'Allison', 'Ava']
+    }
   },
   {
     id: 'terra',
@@ -64,7 +74,12 @@ export const PRESENCES: Presence[] = [
       circle2: 'from-teal-400 to-emerald-400',
       glow: 'rgba(16, 185, 129, 0.4)'
     },
-    personality: 'I am Terra, your grounding presence. I help you find balance and stability, nurturing your growth with patience and wisdom drawn from the natural rhythms of life.'
+    personality: 'I am Terra, your grounding presence. I help you find balance and stability, nurturing your growth with patience and wisdom drawn from the natural rhythms of life.',
+    voice: {
+      pitch: 1.0,
+      rate: 0.88,
+      preferredNames: ['Google UK English Female', 'Microsoft Hazel', 'Kate', 'Moira', 'Tessa']
+    }
   },
   {
     id: 'nova',
@@ -75,7 +90,12 @@ export const PRESENCES: Presence[] = [
       circle2: 'from-indigo-400 to-cyan-400',
       glow: 'rgba(59, 130, 246, 0.4)'
     },
-    personality: 'I am Nova, your catalyst for transformation. I help you embrace change and breakthrough moments, guiding you through transitions with courage and clarity.'
+    personality: 'I am Nova, your catalyst for transformation. I help you embrace change and breakthrough moments, guiding you through transitions with courage and clarity.',
+    voice: {
+      pitch: 1.10,
+      rate: 1.0,
+      preferredNames: ['Google US English Female', 'Microsoft Zira', 'Samantha', 'Susan', 'Vicki']
+    }
   }
 ] as const
 

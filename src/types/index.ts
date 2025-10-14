@@ -35,6 +35,11 @@ export interface Presence {
     circle2: string
     glow: string
   }
+  voice: {
+    pitch: number
+    rate: number
+    preferredNames: string[]
+  }
 }
 
 // ============================================================================
