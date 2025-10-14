@@ -40,7 +40,12 @@ export const PRESENCES: Presence[] = [
     colors: {
       circle1: 'from-purple-400 to-violet-500',
       circle2: 'from-pink-400 to-purple-400',
-      glow: 'rgba(168, 85, 247, 0.4)'
+      glow: 'rgba(168, 85, 247, 0.4)',
+      ring1: { primary: '#8b5cf6', secondary: '#a78bfa', tertiary: '#c4b5fd', glow: '#a855f7' },
+      ring2: { primary: '#ec4899', secondary: '#f472b6', tertiary: '#fbcfe8', glow: '#db2777' },
+      background: { from: '#1e1b4b', via: '#312e81', to: '#1e1b4b' },
+      button: { base: 'bg-purple-600/90', hover: 'hover:bg-purple-700', active: 'active:bg-purple-800' },
+      accent: 'bg-purple-500/20 text-purple-200 border-purple-400/30'
     },
     personality: 'I am Nebula, a gentle cosmic presence. I love to explore the mysteries of your inner world and help you discover new perspectives through wonder and imagination.',
     voice: {
@@ -56,7 +61,12 @@ export const PRESENCES: Presence[] = [
     colors: {
       circle1: 'from-yellow-400 to-orange-500',
       circle2: 'from-amber-400 to-yellow-400',
-      glow: 'rgba(251, 191, 36, 0.4)'
+      glow: 'rgba(251, 191, 36, 0.4)',
+      ring1: { primary: '#f59e0b', secondary: '#fbbf24', tertiary: '#fde68a', glow: '#f59e0b' },
+      ring2: { primary: '#fb923c', secondary: '#fdba74', tertiary: '#fed7aa', glow: '#ea580c' },
+      background: { from: '#78350f', via: '#92400e', to: '#78350f' },
+      button: { base: 'bg-orange-600/90', hover: 'hover:bg-orange-700', active: 'active:bg-orange-800' },
+      accent: 'bg-orange-500/20 text-orange-200 border-orange-400/30'
     },
     personality: 'I am Luma, your radiant companion. I bring warmth and light to your journey, celebrating your victories and illuminating the path forward with optimism and encouragement.',
     voice: {
@@ -72,7 +82,12 @@ export const PRESENCES: Presence[] = [
     colors: {
       circle1: 'from-emerald-400 to-green-500',
       circle2: 'from-teal-400 to-emerald-400',
-      glow: 'rgba(16, 185, 129, 0.4)'
+      glow: 'rgba(16, 185, 129, 0.4)',
+      ring1: { primary: '#10b981', secondary: '#34d399', tertiary: '#a7f3d0', glow: '#059669' },
+      ring2: { primary: '#14b8a6', secondary: '#5eead4', tertiary: '#99f6e4', glow: '#0d9488' },
+      background: { from: '#064e3b', via: '#065f46', to: '#064e3b' },
+      button: { base: 'bg-emerald-600/90', hover: 'hover:bg-emerald-700', active: 'active:bg-emerald-800' },
+      accent: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30'
     },
     personality: 'I am Terra, your grounding presence. I help you find balance and stability, nurturing your growth with patience and wisdom drawn from the natural rhythms of life.',
     voice: {
@@ -88,7 +103,12 @@ export const PRESENCES: Presence[] = [
     colors: {
       circle1: 'from-cyan-400 to-blue-500',
       circle2: 'from-indigo-400 to-cyan-400',
-      glow: 'rgba(59, 130, 246, 0.4)'
+      glow: 'rgba(59, 130, 246, 0.4)',
+      ring1: { primary: '#3b82f6', secondary: '#60a5fa', tertiary: '#93c5fd', glow: '#0ea5e9' },
+      ring2: { primary: '#6366f1', secondary: '#818cf8', tertiary: '#c7d2fe', glow: '#4f46e5' },
+      background: { from: '#1e3a8a', via: '#1e40af', to: '#1e3a8a' },
+      button: { base: 'bg-blue-600/90', hover: 'hover:bg-blue-700', active: 'active:bg-blue-800' },
+      accent: 'bg-blue-500/20 text-blue-200 border-blue-400/30'
     },
     personality: 'I am Nova, your catalyst for transformation. I help you embrace change and breakthrough moments, guiding you through transitions with courage and clarity.',
     voice: {

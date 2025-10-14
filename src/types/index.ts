@@ -34,6 +34,11 @@ export interface Presence {
     circle1: string
     circle2: string
     glow: string
+    ring1: { primary: string; secondary: string; tertiary: string; glow: string }
+    ring2: { primary: string; secondary: string; tertiary: string; glow: string }
+    background: { from: string; via: string; to: string }
+    button: { base: string; hover: string; active: string }
+    accent: string
   }
   voice: {
     pitch: number

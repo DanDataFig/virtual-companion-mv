@@ -739,7 +739,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
   // ============================================================================
   
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div 
+      className="min-h-screen flex flex-col relative overflow-hidden transition-all duration-1000"
+      style={{
+        background: `linear-gradient(135deg, ${currentPresence.colors.background.from} 0%, ${currentPresence.colors.background.via} 50%, ${currentPresence.colors.background.to} 100%)`
+      }}
+    >
       
       {/* Video Background */}
       {isVideoActive && (
@@ -810,7 +815,7 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
           <div className="relative flex items-center justify-center" style={{ width: '320px', height: '180px' }}>
             {/* Left Ring Tube - Multi-layered glowing design */}
             <div 
-              className={`absolute animate-infinity-flow transition-all duration-500`}
+              className={`absolute animate-infinity-flow transition-all duration-1000`}
               style={{
                 width: '160px',
                 height: '160px',
@@ -822,9 +827,9 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             >
               {/* Outer glow halo */}
               <div 
-                className="absolute inset-0 rounded-full"
+                className="absolute inset-0 rounded-full transition-all duration-1000"
                 style={{
-                  background: `radial-gradient(circle, transparent 40%, #0ea5e9 50%, transparent 60%)`,
+                  background: `radial-gradient(circle, transparent 40%, ${currentPresence.colors.ring1.glow} 50%, transparent 60%)`,
                   filter: `blur(20px)`,
                   opacity: 0.6
                 }}
@@ -832,15 +837,15 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               
               {/* Main glowing ring - outermost layer */}
               <div 
-                className="absolute inset-0 rounded-full"
+                className="absolute inset-0 rounded-full transition-all duration-1000"
                 style={{
                   background: `transparent`,
-                  border: '3px solid #3b82f6',
+                  border: `3px solid ${currentPresence.colors.ring1.primary}`,
                   boxShadow: `
-                    0 0 20px #3b82f6,
-                    0 0 40px #3b82f6,
-                    inset 0 0 20px #3b82f6,
-                    inset 0 0 40px rgba(59, 130, 246, 0.3)
+                    0 0 20px ${currentPresence.colors.ring1.primary},
+                    0 0 40px ${currentPresence.colors.ring1.primary},
+                    inset 0 0 20px ${currentPresence.colors.ring1.primary},
+                    inset 0 0 40px ${currentPresence.colors.ring1.primary}33
                   `,
                   opacity: 0.9
                 }}
@@ -848,15 +853,15 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               
               {/* Second bright ring */}
               <div 
-                className="absolute rounded-full"
+                className="absolute rounded-full transition-all duration-1000"
                 style={{
                   inset: '6px',
                   background: `transparent`,
-                  border: '2px solid #60a5fa',
+                  border: `2px solid ${currentPresence.colors.ring1.secondary}`,
                   boxShadow: `
-                    0 0 15px #60a5fa,
-                    0 0 30px #60a5fa,
-                    inset 0 0 15px #60a5fa
+                    0 0 15px ${currentPresence.colors.ring1.secondary},
+                    0 0 30px ${currentPresence.colors.ring1.secondary},
+                    inset 0 0 15px ${currentPresence.colors.ring1.secondary}
                   `,
                   opacity: 0.95
                 }}
@@ -864,15 +869,15 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               
               {/* Third inner bright ring */}
               <div 
-                className="absolute rounded-full"
+                className="absolute rounded-full transition-all duration-1000"
                 style={{
                   inset: '12px',
                   background: `transparent`,
-                  border: '2px solid #93c5fd',
+                  border: `2px solid ${currentPresence.colors.ring1.tertiary}`,
                   boxShadow: `
-                    0 0 10px #93c5fd,
-                    0 0 20px #93c5fd,
-                    inset 0 0 10px #93c5fd
+                    0 0 10px ${currentPresence.colors.ring1.tertiary},
+                    0 0 20px ${currentPresence.colors.ring1.tertiary},
+                    inset 0 0 10px ${currentPresence.colors.ring1.tertiary}
                   `,
                   opacity: 0.85
                 }}
@@ -880,12 +885,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               
               {/* Innermost core glow */}
               <div 
-                className="absolute rounded-full"
+                className="absolute rounded-full transition-all duration-1000"
                 style={{
                   inset: '18px',
-                  background: `radial-gradient(circle, rgba(147, 197, 253, 0.3) 0%, transparent 70%)`,
-                  border: '1px solid rgba(147, 197, 253, 0.4)',
-                  boxShadow: `inset 0 0 20px rgba(147, 197, 253, 0.5)`
+                  background: `radial-gradient(circle, ${currentPresence.colors.ring1.tertiary}4D 0%, transparent 70%)`,
+                  border: `1px solid ${currentPresence.colors.ring1.tertiary}66`,
+                  boxShadow: `inset 0 0 20px ${currentPresence.colors.ring1.tertiary}80`
                 }}
               />
               
@@ -896,12 +901,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   {[...Array(particleConfig.particleCount.primary)].map((_, i) => (
                     <div
                       key={`primary-${i}`}
-                      className="absolute rounded-full animate-tube-particle-flow-left"
+                      className="absolute rounded-full animate-tube-particle-flow-left transition-all duration-1000"
                       style={{
                         width: `${particleConfig.particleSize.primary}px`,
                         height: `${particleConfig.particleSize.primary}px`,
-                        background: `radial-gradient(circle, #60a5fa 0%, transparent 70%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px #60a5fa)`,
+                        background: `radial-gradient(circle, ${currentPresence.colors.ring1.secondary} 0%, transparent 70%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px ${currentPresence.colors.ring1.secondary})`,
                         animationDelay: `${i * particleConfig.delayVariation}s`,
                         animationDuration: `${particleConfig.particleSpeed.primary}s`,
                         opacity: particleConfig.particleOpacity.base
@@ -913,12 +918,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   {particleConfig.shouldShowTrails && [...Array(particleConfig.particleCount.trail)].map((_, i) => (
                     <div
                       key={`trail-${i}`}
-                      className="absolute rounded-full animate-tube-particle-flow-left"
+                      className="absolute rounded-full animate-tube-particle-flow-left transition-all duration-1000"
                       style={{
                         width: `${particleConfig.particleSize.trail}px`,
                         height: `${particleConfig.particleSize.trail}px`,
-                        background: `radial-gradient(circle, #93c5fd 0%, transparent 60%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px #93c5fd)`,
+                        background: `radial-gradient(circle, ${currentPresence.colors.ring1.tertiary} 0%, transparent 60%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px ${currentPresence.colors.ring1.tertiary})`,
                         animationDelay: `${i * particleConfig.delayVariation * 1.2 + 0.15}s`,
                         animationDuration: `${particleConfig.particleSpeed.trail}s`,
                         opacity: particleConfig.particleOpacity.base * 0.75
@@ -931,7 +936,7 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             
             {/* Right Ring Tube - overlapping with same glowing multi-layer design */}
             <div 
-              className={`absolute animate-infinity-counter-flow transition-all duration-500`}
+              className={`absolute animate-infinity-counter-flow transition-all duration-1000`}
               style={{
                 width: '160px',
                 height: '160px',
@@ -942,9 +947,9 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             >
               {/* Outer glow halo */}
               <div 
-                className="absolute inset-0 rounded-full"
+                className="absolute inset-0 rounded-full transition-all duration-1000"
                 style={{
-                  background: `radial-gradient(circle, transparent 40%, #a855f7 50%, transparent 60%)`,
+                  background: `radial-gradient(circle, transparent 40%, ${currentPresence.colors.ring2.glow} 50%, transparent 60%)`,
                   filter: `blur(20px)`,
                   opacity: 0.6
                 }}
@@ -952,15 +957,15 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               
               {/* Main glowing ring - outermost layer */}
               <div 
-                className="absolute inset-0 rounded-full"
+                className="absolute inset-0 rounded-full transition-all duration-1000"
                 style={{
                   background: `transparent`,
-                  border: '3px solid #8b5cf6',
+                  border: `3px solid ${currentPresence.colors.ring2.primary}`,
                   boxShadow: `
-                    0 0 20px #8b5cf6,
-                    0 0 40px #8b5cf6,
-                    inset 0 0 20px #8b5cf6,
-                    inset 0 0 40px rgba(139, 92, 246, 0.3)
+                    0 0 20px ${currentPresence.colors.ring2.primary},
+                    0 0 40px ${currentPresence.colors.ring2.primary},
+                    inset 0 0 20px ${currentPresence.colors.ring2.primary},
+                    inset 0 0 40px ${currentPresence.colors.ring2.primary}33
                   `,
                   opacity: 0.9
                 }}
@@ -968,15 +973,15 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               
               {/* Second bright ring */}
               <div 
-                className="absolute rounded-full"
+                className="absolute rounded-full transition-all duration-1000"
                 style={{
                   inset: '6px',
                   background: `transparent`,
-                  border: '2px solid #a78bfa',
+                  border: `2px solid ${currentPresence.colors.ring2.secondary}`,
                   boxShadow: `
-                    0 0 15px #a78bfa,
-                    0 0 30px #a78bfa,
-                    inset 0 0 15px #a78bfa
+                    0 0 15px ${currentPresence.colors.ring2.secondary},
+                    0 0 30px ${currentPresence.colors.ring2.secondary},
+                    inset 0 0 15px ${currentPresence.colors.ring2.secondary}
                   `,
                   opacity: 0.95
                 }}
@@ -984,15 +989,15 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               
               {/* Third inner bright ring */}
               <div 
-                className="absolute rounded-full"
+                className="absolute rounded-full transition-all duration-1000"
                 style={{
                   inset: '12px',
                   background: `transparent`,
-                  border: '2px solid #c4b5fd',
+                  border: `2px solid ${currentPresence.colors.ring2.tertiary}`,
                   boxShadow: `
-                    0 0 10px #c4b5fd,
-                    0 0 20px #c4b5fd,
-                    inset 0 0 10px #c4b5fd
+                    0 0 10px ${currentPresence.colors.ring2.tertiary},
+                    0 0 20px ${currentPresence.colors.ring2.tertiary},
+                    inset 0 0 10px ${currentPresence.colors.ring2.tertiary}
                   `,
                   opacity: 0.85
                 }}
@@ -1000,12 +1005,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               
               {/* Innermost core glow */}
               <div 
-                className="absolute rounded-full"
+                className="absolute rounded-full transition-all duration-1000"
                 style={{
                   inset: '18px',
-                  background: `radial-gradient(circle, rgba(196, 181, 253, 0.3) 0%, transparent 70%)`,
-                  border: '1px solid rgba(196, 181, 253, 0.4)',
-                  boxShadow: `inset 0 0 20px rgba(196, 181, 253, 0.5)`
+                  background: `radial-gradient(circle, ${currentPresence.colors.ring2.tertiary}4D 0%, transparent 70%)`,
+                  border: `1px solid ${currentPresence.colors.ring2.tertiary}66`,
+                  boxShadow: `inset 0 0 20px ${currentPresence.colors.ring2.tertiary}80`
                 }}
               />
               
@@ -1016,12 +1021,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   {[...Array(particleConfig.particleCount.primary)].map((_, i) => (
                     <div
                       key={`primary-${i}`}
-                      className="absolute rounded-full animate-tube-particle-flow-right"
+                      className="absolute rounded-full animate-tube-particle-flow-right transition-all duration-1000"
                       style={{
                         width: `${particleConfig.particleSize.primary}px`,
                         height: `${particleConfig.particleSize.primary}px`,
-                        background: `radial-gradient(circle, #a78bfa 0%, transparent 70%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px #a78bfa)`,
+                        background: `radial-gradient(circle, ${currentPresence.colors.ring2.secondary} 0%, transparent 70%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity}px ${currentPresence.colors.ring2.secondary})`,
                         animationDelay: `${i * particleConfig.delayVariation * 1.1}s`,
                         animationDuration: `${particleConfig.particleSpeed.primary * 1.1}s`,
                         opacity: particleConfig.particleOpacity.base * 0.9
@@ -1033,12 +1038,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   {particleConfig.shouldShowTrails && [...Array(particleConfig.particleCount.trail)].map((_, i) => (
                     <div
                       key={`trail-${i}`}
-                      className="absolute rounded-full animate-tube-particle-flow-right"
+                      className="absolute rounded-full animate-tube-particle-flow-right transition-all duration-1000"
                       style={{
                         width: `${particleConfig.particleSize.trail}px`,
                         height: `${particleConfig.particleSize.trail}px`,
-                        background: `radial-gradient(circle, #c4b5fd 0%, transparent 60%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px #c4b5fd)`,
+                        background: `radial-gradient(circle, ${currentPresence.colors.ring2.tertiary} 0%, transparent 60%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.5}px ${currentPresence.colors.ring2.tertiary})`,
                         animationDelay: `${i * particleConfig.delayVariation * 1.3 + 0.2}s`,
                         animationDuration: `${particleConfig.particleSpeed.trail * 1.15}s`,
                         opacity: particleConfig.particleOpacity.base * 0.65
@@ -1052,15 +1057,15 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             {/* Center intersection core */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <div 
-                className={`w-16 h-16 rounded-full animate-ring-core-breathe transition-all duration-300`}
+                className={`w-16 h-16 rounded-full animate-ring-core-breathe transition-all duration-1000`}
                 style={{
-                  background: `radial-gradient(circle, #ddd6fe 0%, #8b5cf6 50%, #3b82f6 100%)`,
-                  filter: `drop-shadow(0 0 30px #8b5cf6) drop-shadow(0 0 50px #3b82f6)`,
+                  background: `radial-gradient(circle, ${currentPresence.colors.ring2.tertiary} 0%, ${currentPresence.colors.ring2.primary} 50%, ${currentPresence.colors.ring1.primary} 100%)`,
+                  filter: `drop-shadow(0 0 30px ${currentPresence.colors.ring2.primary}) drop-shadow(0 0 50px ${currentPresence.colors.ring1.primary})`,
                   opacity: particleConfig.particleOpacity.peak,
                   boxShadow: `
-                    0 0 20px #8b5cf6,
-                    0 0 40px #3b82f6,
-                    inset 0 0 30px rgba(139, 92, 246, 0.8)
+                    0 0 20px ${currentPresence.colors.ring2.primary},
+                    0 0 40px ${currentPresence.colors.ring1.primary},
+                    inset 0 0 30px ${currentPresence.colors.ring2.primary}CC
                   `
                 }}
               />
@@ -1071,12 +1076,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   {[...Array(Math.floor(3 + conversationIntensity / 50))].map((_, i) => (
                     <div
                       key={`exchange-${i}`}
-                      className="absolute rounded-full animate-cross-ring-exchange"
+                      className="absolute rounded-full animate-cross-ring-exchange transition-all duration-1000"
                       style={{
                         width: `${particleConfig.particleSize.trail * 1.5}px`,
                         height: `${particleConfig.particleSize.trail * 1.5}px`,
-                        background: `radial-gradient(circle, #ffffff 0%, #60a5fa 50%, transparent 80%)`,
-                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.8}px #60a5fa)`,
+                        background: `radial-gradient(circle, #ffffff 0%, ${currentPresence.colors.ring1.secondary} 50%, transparent 80%)`,
+                        filter: `drop-shadow(0 0 ${particleConfig.glowIntensity * 0.8}px ${currentPresence.colors.ring1.secondary})`,
                         animationDelay: `${i * particleConfig.delayVariation * 1.5}s`,
                         animationDuration: `${1.8 - (conversationIntensity / 200)}s`,
                         top: '50%',
@@ -1310,10 +1315,10 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               size="lg"
               variant="ghost"
               onClick={() => setIsListening(!isListening)}
-              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-all duration-500 touch-manipulation ${
                 isListening 
                   ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800' 
-                  : 'bg-blue-600/90 hover:bg-blue-700 active:bg-blue-800'
+                  : `${currentPresence.colors.button.base} ${currentPresence.colors.button.hover} ${currentPresence.colors.button.active}`
               }`}
             >
               {isListening ? <MicrophoneSlash size={20} /> : <Microphone size={20} />}
@@ -1330,9 +1335,9 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
                   updatePreferences({ voiceEnabled: !preferences?.voiceEnabled })
                 }
               }}
-              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-colors touch-manipulation ${
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm transition-all duration-500 touch-manipulation ${
                 preferences?.voiceEnabled && !isSpeaking
-                  ? 'bg-green-600/90 hover:bg-green-700 active:bg-green-800' 
+                  ? `${currentPresence.colors.button.base} ${currentPresence.colors.button.hover} ${currentPresence.colors.button.active}` 
                   : isSpeaking
                   ? 'bg-red-600/90 hover:bg-red-700 active:bg-red-800'
                   : 'bg-gray-600/90 hover:bg-gray-700 active:bg-gray-800'
@@ -1346,7 +1351,7 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
               size="lg"
               variant="ghost"
               onClick={() => setShowMoodSelector(!showMoodSelector)}
-              className="w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full bg-purple-600/90 hover:bg-purple-700 active:bg-purple-800 text-white backdrop-blur-sm touch-manipulation"
+              className={`w-14 h-14 sm:w-16 sm:h-16 min-w-[56px] min-h-[56px] rounded-full text-white backdrop-blur-sm touch-manipulation transition-all duration-500 ${currentPresence.colors.button.base} ${currentPresence.colors.button.hover} ${currentPresence.colors.button.active}`}
             >
               <Smiley size={20} />
             </Button>
@@ -1366,9 +1371,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             <Button 
               onClick={sendMessage} 
               disabled={!inputMessage.trim() || isLoading}
-              className={`bg-purple-600/90 hover:bg-purple-700 active:bg-purple-800 rounded-full px-4 sm:px-6 backdrop-blur-sm transition-all duration-300 min-w-[48px] min-h-[48px] touch-manipulation ${
-                conversationIntensity > 60 ? 'animate-pulse shadow-lg shadow-purple-500/30' : ''
+              className={`rounded-full px-4 sm:px-6 backdrop-blur-sm transition-all duration-500 min-w-[48px] min-h-[48px] touch-manipulation ${currentPresence.colors.button.base} ${currentPresence.colors.button.hover} ${currentPresence.colors.button.active} ${
+                conversationIntensity > 60 ? 'animate-pulse' : ''
               }`}
+              style={conversationIntensity > 60 ? {
+                boxShadow: `0 0 20px ${currentPresence.colors.ring1.glow}`
+              } : {}}
             >
               <PaperPlaneTilt size={18} />
             </Button>
@@ -1377,7 +1385,7 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
           {/* Status Indicators */}
           <div className="flex justify-center space-x-2 sm:space-x-4 flex-wrap gap-2">
             {/* Current Presence Indicator */}
-            <Badge variant="secondary" className="bg-orange-500/20 text-orange-200 border-orange-400/30 backdrop-blur-sm text-xs px-2 py-1">
+            <Badge variant="secondary" className={`backdrop-blur-sm text-xs px-2 py-1 transition-all duration-500 ${currentPresence.colors.accent}`}>
               {getCurrentPresence().name}
             </Badge>
             
@@ -1385,12 +1393,12 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             {conversationIntensity > 30 && (
               <Badge 
                 variant="secondary" 
-                className={`backdrop-blur-sm text-xs px-2 py-1 transition-all duration-300 ${
+                className={`backdrop-blur-sm text-xs px-2 py-1 transition-all duration-500 ${
                   conversationIntensity > 70 
-                    ? 'bg-purple-500/30 text-purple-200 border-purple-400/50 animate-pulse' 
+                    ? `${currentPresence.colors.accent} animate-pulse` 
                     : conversationIntensity > 50 
-                    ? 'bg-blue-500/20 text-blue-200 border-blue-400/30' 
-                    : 'bg-cyan-500/20 text-cyan-200 border-cyan-400/30'
+                    ? currentPresence.colors.accent.replace('/20', '/15').replace('/30', '/25')
+                    : currentPresence.colors.accent.replace('/20', '/10').replace('/30', '/20')
                 }`}
               >
                 ⚡ {Math.round(conversationIntensity)}% engaged
@@ -1399,14 +1407,14 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
             
             {/* Current Mood Indicator */}
             {moodEntries.length > 0 && (
-              <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm text-xs px-2 py-1">
+              <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20 backdrop-blur-sm text-xs px-2 py-1 transition-all duration-500">
                 Mood: {getMoodEmoji(moodEntries[0].level)} {moodEntries[0].level}/5
               </Badge>
             )}
             
             {/* Voice Status */}
-            <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm text-xs px-2 py-1 ${
-              preferences?.voiceEnabled ? 'bg-green-500/20 text-green-200' : 'bg-gray-500/20 text-gray-200'
+            <Badge variant="secondary" className={`border-white/20 backdrop-blur-sm text-xs px-2 py-1 transition-all duration-500 ${
+              preferences?.voiceEnabled ? currentPresence.colors.accent : 'bg-gray-500/20 text-gray-200'
             }`}>
               Voice: {preferences?.voiceEnabled ? 'On' : 'Off'}
             </Badge>
