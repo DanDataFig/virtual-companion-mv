@@ -56,6 +56,9 @@ import {
   Users 
 } from "@phosphor-icons/react"
 
+// Community Components
+import { CommunityHub } from '@/components/community'
+
 // Type definitions
 import type { 
   Message, 
@@ -120,11 +123,10 @@ const App: React.FC = () => {
   const [showBackgroundSelector, setShowBackgroundSelector] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
-  const [showSocialHub, setShowSocialHub] = useState(false)
+  const [showCommunityHub, setShowCommunityHub] = useState(false)
   const [selectedBackground, setSelectedBackground] = useState<string | null>(null)
   const [isLoadingInitial, setIsLoadingInitial] = useState(true)
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('welcome')
-  const [socialSection, setSocialSection] = useState<SocialSection>('community')
   const [isListening, setIsListening] = useState(false)
   const [isTransitioningPresence, setIsTransitioningPresence] = useState(false)
   
@@ -392,7 +394,7 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
     setShowBackgroundSelector(false)
     setShowSettings(false)
     setShowAccountSettings(false)
-    setShowSocialHub(false)
+    setShowCommunityHub(false)
     setInputMessage('')
     setOnboardingStep('welcome')
     setIsLoadingInitial(true)
@@ -805,8 +807,18 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
           </Button>
         </div>
 
-        {/* Settings Button - Top Right */}
-        <div className="absolute top-4 right-4 z-30">
+        {/* Top Right Controls */}
+        <div className="absolute top-4 right-4 z-30 flex space-x-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowCommunityHub(!showCommunityHub)}
+            className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-black/40 hover:bg-black/60 active:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-all duration-300 touch-manipulation shadow-lg"
+            title="Community"
+          >
+            <Users size={18} />
+          </Button>
+          
           <Button
             size="sm"
             variant="ghost"
@@ -1584,6 +1596,14 @@ Respond naturally and warmly as ${presence.name}, showing you understand their e
           </div>
         </div>
       </div>
+      
+      {/* Community Hub Modal */}
+      {showCommunityHub && (
+        <CommunityHub
+          currentUser={userAccount || null}
+          onClose={() => setShowCommunityHub(false)}
+        />
+      )}
     </div>
   )
 }
