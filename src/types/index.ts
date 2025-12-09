@@ -10,14 +10,14 @@
 export interface Message {
   id: string
   content: string
-  timestamp: Date
+  timestamp: Date | string
   sender: 'user' | 'companion'
 }
 
 export interface MoodEntry {
   id: string
   level: number // 1-5 scale
-  timestamp: Date
+  timestamp: Date | string
   note?: string
 }
 
@@ -66,7 +66,7 @@ export interface UserAccount {
   avatarUrl?: string
   bio?: string
   language?: string
-  createdAt: Date
+  createdAt: Date | string
 }
 
 export interface UserPreferences {
@@ -99,7 +99,7 @@ export interface CommunityPost {
   content: string
   type: 'reflection' | 'milestone' | 'support' | 'gratitude'
   mood?: number
-  timestamp: Date
+  timestamp: Date | string
   likes: string[] // user IDs who liked
   supportCount: number
   isAnonymous: boolean
@@ -114,8 +114,8 @@ export interface Connection {
   connectionType: 'journey-buddy' | 'support-circle' | 'check-in-partner'
   status: 'pending' | 'active' | 'paused'
   sharedInterests: string[]
-  connectedAt: Date
-  lastInteraction: Date
+  connectedAt: Date | string
+  lastInteraction: Date | string
 }
 
 export interface SupportCircle {
@@ -126,7 +126,7 @@ export interface SupportCircle {
   memberCount: number
   isPrivate: boolean
   memberIds: string[]
-  recentActivity: Date
+  recentActivity: Date | string
   tags: string[]
 }
 
@@ -139,7 +139,7 @@ export interface JourneyMoment {
   type: 'breakthrough' | 'gratitude' | 'challenge' | 'reflection' | 'milestone'
   isShared: boolean
   isAnonymous: boolean
-  timestamp: Date
+  timestamp: Date | string
   tags: string[]
   reactions: { [userId: string]: 'heart' | 'support' | 'celebrate' }
 }
@@ -154,7 +154,7 @@ export interface ChatMessage {
   senderName: string
   receiverId: string
   content: string
-  timestamp: Date
+  timestamp: Date | string
   messageType: 'text' | 'mood-share' | 'journey-moment' | 'system'
   metadata?: {
     mood?: number
@@ -168,7 +168,7 @@ export interface ChatConversation {
   participantIds: string[]
   participantNames: string[]
   lastMessage?: ChatMessage
-  lastActivity: Date
+  lastActivity: Date | string
   unreadCount: number
   conversationType: 'direct' | 'group'
 }

@@ -135,9 +135,10 @@ export const calculateParticleConfig = (intensity: IntensityLevel) => {
 /**
  * Format relative time (e.g., "2 hours ago", "Just now")
  */
-export const formatRelativeTime = (date: Date): string => {
+export const formatRelativeTime = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
   const now = new Date()
-  const diffInMs = now.getTime() - date.getTime()
+  const diffInMs = now.getTime() - dateObj.getTime()
   const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
@@ -150,14 +151,15 @@ export const formatRelativeTime = (date: Date): string => {
   if (diffInDays < 7) return `${diffInDays} days ago`
   if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
   
-  return date.toLocaleDateString()
+  return dateObj.toLocaleDateString()
 }
 
 /**
  * Format time for display (e.g., "2:30 PM")
  */
-export const formatDisplayTime = (date: Date): string => {
-  return date.toLocaleTimeString([], { 
+export const formatDisplayTime = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  return dateObj.toLocaleTimeString([], { 
     hour: '2-digit', 
     minute: '2-digit',
     hour12: true 
@@ -167,8 +169,9 @@ export const formatDisplayTime = (date: Date): string => {
 /**
  * Format date for display (e.g., "March 15, 2024")
  */
-export const formatDisplayDate = (date: Date): string => {
-  return date.toLocaleDateString([], {
+export const formatDisplayDate = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  return dateObj.toLocaleDateString([], {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
